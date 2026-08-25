@@ -1,15 +1,21 @@
+import Image from "next/image";
+
 export default function WolhwaSection() {
   return (
     <section className="glow-gold px-6 py-24 sm:py-32">
       <div className="mx-auto max-w-md text-center">
-        {/* 월화 초상 — 원형에 가까운 블렌드로 인물에 집중.
-            이미지가 없으면 은은한 촛불빛 원만 남아 자리를 지킨다 */}
-        <div
-          className="img-blend mx-auto aspect-square w-full max-w-[240px] bg-[radial-gradient(circle_at_50%_45%,rgba(201,169,106,0.08),transparent_70%)] bg-cover bg-[position:center_18%] sm:max-w-[280px]"
-          style={{ backgroundImage: "url('/images/wolhwa-portrait.webp')" }}
-          role="img"
-          aria-label="월화의 초상"
-        />
+        {/* 월화 초상 — 정방형 원본을 그대로 사용, 가장자리만 어둠에 녹아들게.
+            얼굴·머리 장식·의상이 모두 보이도록 크롭하지 않음 */}
+        <div className="img-blend relative mx-auto aspect-square w-full max-w-[290px] sm:max-w-[330px]">
+          <Image
+            src="/images/wolhwa-portrait.webp"
+            alt="월화의 초상 — 붉은 매화 곁의 얼굴"
+            fill
+            quality={90}
+            sizes="(max-width: 640px) 290px, 330px"
+            className="object-cover"
+          />
+        </div>
 
         <p className="mt-10 text-[0.68rem] tracking-[0.35em] text-gold/90">
           인연의 흐름을 읽는 사람

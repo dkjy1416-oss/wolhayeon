@@ -1,28 +1,29 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function HeroSection() {
   return (
     <section className="relative flex min-h-[100svh] flex-col overflow-hidden">
-      {/* 월화 메인 이미지 — 인물 상반신이 상단에 오도록 배치.
-          이미지가 없어도 딥블랙 배경으로 레이아웃 유지 */}
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-ink bg-cover bg-[position:center_12%] bg-no-repeat"
-        style={{ backgroundImage: "url('/images/wolhwa-hero.webp')" }}
+      {/* 월화 메인 이미지 — 얼굴은 상단, 붉은 실은 중앙에 오도록 배치 */}
+      <Image
+        src="/images/wolhwa-hero.webp"
+        alt="달빛 아래에서 붉은 실을 든 월화"
+        fill
+        priority
+        quality={90}
+        sizes="100vw"
+        className="object-cover object-[center_30%]"
       />
-      {/* 달빛 오버레이 — 상단에서 은은하게 */}
+
+      {/* 텍스트 가독성용 오버레이 — 이미지 blur 없음, 그라데이션만 사용.
+          얼굴이 있는 상단은 거의 건드리지 않고 하단만 어둡게 */}
       <div
         aria-hidden
-        className="absolute inset-0 bg-[radial-gradient(ellipse_90%_50%_at_50%_-8%,rgba(201,169,106,0.1),transparent_60%)]"
-      />
-      {/* 텍스트 가독성: 인물 얼굴은 살리고 하단만 깊게 어둡게 */}
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-ink/25 via-transparent to-ink"
+        className="absolute inset-0 bg-gradient-to-b from-ink/20 via-transparent to-transparent"
       />
       <div
         aria-hidden
-        className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-ink via-ink/70 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-ink via-ink/75 to-transparent"
       />
 
       <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-end px-6 pb-14 pt-28 sm:px-8">
