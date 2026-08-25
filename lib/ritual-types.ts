@@ -230,6 +230,9 @@ export const LAST_MEMORY_MAX = 700;
 export const WISH_SENTENCE_MAX = 300;
 export const DESIRED_CHANGE_MAX = 500;
 
+/** 상품 가격(원) — 서버 검증 기준값. 클라이언트 값은 절대 신뢰하지 않음 */
+export const RITUAL_PRICE_KRW = 16900;
+
 /* ---------- 유틸 ---------- */
 
 export function optionLabel(options: Option[], value: string | null): string {

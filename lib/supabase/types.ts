@@ -22,6 +22,10 @@ export interface RitualOrderRow extends RitualApplication {
   order_number: string;
   payment_amount: number;
   payment_status: PaymentStatus;
+  /** 토스페이먼츠 paymentKey (승인 성공 시에만 존재) */
+  payment_key: string | null;
+  payment_method: string | null;
+  paid_at: string | null;
   generation_status: GenerationStatus;
   review_status: ReviewStatus;
   delivery_status: DeliveryStatus;
