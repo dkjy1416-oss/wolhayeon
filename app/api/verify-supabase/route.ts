@@ -16,7 +16,11 @@
  */
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getSupabaseAdmin } from "@/lib/supabase/server";
+import {
+  getSupabaseAdmin,
+  sanitizeSupabaseUrl,
+  describeSupabaseUrlIssues,
+} from "@/lib/supabase/server";
 import { EMPTY_APPLICATION } from "@/lib/ritual-types";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +69,10 @@ export async function GET() {
     return NextResponse.json(report, { status: 500 });
   }
 
+  /* 1-b) URL 값 자체 진단 — 값은 노출하지 않고 문제 여부만 boolean으로 보고.
+     (공백/개행/따옴표/rest_v1 접미사/끝 슬래시는 자동 정리 후 사용) */
+  report.url_진단 = describeSupabaseUrlIssues(url);
+
   /* 2) service_role: 두 테이블 접근 + 전체 컬럼 존재 확인 */
   try {
     const admin = getSupabaseAdmin();
@@ -93,9 +101,12 @@ export async function GET() {
   }
 
   /* 3) anon key: SELECT / INSERT / UPDATE 전부 차단되어야 정상 */
-  const anon = createClient(url, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  // 서버 클라이언트(lib/supabase/server.ts)와 완전히 동일한 방식으로 URL 정리
+  const anon = createClient(
+    sanitizeSupabaseUrl(url),
+    anonKey.trim().replace(/^["']+|["']+$/g, ""),
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
 
   const anonSelectOrders = await anon.from("ritual_orders").select("id").limit(1);
   const anonSelectResults = await anon.from("ritual_results").select("id").limit(1);
@@ -140,14 +151,25 @@ export async function GET() {
   // RLS만 켜져 있으면 SELECT는 '빈 결과(오류 없음)'로 올 수 있음.
   // migration에서 REVOKE까지 했으므로 정상이라면 권한 오류가 나야 하지만,
   // 둘 중 어느 쪽이든 '데이터가 나오지 않으면' 차단으로 판정.
+  // PGRST125 등 '경로 오류'는 요청 자체가 실패한 것이므로 차단 성공으로
+  // 오판하지 않도록 별도 표시합니다.
+  const isPathError = (code?: string) => code === "PGRST125";
+  const pathProblem =
+    isPathError(anonSelectOrders.error?.code) ||
+    isPathError(anonSelectResults.error?.code) ||
+    isPathError(anonInsert.error?.code) ||
+    isPathError(anonUpdate.error?.code);
+
   const selectBlocked =
+    !pathProblem &&
     (!!anonSelectOrders.error || (anonSelectOrders.data ?? []).length === 0) &&
     (!!anonSelectResults.error || (anonSelectResults.data ?? []).length === 0);
 
   report.anon_차단 = {
+    판정_가능: !pathProblem,
     SELECT_차단: selectBlocked,
-    INSERT_차단: !insertLeaked,
-    UPDATE_차단: !!anonUpdate.error,
+    INSERT_차단: !pathProblem && !insertLeaked,
+    UPDATE_차단: !pathProblem && !!anonUpdate.error,
     비고: {
       select_오류: anonSelectOrders.error?.code ?? "오류 없음(빈 결과)",
       insert_오류: anonInsert.error?.code ?? (insertLeaked ? "차단 실패!" : ""),
@@ -160,6 +182,7 @@ export async function GET() {
   const pass =
     sr["ritual_orders_접근"] === true &&
     sr["ritual_results_접근"] === true &&
+    !pathProblem &&
     selectBlocked &&
     !insertLeaked &&
     !!anonUpdate.error;

@@ -18,19 +18,50 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
+/**
+ * 환경변수로 들어온 Supabase URL 정리.
+ * Vercel에 값을 붙여넣을 때 섞이기 쉬운 다음을 제거합니다:
+ *  - 앞뒤 공백/개행/탭
+ *  - 양쪽 따옴표 (" 또는 ')
+ *  - 끝의 /rest/v1 또는 /rest/v1/ (문서에서 복사 시 흔한 실수)
+ *  - 끝의 슬래시(/)
+ * SDK에는 반드시 https://[project-ref].supabase.co 형태만 전달합니다.
+ */
+export function sanitizeSupabaseUrl(raw: string): string {
+  let u = raw.trim().replace(/^["']+|["']+$/g, "").trim();
+  u = u.replace(/\/rest\/v1\/?$/i, "");
+  u = u.replace(/\/+$/g, "");
+  return u;
+}
+
+/** 원본 값에 어떤 문제가 있었는지 boolean으로만 보고 (값 자체는 절대 노출 안 함) */
+export function describeSupabaseUrlIssues(raw: string) {
+  const sanitized = sanitizeSupabaseUrl(raw);
+  return {
+    "공백이나_개행_포함": raw !== raw.trim() || /[\r\n\t]/.test(raw),
+    "따옴표_포함": /^["']|["']$/.test(raw.trim()),
+    "rest_v1_접미사_포함": /\/rest\/v1\/?\s*$/i.test(raw.trim().replace(/^["']+|["']+$/g, "")),
+    "끝_슬래시_포함": /\/\s*$/.test(raw) && !/\/rest\/v1\/?\s*$/i.test(raw),
+    "정리_후_형식_정상": /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(sanitized),
+  };
+}
+
 let cached: SupabaseClient | null = null;
 
 export function getSupabaseAdmin(): SupabaseClient {
   if (cached) return cached;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url || !serviceRoleKey) {
+  if (!rawUrl || !rawKey) {
     throw new Error(
       "Supabase 환경변수가 없습니다. .env.local 에 NEXT_PUBLIC_SUPABASE_URL 과 SUPABASE_SERVICE_ROLE_KEY 를 설정하세요. (.env.example 참고)"
     );
   }
+
+  const url = sanitizeSupabaseUrl(rawUrl);
+  const serviceRoleKey = rawKey.trim().replace(/^["']+|["']+$/g, "");
 
   cached = createClient(url, serviceRoleKey, {
     auth: {
