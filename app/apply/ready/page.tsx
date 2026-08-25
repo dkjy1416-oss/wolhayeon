@@ -3,24 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { loadApplication, hasMeaningfulData } from "@/lib/ritual-storage";
-
-/**
- * 개발용 안내 표시 여부.
- * 결제 기능이 연결되면 이 값을 false로 바꾸거나 해당 블록을 삭제하세요.
- */
-const SHOW_DEV_NOTICE = true;
-
-const DELIVERABLES = [
-  "월화의 개인 편지",
-  "두 사람의 관계 이야기",
-  "현재 마음 분석",
-  "개인화된 붉은 인연의 실 리추얼",
-  "당신만을 위한 리추얼 문장",
-  "리추얼 이후 24시간 가이드",
-  "7일 행동 가이드",
-  "21일 마음 회복 플랜",
-  "개인 마음 기록 질문",
-];
+import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
+import RitualAccordion from "@/components/RitualAccordion";
 
 export default function ReadyPage() {
   const [guard, setGuard] = useState<"loading" | "ok" | "empty">("loading");
@@ -60,28 +44,18 @@ export default function ReadyPage() {
         개인 리추얼을 준비합니다.
       </p>
 
-      <section className="mt-10 rounded-2xl border border-gold-dim/30 bg-gradient-to-b from-ink-soft to-ink px-7 py-8">
+      <section className="mt-10 rounded-2xl border border-gold-dim/30 bg-gradient-to-b from-ink-soft to-ink px-5 py-7">
         <h2 className="font-display text-center text-base font-semibold text-gold">
-          준비되는 내용
+          월화가 준비하는 9가지 이야기
         </h2>
-        <ul className="mt-6 flex flex-col gap-3">
-          {DELIVERABLES.map((item) => (
-            <li key={item} className="flex items-start gap-3">
-              <span
-                aria-hidden
-                className="mt-[0.55rem] h-1 w-1 shrink-0 rounded-full bg-thread"
-              />
-              <span className="text-[0.88rem] font-light text-ivory-dim">
-                {item}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <p className="mt-3 text-center text-[0.75rem] font-light text-ivory-dim/70">
+          항목을 누르면 자세한 내용을 볼 수 있습니다.
+        </p>
+        <div className="mt-5">
+          <RitualAccordion compact />
+        </div>
 
-        <div
-          aria-hidden
-          className="mx-auto mt-8 h-px w-16 bg-gold-dim/50"
-        />
+        <div aria-hidden className="mx-auto mt-8 h-px w-16 bg-gold-dim/50" />
 
         <p className="font-display mt-7 text-center text-3xl font-semibold text-gold">
           16,900<span className="ml-1 text-lg text-ivory-dim">원</span>
@@ -98,11 +72,8 @@ export default function ReadyPage() {
         신청 준비 완료
       </button>
 
-      {SHOW_DEV_NOTICE && (
-        <p className="mt-4 text-center text-xs text-ivory-dim/50">
-          결제 기능은 다음 개발 단계에서 연결됩니다.
-        </p>
-      )}
+      {/* 개발 단계 전용 — 결제 연결 시 아래 한 줄과 상단 import를 삭제 */}
+      <DevPaymentNotice />
 
       <Link
         href="/apply/confirm"

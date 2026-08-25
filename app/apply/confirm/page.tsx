@@ -22,10 +22,10 @@ import { loadApplication, hasMeaningfulData } from "@/lib/ritual-storage";
 function Row({ label, value }: { label: string; value: string }) {
   const empty = value.trim() === "";
   return (
-    <div className="flex flex-col gap-1 py-3">
+    <div className="flex flex-col gap-0.5 py-2.5">
       <dt className="text-xs tracking-wide text-gold/80">{label}</dt>
       <dd
-        className={`text-[0.92rem] leading-relaxed ${
+        className={`text-[0.88rem] leading-relaxed ${
           empty ? "text-ivory-dim/40" : "text-ivory"
         }`}
       >
@@ -43,8 +43,8 @@ function Group({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-5">
-      <h2 className="font-display border-b border-gold-dim/20 pb-3 text-base font-semibold text-ivory">
+    <section className="rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
+      <h2 className="font-display border-b border-gold-dim/20 pb-2.5 text-[0.9rem] font-semibold text-ivory">
         {title}
       </h2>
       <dl className="divide-y divide-gold-dim/10">{children}</dl>
@@ -96,7 +96,7 @@ export default function ConfirmPage() {
         이렇게 들었습니다.
       </h1>
 
-      <div className="mt-10 flex flex-col gap-4">
+      <div className="mt-8 flex flex-col gap-3">
         <Group title="나">
           <Row label="이름" value={data.applicant_name} />
         </Group>

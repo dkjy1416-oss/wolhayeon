@@ -43,6 +43,8 @@ export interface RitualApplication {
   current_emotion: string;
   /** Q16. 안전/경계 확인 (내부 정보 — 확인 페이지에 표시하지 않음) */
   safety_concerns: string[];
+  /** Q16-기타 선택 시 추가 입력 (최대 300자) */
+  safety_concerns_other: string;
   /** Q17. 결과 수신 이메일 */
   email: string;
   /** 동의 1. 정보 처리 동의 (필수) */
@@ -72,6 +74,7 @@ export const EMPTY_APPLICATION: RitualApplication = {
   desired_change: "",
   current_emotion: "",
   safety_concerns: [],
+  safety_concerns_other: "",
   email: "",
   consent_processing: false,
   consent_no_guarantee: false,
@@ -198,12 +201,26 @@ export const SAFETY_CONCERN_OPTIONS: Option[] = [
   { value: "threats", label: "위협 또는 협박" },
   { value: "physical_violence", label: "신체적 폭력" },
   { value: "unwanted_contact", label: "원하지 않는 지속적인 연락이나 찾아옴" },
-  { value: "financial_control", label: "금전적인 통제 또는 요구" },
+  { value: "obsession_control", label: "지나친 집착이나 통제" },
+  { value: "monitoring", label: "휴대폰·SNS·연락 상대를 확인하거나 통제함" },
+  { value: "jealousy_conflict", label: "심한 질투나 의심으로 자주 갈등함" },
+  { value: "on_off_cycle", label: "헤어짐과 재회를 반복함" },
+  { value: "ghosting_cycle", label: "연락 두절이나 잠수를 반복함" },
+  { value: "infidelity", label: "외도 또는 다른 이성과 관련된 문제" },
+  { value: "broken_trust", label: "거짓말이나 신뢰가 깨진 일이 있었음" },
+  { value: "financial_conflict", label: "금전적인 요구나 경제적 갈등" },
+  { value: "emotional_pressure", label: "감정적으로 압박하거나 죄책감을 느끼게 함" },
+  { value: "boundary_disrespect", label: "상대방이 나의 거절이나 경계를 존중하지 않음" },
+  { value: "my_repeated_contact", label: "내가 상대방에게 집착하거나 반복적으로 연락한 적이 있음" },
   { value: "other", label: "기타" },
+  { value: "prefer_not_to_say", label: "답하고 싶지 않음" },
 ];
 
-/** '없음'은 다른 항목과 동시 선택 불가 */
-export const SAFETY_NONE_VALUE = "none";
+/** 단독 선택 항목: 다른 항목과 동시 선택 불가, 서로도 동시 선택 불가 */
+export const SAFETY_EXCLUSIVE_VALUES = ["none", "prefer_not_to_say"];
+/** '기타' 선택 시 추가 입력 */
+export const SAFETY_OTHER_VALUE = "other";
+export const SAFETY_OTHER_MAX = 300;
 
 /* ---------- 글자 수 제한 ---------- */
 

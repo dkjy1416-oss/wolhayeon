@@ -19,7 +19,9 @@ import {
   MAIN_WISH_OPTIONS,
   CURRENT_EMOTION_OPTIONS,
   SAFETY_CONCERN_OPTIONS,
-  SAFETY_NONE_VALUE,
+  SAFETY_EXCLUSIVE_VALUES,
+  SAFETY_OTHER_VALUE,
+  SAFETY_OTHER_MAX,
   STORY_MAX,
   STORY_RECOMMENDED_MIN,
   LAST_MEMORY_MAX,
@@ -450,14 +452,37 @@ export default function ApplyWizard() {
           title: "관계에서 걱정되는 상황이 있었나요?",
           hint: "해당하는 것이 있다면 알려주세요. 리추얼을 더 안전하고 편안하게 준비하는 데에만 사용됩니다.",
           body: (
-            <MultiSelect
-              options={SAFETY_CONCERN_OPTIONS}
-              values={data.safety_concerns}
-              onChange={(v) => set("safety_concerns", v)}
-              exclusiveValue={SAFETY_NONE_VALUE}
-            />
+            <>
+              <MultiSelect
+                options={SAFETY_CONCERN_OPTIONS}
+                values={data.safety_concerns}
+                onChange={(v) =>
+                  setData((d) => ({
+                    ...d,
+                    safety_concerns: v,
+                    // '기타' 해제 시 추가 입력도 정리
+                    safety_concerns_other: v.includes(SAFETY_OTHER_VALUE)
+                      ? d.safety_concerns_other
+                      : "",
+                  }))
+                }
+                exclusiveValues={SAFETY_EXCLUSIVE_VALUES}
+              />
+              {data.safety_concerns.includes(SAFETY_OTHER_VALUE) && (
+                <div className="mt-4">
+                  <TextAreaField
+                    value={data.safety_concerns_other}
+                    onChange={(v) => set("safety_concerns_other", v)}
+                    placeholder="편하게 적을 수 있는 만큼만 적어주세요."
+                    maxLength={SAFETY_OTHER_MAX}
+                    rows={4}
+                  />
+                </div>
+              )}
+            </>
           ),
-          error: "해당하는 항목을 선택해주세요. 없다면 '없음'을 선택해주세요.",
+          error:
+            "해당하는 항목을 선택해주세요. 없다면 '없음' 또는 '답하고 싶지 않음'을 선택해주세요.",
         };
       case "q17":
         return {

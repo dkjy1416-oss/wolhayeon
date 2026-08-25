@@ -8,6 +8,7 @@ import DeliverablesSection from "@/components/DeliverablesSection";
 import PreviewSection from "@/components/PreviewSection";
 import AudienceSection from "@/components/AudienceSection";
 import PricingSection from "@/components/PricingSection";
+import RitualDetailSection from "@/components/RitualDetailSection";
 import DisclaimerSection from "@/components/DisclaimerSection";
 import Footer from "@/components/Footer";
 
@@ -25,6 +26,7 @@ export default function Home() {
         <PreviewSection />
         <AudienceSection />
         <PricingSection />
+        <RitualDetailSection />
         <DisclaimerSection />
       </main>
       <Footer />

@@ -43,13 +43,14 @@ export function MultiSelect({
   values,
   onChange,
   max,
-  exclusiveValue,
+  exclusiveValues,
 }: {
   options: Option[];
   values: string[];
   onChange: (v: string[]) => void;
   max?: number;
-  exclusiveValue?: string;
+  /** 이 목록의 값들은 각각 단독 선택만 가능 ('없음', '답하고 싶지 않음' 등) */
+  exclusiveValues?: string[];
 }) {
   const toggle = (v: string) => {
     if (values.includes(v)) {
@@ -57,10 +58,10 @@ export function MultiSelect({
       return;
     }
     let next = [...values, v];
-    if (exclusiveValue) {
-      // '없음' 등 배타 항목: 함께 선택 불가
-      next =
-        v === exclusiveValue ? [v] : next.filter((x) => x !== exclusiveValue);
+    if (exclusiveValues && exclusiveValues.length > 0) {
+      next = exclusiveValues.includes(v)
+        ? [v] // 배타 항목 선택 → 그 항목만 남김
+        : next.filter((x) => !exclusiveValues.includes(x)); // 일반 항목 선택 → 배타 항목 자동 해제
     }
     if (max && next.length > max) return; // 최대 개수 초과 시 무시
     onChange(next);

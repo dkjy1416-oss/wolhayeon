@@ -1,12 +1,5 @@
 import Link from "next/link";
 
-const included = [
-  "개인 리추얼",
-  "진행 방법",
-  "개인화 리추얼 문구",
-  "마음 정리 가이드",
-];
-
 export default function PricingSection() {
   return (
     <section id="pricing" className="px-6 py-24 sm:py-32">
@@ -26,17 +19,25 @@ export default function PricingSection() {
 
           <div aria-hidden className="mx-auto mt-8 h-px w-16 bg-gold-dim/50" />
 
-          <ul className="mt-8 flex flex-col gap-3">
-            {included.map((item) => (
-              <li key={item} className="text-sm text-ivory-dim">
-                {item}
-              </li>
-            ))}
-          </ul>
+          <p className="mt-8 text-[0.95rem] text-ivory">
+            월화가 준비하는 9가지 이야기
+            <span className="text-gold"> + BONUS</span>
+          </p>
+          <p className="mt-3 text-[0.82rem] font-light leading-relaxed text-ivory-dim">
+            개인 편지 · 관계 이야기 · 마음 들여다보기
+            <br />· 개인 리추얼 · 21일 플랜 외
+          </p>
+
+          <a
+            href="#ritual-detail"
+            className="mt-5 inline-block text-xs text-gold/90 underline underline-offset-4 transition-colors hover:text-gold"
+          >
+            받게 되는 내용 자세히 보기
+          </a>
 
           <Link
             href="/apply"
-            className="mt-10 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
+            className="mt-9 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
           >
             나의 리추얼 신청하기
           </Link>
