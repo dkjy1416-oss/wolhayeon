@@ -47,7 +47,11 @@ export const RitualResultStructSchema = z.object({
     ),
   }),
   part_14_final_letter: sTitled,
-  bonus_journal_questions: sLines,
+  bonus_journal_questions: z.object({
+    title: z.string(),
+    intro: z.string(),
+    questions: sLines,
+  }),
 });
 
 /* ---------- 2) 품질 검증용 (DB 저장 전) ---------- */
@@ -90,7 +94,12 @@ export const RitualResultSchema = z.object({
       ),
   }),
   part_14_final_letter: titledContent,
-  bonus_journal_questions: z.array(line).min(3).max(12),
+  /* 월화의 마음 기록장: 제목 + 여는 글 + 기록 항목 7~10개 */
+  bonus_journal_questions: z.object({
+    title,
+    intro: text,
+    questions: z.array(z.string().trim().min(2)).min(7).max(10),
+  }),
 });
 
 export type RitualResult = z.infer<typeof RitualResultSchema>;
