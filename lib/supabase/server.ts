@@ -34,18 +34,6 @@ export function sanitizeSupabaseUrl(raw: string): string {
   return u;
 }
 
-/** 원본 값에 어떤 문제가 있었는지 boolean으로만 보고 (값 자체는 절대 노출 안 함) */
-export function describeSupabaseUrlIssues(raw: string) {
-  const sanitized = sanitizeSupabaseUrl(raw);
-  return {
-    "공백이나_개행_포함": raw !== raw.trim() || /[\r\n\t]/.test(raw),
-    "따옴표_포함": /^["']|["']$/.test(raw.trim()),
-    "rest_v1_접미사_포함": /\/rest\/v1\/?\s*$/i.test(raw.trim().replace(/^["']+|["']+$/g, "")),
-    "끝_슬래시_포함": /\/\s*$/.test(raw) && !/\/rest\/v1\/?\s*$/i.test(raw),
-    "정리_후_형식_정상": /^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(sanitized),
-  };
-}
-
 let cached: SupabaseClient | null = null;
 
 export function getSupabaseAdmin(): SupabaseClient {

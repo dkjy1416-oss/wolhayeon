@@ -10,6 +10,7 @@ import { RitualApplication, EMPTY_APPLICATION } from "./ritual-types";
 
 const STORAGE_KEY = "wolhayeon_ritual_application_v1";
 const STEP_KEY = "wolhayeon_ritual_step_v1";
+const SUBMISSION_KEY = "wolhayeon_ritual_submission_v1";
 
 export function loadApplication(): RitualApplication {
   if (typeof window === "undefined") return { ...EMPTY_APPLICATION };
@@ -58,8 +59,28 @@ export function clearApplication(): void {
   try {
     window.sessionStorage.removeItem(STORAGE_KEY);
     window.sessionStorage.removeItem(STEP_KEY);
+    window.sessionStorage.removeItem(SUBMISSION_KEY);
   } catch {
     /* noop */
+  }
+}
+
+/**
+ * 중복 제출 방지용 세션 UUID.
+ * 신청 세션마다 1회 생성해 재사용 — 개인정보와 무관한 무작위 값.
+ * 같은 값으로 서버에 두 번 요청해도 주문은 1건만 생성됩니다.
+ */
+export function getOrCreateSubmissionId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    let id = window.sessionStorage.getItem(SUBMISSION_KEY);
+    if (!id) {
+      id = window.crypto.randomUUID();
+      window.sessionStorage.setItem(SUBMISSION_KEY, id);
+    }
+    return id;
+  } catch {
+    return null;
   }
 }
 
