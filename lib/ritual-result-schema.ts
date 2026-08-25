@@ -37,9 +37,14 @@ export const RitualResultStructSchema = z.object({
   part_11_24h_guide: z.object({ items: sLines }),
   part_12_7day_guide: z.object({ items: sLines }),
   part_13_21day_plan: z.object({
-    days_1_7: sLines,
-    days_8_14: sLines,
-    days_15_21: sLines,
+    days: z.array(
+      z.object({
+        day: z.number().int(),
+        title: z.string(),
+        action: z.string(),
+        reflection: z.string(),
+      })
+    ),
   }),
   part_14_final_letter: sTitled,
   bonus_journal_questions: sLines,
@@ -69,9 +74,20 @@ export const RitualResultSchema = z.object({
   part_11_24h_guide: z.object({ items: lines(3) }),
   part_12_7day_guide: z.object({ items: lines(3) }),
   part_13_21day_plan: z.object({
-    days_1_7: lines(2),
-    days_8_14: lines(2),
-    days_15_21: lines(2),
+    days: z
+      .array(
+        z.object({
+          day: z.number().int().min(1).max(21),
+          title: z.string().trim().min(2).max(60),
+          action: z.string().trim().min(5),
+          reflection: z.string().trim().min(5),
+        })
+      )
+      .length(21)
+      .refine(
+        (days) => days.every((d, i) => d.day === i + 1),
+        { message: "days must be DAY 1..21 in order" }
+      ),
   }),
   part_14_final_letter: titledContent,
   bonus_journal_questions: z.array(line).min(3).max(12),
@@ -101,7 +117,14 @@ export function parseRitualResult(
     return { ok: false, reason: "json_parse_error" };
   }
   const result = RitualResultSchema.safeParse(parsed);
-  if (!result.success) {
+  if (result.success) {
+    /* 고객 문장에 개발 용어(part_01, JSON, schema 등)가 새어 나오면 저장 거부 */
+    if (containsDevKeys(result.data)) {
+      return { ok: false, reason: "dev_key_leak" };
+    }
+    return { ok: true, data: result.data };
+  }
+  {
     // 어떤 파트가 어긋났는지 '경로'만 기록 (내용·개인정보는 로그에 남기지 않음)
     const paths = result.error.issues
       .slice(0, 5)
@@ -109,5 +132,14 @@ export function parseRitualResult(
       .join(",");
     return { ok: false, reason: `schema_invalid:${paths}` };
   }
-  return { ok: true, data: result.data };
+}
+
+/** 결과의 모든 문자열 값에서 개발 용어 검출 (고객 노출 방지) */
+const DEV_KEY_RE = /part[_\s-]?\d{1,2}|\bjson\b|\bschema\b|섹션\s*키/i;
+function containsDevKeys(value: unknown): boolean {
+  if (typeof value === "string") return DEV_KEY_RE.test(value);
+  if (Array.isArray(value)) return value.some(containsDevKeys);
+  if (value && typeof value === "object")
+    return Object.values(value).some(containsDevKeys);
+  return false;
 }
