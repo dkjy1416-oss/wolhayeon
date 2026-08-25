@@ -15,9 +15,13 @@
 import "server-only";
 import { randomUUID } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { WOLHWA_SYSTEM_PROMPT, buildUserPrompt } from "@/lib/wolhwa-prompt";
-import { parseRitualResult } from "@/lib/ritual-result-schema";
+import {
+  parseRitualResult,
+  RitualResultStructSchema,
+} from "@/lib/ritual-result-schema";
 import type { RitualOrderRow } from "@/lib/supabase/types";
 
 /** 모델 ID는 이 한 곳에서만 관리.
@@ -28,7 +32,9 @@ export function getModelId(): string {
   return process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_MODEL;
 }
 
-const MAX_OUTPUT_TOKENS = 8192;
+/** 15개 파트 한국어 결과는 8천 토큰을 넘을 수 있어 여유 있게 설정.
+ *  (1차 실패 원인: 8192에서 출력이 잘려 JSON이 중간에 끊김) */
+const MAX_OUTPUT_TOKENS = 20000;
 
 export type GenerateOutcome =
   | { status: "success"; orderNumber: string; resultVersion: number }
@@ -110,7 +116,24 @@ export async function generateRitualForOrder(
         max_tokens: MAX_OUTPUT_TOKENS,
         system: WOLHWA_SYSTEM_PROMPT,
         messages: [{ role: "user", content: buildUserPrompt(order) }],
+        /* Anthropic 공식 구조화 출력: 모델이 이 JSON schema에 맞는
+           JSON만 생성하도록 API 차원에서 강제.
+           → 코드펜스·설명문·앞뒤 문장·깨진 JSON이 발생하지 않음 */
+        output_config: {
+          format: zodOutputFormat(RitualResultStructSchema),
+        },
       });
+
+      /* 출력이 잘렸거나 모델이 거부한 경우를 명확히 구분 */
+      if (message.stop_reason === "max_tokens") {
+        await markFailed("output_truncated");
+        return { status: "generation_failed", code: "output_truncated" };
+      }
+      if (message.stop_reason === "refusal") {
+        await markFailed("model_refusal");
+        return { status: "generation_failed", code: "model_refusal" };
+      }
+
       rawText = message.content
         .filter(
           (block): block is Anthropic.TextBlock => block.type === "text"

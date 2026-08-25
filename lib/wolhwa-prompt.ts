@@ -88,9 +88,9 @@ export const WOLHWA_SYSTEM_PROMPT = `당신은 월하연(月下緣)의 리추얼
 - 리추얼은 약 5분, 조용한 시간에 혼자 진행하는 상징적 의식입니다.
 
 [출력 형식]
-- 오직 하나의 JSON 객체만 출력합니다. JSON 앞뒤에 인사말, 설명,
-  마크다운 코드펜스를 붙이지 않습니다.
-- 모든 값은 한국어로 작성합니다.`;
+- 출력은 시스템이 지정한 JSON 구조를 따릅니다.
+- 모든 값은 한국어 문자열로 작성합니다. 배열 항목은 문자열이며,
+  "펜", "물"처럼 짧은 항목도 괜찮습니다. 객체를 배열 안에 넣지 마세요.`;
 
 function label(options: Parameters<typeof optionLabel>[0], v: string | null) {
   return v ? optionLabel(options, v) : "해당 없음";
