@@ -18,6 +18,7 @@ import {
 } from "@/lib/ritual-types";
 import type { RitualOrderRow } from "@/lib/supabase/types";
 import ReviewEditor from "@/components/admin/ReviewEditor";
+import ResultLinkButtons from "@/components/admin/ResultLinkButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function AdminOrderDetailPage({
     review_notes: string;
     generated_at: string | null;
     approved_at: string | null;
+    result_token: string;
   } | null = null;
 
   try {
@@ -72,7 +74,7 @@ export default async function AdminOrderDetailPage({
       const r = await supabase
         .from("ritual_results")
         .select(
-          "result_version, generated_content, reviewed_content, review_notes, generated_at, approved_at"
+          "result_version, generated_content, reviewed_content, review_notes, generated_at, approved_at, result_token"
         )
         .eq("order_id", order.id)
         .order("result_version", { ascending: false })
@@ -137,6 +139,20 @@ export default async function AdminOrderDetailPage({
           )}
         </div>
       </div>
+
+      {/* 승인 완료 시에만: 고객 결과 링크 (승인 전에는 표시하지 않음) */}
+      {result &&
+        order.review_status === "approved" &&
+        !!result.approved_at && (
+          <div className="mt-3 rounded-xl border border-emerald-500/40 bg-ink-soft px-5 py-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs text-emerald-400">
+                ✓ 승인 완료 — 고객 제공 링크
+              </span>
+              <ResultLinkButtons token={result.result_token} />
+            </div>
+          </div>
+        )}
 
       {/* 안전 경고 */}
       {safetyRisky.length > 0 && (
