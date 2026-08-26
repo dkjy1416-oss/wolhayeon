@@ -53,6 +53,10 @@ export interface RitualResultRow {
   result_version: number;
   /** PART 01~14 + BONUS 구조를 담는 JSONB (형식은 AI 단계에서 확정) */
   generated_content: Record<string, unknown> | null;
+  /** 관리자 검수본 (고객 제공용 최종). AI 원본은 generated_content에 보존 */
+  reviewed_content: Record<string, unknown> | null;
+  /** 관리자 내부 검수 메모 */
+  review_notes: string;
   generated_at: string | null;
   reviewed_at: string | null;
   approved_at: string | null;
