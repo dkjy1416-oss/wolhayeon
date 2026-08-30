@@ -11,6 +11,16 @@ export interface RitualApplication {
   applicant_name: string;
   /** Q2. 상대방 이름/닉네임 */
   partner_name: string;
+  /** Q1-b. 신청자 성별 */
+  applicant_gender: string;
+  /** Q1-b. 신청자 출생연도 (4자리) */
+  applicant_birth_year: number | null;
+  /** Q1-b. 현재 생활단계 */
+  life_stage: string;
+  /** Q2-b. 상대방 성별 (선택 — 미입력 시 null) */
+  partner_gender: string | null;
+  /** Q2-b. 상대방 출생연도 (선택/모름 — 미입력 시 null) */
+  partner_birth_year: number | null;
   /** Q3. 현재 관계 */
   relationship_type: string;
   /** Q3-기타 선택 시 추가 입력 */
@@ -58,6 +68,11 @@ export interface RitualApplication {
 export const EMPTY_APPLICATION: RitualApplication = {
   applicant_name: "",
   partner_name: "",
+  applicant_gender: "",
+  applicant_birth_year: null,
+  life_stage: "",
+  partner_gender: null,
+  partner_birth_year: null,
   relationship_type: "",
   relationship_type_other: "",
   relationship_duration: "",
@@ -229,6 +244,53 @@ export const STORY_RECOMMENDED_MIN = 100;
 export const LAST_MEMORY_MAX = 700;
 export const WISH_SENTENCE_MAX = 300;
 export const DESIRED_CHANGE_MAX = 500;
+
+/* ---------- 신청자/상대 추가 정보 ---------- */
+
+export const APPLICANT_GENDER_OPTIONS: Option[] = [
+  { value: "female", label: "여성" },
+  { value: "male", label: "남성" },
+  { value: "other", label: "직접 입력/기타" },
+  { value: "prefer_not_to_say", label: "답하지 않음" },
+];
+
+export const PARTNER_GENDER_OPTIONS: Option[] = [
+  { value: "female", label: "여성" },
+  { value: "male", label: "남성" },
+  { value: "other", label: "기타" },
+  { value: "unknown", label: "말하고 싶지 않음/모름" },
+];
+
+export const LIFE_STAGE_OPTIONS: Option[] = [
+  { value: "middle_high_school", label: "중·고등학생" },
+  { value: "university", label: "대학생·대학원생" },
+  { value: "job_seeking", label: "취업준비 중" },
+  { value: "employee", label: "직장인" },
+  { value: "self_employed", label: "자영업·프리랜서" },
+  { value: "homemaker", label: "가사·육아 중심" },
+  { value: "other", label: "기타" },
+];
+
+/** 출생연도 허용 범위: 만 10세 ~ 100세 (서버·클라이언트 공통 기준) */
+export function isRealisticBirthYear(
+  year: number,
+  nowYear: number = new Date().getFullYear()
+): boolean {
+  return (
+    Number.isInteger(year) && year >= nowYear - 100 && year <= nowYear - 10
+  );
+}
+
+/** 미성년/학생 여부(향후 AI 분기용 — 이번 단계에서는 저장만) */
+export function isLikelyMinor(
+  birthYear: number | null,
+  lifeStage: string,
+  nowYear: number = new Date().getFullYear()
+): boolean {
+  if (lifeStage === "middle_high_school") return true;
+  if (birthYear !== null && nowYear - birthYear < 19) return true;
+  return false;
+}
 
 /** 상품 가격(원) — 서버 검증 기준값. 클라이언트 값은 절대 신뢰하지 않음 */
 export const RITUAL_PRICE_KRW = 16900;

@@ -9,6 +9,8 @@ import {
   clearApplication,
   getOrCreateSubmissionId,
 } from "@/lib/ritual-storage";
+import { saveStep } from "@/lib/ritual-storage";
+import { stepIndexOf } from "@/components/apply/ApplyWizard";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import RitualAccordion from "@/components/RitualAccordion";
 
@@ -38,10 +40,11 @@ export default function ReadyPage() {
       });
       const json = await res.json().catch(() => null);
       if (res.ok && json?.ok && typeof json.order_number === "string") {
-        // 성공: 세션의 신청 데이터 삭제 후 완료 페이지로
-        clearApplication();
+        // 성공: 미리보기 페이지로 이동.
+        // (신청 데이터는 미리보기 접근 확인용 submission id와 함께
+        //  결제 완료 시점까지 세션에 유지)
         router.push(
-          `/apply/complete?order=${encodeURIComponent(json.order_number)}`
+          `/apply/preview?order=${encodeURIComponent(json.order_number)}`
         );
         return; // submitting 유지 (이동 중 재클릭 방지)
       }
@@ -110,6 +113,30 @@ export default function ReadyPage() {
           1회 결제 / 정기결제 없음
         </p>
       </section>
+
+      {/* 결제 전 이메일 재확인 (인증번호 없음) */}
+      <div className="mt-8 rounded-2xl border border-gold/30 bg-ink-soft px-6 py-5">
+        <p className="text-xs tracking-wide text-gold/90">결과 받을 이메일</p>
+        <p className="mt-2 break-all text-lg font-medium text-ivory">
+          {loadApplication().email || "이메일이 입력되지 않았습니다"}
+        </p>
+        <p className="mt-2 text-[0.78rem] leading-relaxed text-ivory-dim">
+          결과가 완성되면 이 이메일로도 보내드려요.
+          <br />
+          주소가 맞는지 한 번만 확인해 주세요.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            const idx = stepIndexOf("q17", loadApplication());
+            if (idx >= 0) saveStep(idx);
+            router.push("/apply");
+          }}
+          className="mt-3 rounded-full border border-gold-dim/40 px-4 py-1.5 text-xs text-ivory-dim hover:border-gold/60 hover:text-ivory"
+        >
+          수정
+        </button>
+      </div>
 
       <button
         type="button"

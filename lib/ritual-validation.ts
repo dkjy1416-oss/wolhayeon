@@ -13,6 +13,10 @@
 import {
   type RitualApplication,
   type Option,
+  APPLICANT_GENDER_OPTIONS,
+  PARTNER_GENDER_OPTIONS,
+  LIFE_STAGE_OPTIONS,
+  isRealisticBirthYear,
   RELATIONSHIP_TYPE_OPTIONS,
   RELATIONSHIP_DURATION_OPTIONS,
   BREAKUP_ELAPSED_OPTIONS,
@@ -45,6 +49,9 @@ function values(options: Option[]): Set<string> {
 }
 
 const V = {
+  applicant_gender: values(APPLICANT_GENDER_OPTIONS),
+  partner_gender: values(PARTNER_GENDER_OPTIONS),
+  life_stage: values(LIFE_STAGE_OPTIONS),
   relationship_type: values(RELATIONSHIP_TYPE_OPTIONS),
   relationship_duration: values(RELATIONSHIP_DURATION_OPTIONS),
   breakup_elapsed: values(BREAKUP_ELAPSED_OPTIONS),
@@ -60,6 +67,13 @@ const V = {
 
 function str(v: unknown, max: number): string {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
+}
+
+/** 4자리 정수 연도만 추출, 아니면 null */
+function yearNum(v: unknown): number | null {
+  const n =
+    typeof v === "number" ? v : typeof v === "string" ? Number(v.trim()) : NaN;
+  return Number.isInteger(n) && n >= 1000 && n <= 9999 ? n : null;
 }
 
 function strArr(v: unknown): string[] {
@@ -93,9 +107,20 @@ export function sanitizeAndValidateApplication(
     V.safety_concerns.has(v)
   );
 
+  const partnerGenderRaw = str(src.partner_gender, 50);
+  const partnerBirthRaw = yearNum(src.partner_birth_year);
+
   const data: RitualApplication = {
     applicant_name: str(src.applicant_name, NAME_MAX),
     partner_name: str(src.partner_name, NAME_MAX),
+    applicant_gender: str(src.applicant_gender, 50),
+    applicant_birth_year: yearNum(src.applicant_birth_year),
+    life_stage: str(src.life_stage, 50),
+    // 선택 입력: 허용값이 아니면 null로 정리
+    partner_gender: V.partner_gender.has(partnerGenderRaw)
+      ? partnerGenderRaw
+      : null,
+    partner_birth_year: partnerBirthRaw,
     relationship_type,
     relationship_type_other:
       relationship_type === "other" ? str(src.relationship_type_other, OTHER_MAX) : "",
@@ -130,6 +155,21 @@ export function sanitizeAndValidateApplication(
   /* ---------- 필수/형식 검증 ---------- */
   if (!data.applicant_name) invalid.push("applicant_name");
   if (!data.partner_name) invalid.push("partner_name");
+  if (!V.applicant_gender.has(data.applicant_gender))
+    invalid.push("applicant_gender");
+  if (
+    data.applicant_birth_year === null ||
+    !isRealisticBirthYear(data.applicant_birth_year)
+  )
+    invalid.push("applicant_birth_year");
+  if (!V.life_stage.has(data.life_stage)) invalid.push("life_stage");
+  // 상대 출생연도는 선택이지만, 입력했다면 현실적인 값이어야 함
+  if (
+    data.partner_birth_year !== null &&
+    !isRealisticBirthYear(data.partner_birth_year)
+  )
+    invalid.push("partner_birth_year");
+
   if (!V.relationship_type.has(data.relationship_type))
     invalid.push("relationship_type");
   if (data.relationship_type === "other" && !data.relationship_type_other)

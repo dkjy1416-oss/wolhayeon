@@ -27,6 +27,10 @@ import {
   LAST_MEMORY_MAX,
   WISH_SENTENCE_MAX,
   DESIRED_CHANGE_MAX,
+  APPLICANT_GENDER_OPTIONS,
+  PARTNER_GENDER_OPTIONS,
+  LIFE_STAGE_OPTIONS,
+  isRealisticBirthYear,
   isBreakupRelated,
   isValidEmail,
 } from "@/lib/ritual-types";
@@ -42,17 +46,26 @@ import {
   TextField,
   TextAreaField,
   ConsentCheck,
+  EmailField,
 } from "./Fields";
 
-type StepId =
-  | "q1" | "q2" | "q3" | "q4" | "q5" | "q6" | "q7" | "q8" | "q9"
+export type StepId =
+  | "q1" | "q1b" | "q2" | "q2b" | "q3" | "q4" | "q5" | "q6" | "q7" | "q8" | "q9"
   | "q10" | "q11" | "q12" | "q13" | "q14" | "q15" | "q16" | "q17"
   | "consent";
 
-const STEP_ORDER: StepId[] = [
-  "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9",
+export const STEP_ORDER: StepId[] = [
+  "q1", "q1b", "q2", "q2b", "q3", "q4", "q5", "q6", "q7", "q8", "q9",
   "q10", "q11", "q12", "q13", "q14", "q15", "q16", "q17", "consent",
 ];
+
+/** 현재 답변 기준으로 특정 스텝의 표시 인덱스 계산 (ready 페이지 [수정]용) */
+export function stepIndexOf(id: StepId, app: RitualApplication): number {
+  const visible = STEP_ORDER.filter(
+    (s) => s !== "q5" || isBreakupRelated(app.relationship_type)
+  );
+  return visible.indexOf(id);
+}
 
 export default function ApplyWizard() {
   const router = useRouter();
@@ -115,7 +128,20 @@ export default function ApplyWizard() {
   const isStepValid = (id: StepId): boolean => {
     switch (id) {
       case "q1": return data.applicant_name.trim().length > 0;
+      case "q1b":
+        return (
+          data.applicant_gender !== "" &&
+          data.applicant_birth_year !== null &&
+          isRealisticBirthYear(data.applicant_birth_year) &&
+          data.life_stage !== ""
+        );
       case "q2": return data.partner_name.trim().length > 0;
+      case "q2b":
+        // 선택 입력 — 단, 출생연도를 적었다면 현실적인 값이어야 함
+        return (
+          data.partner_birth_year === null ||
+          isRealisticBirthYear(data.partner_birth_year)
+        );
       case "q3":
         return (
           data.relationship_type !== "" &&
@@ -230,6 +256,56 @@ export default function ApplyWizard() {
           ),
           error: "이름 또는 닉네임을 입력해주세요.",
         };
+      case "q1b":
+        return {
+          title: "당신에 대해 조금만 더 알려주세요.",
+          hint: "같은 이야기라도 상황에 따라 필요한 말이 달라, 결과를 더 정확하게 준비하는 데 사용됩니다.",
+          body: (
+            <div className="flex flex-col gap-6">
+              <div>
+                <p className="mb-2 text-sm text-ivory-dim">성별</p>
+                <SingleSelect
+                  options={APPLICANT_GENDER_OPTIONS}
+                  value={data.applicant_gender}
+                  onChange={(v) => set("applicant_gender", v)}
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-sm text-ivory-dim">출생연도</p>
+                <TextField
+                  value={
+                    data.applicant_birth_year === null
+                      ? ""
+                      : String(data.applicant_birth_year)
+                  }
+                  onChange={(v) => {
+                    const digits = v.replace(/\D/g, "").slice(0, 4);
+                    set(
+                      "applicant_birth_year",
+                      digits.length === 4 ? Number(digits) : null
+                    );
+                  }}
+                  placeholder="예: 1998"
+                />
+                {data.applicant_birth_year !== null &&
+                  !isRealisticBirthYear(data.applicant_birth_year) && (
+                    <p className="mt-2 text-xs text-thread">
+                      출생연도를 다시 확인해주세요.
+                    </p>
+                  )}
+              </div>
+              <div>
+                <p className="mb-2 text-sm text-ivory-dim">현재 생활</p>
+                <SingleSelect
+                  options={LIFE_STAGE_OPTIONS}
+                  value={data.life_stage}
+                  onChange={(v) => set("life_stage", v)}
+                />
+              </div>
+            </div>
+          ),
+          error: "성별, 출생연도(4자리), 현재 생활을 확인해주세요.",
+        };
       case "q2":
         return {
           title: "그 사람을 어떻게 불러드릴까요?",
@@ -243,6 +319,52 @@ export default function ApplyWizard() {
             />
           ),
           error: "이름 또는 닉네임을 입력해주세요.",
+        };
+      case "q2b":
+        return {
+          title: "그 사람에 대해서도 알려주실 수 있나요?",
+          hint: "선택 입력입니다. 모르시거나 답하고 싶지 않으면 비워두고 넘어가셔도 됩니다.",
+          body: (
+            <div className="flex flex-col gap-6">
+              <div>
+                <p className="mb-2 text-sm text-ivory-dim">상대방 성별 (선택)</p>
+                <SingleSelect
+                  options={PARTNER_GENDER_OPTIONS}
+                  value={data.partner_gender ?? ""}
+                  onChange={(v) =>
+                    set("partner_gender", v === data.partner_gender ? null : v)
+                  }
+                />
+              </div>
+              <div>
+                <p className="mb-2 text-sm text-ivory-dim">
+                  상대방 출생연도 (선택 · 모르면 비워두세요)
+                </p>
+                <TextField
+                  value={
+                    data.partner_birth_year === null
+                      ? ""
+                      : String(data.partner_birth_year)
+                  }
+                  onChange={(v) => {
+                    const digits = v.replace(/\D/g, "").slice(0, 4);
+                    set(
+                      "partner_birth_year",
+                      digits.length === 4 ? Number(digits) : null
+                    );
+                  }}
+                  placeholder="예: 1996 (모르면 비워두기)"
+                />
+                {data.partner_birth_year !== null &&
+                  !isRealisticBirthYear(data.partner_birth_year) && (
+                    <p className="mt-2 text-xs text-thread">
+                      출생연도를 다시 확인해주세요. 모르시면 비워두셔도 됩니다.
+                    </p>
+                  )}
+              </div>
+            </div>
+          ),
+          error: "출생연도를 확인해주세요. 모르시면 비워두셔도 됩니다.",
         };
       case "q3":
         return {
@@ -489,13 +611,7 @@ export default function ApplyWizard() {
           title: "결과를 어디로 보내드릴까요?",
           hint: "리추얼이 준비되면 결과 페이지를 확인할 수 있는 링크를 보내드립니다.",
           body: (
-            <TextField
-              type="email"
-              value={data.email}
-              onChange={(v) => set("email", v)}
-              placeholder="example@email.com"
-              onEnter={goNext}
-            />
+            <EmailField value={data.email} onChange={(v) => set("email", v)} />
           ),
           error: "올바른 이메일 주소를 입력해주세요.",
         };

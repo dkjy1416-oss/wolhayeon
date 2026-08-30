@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { confirmOrderPayment } from "@/lib/payment-confirm";
 import { GenerationPendingNotice } from "@/components/pay/TestModeNotices";
+import ClearSessionOnMount from "@/components/apply/ClearSessionOnMount";
 
 function SuccessView({ orderNumber }: { orderNumber: string }) {
   return (
     <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col items-center justify-center px-6 py-20 text-center">
+      <ClearSessionOnMount />
       <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
       <h1 className="font-display mt-6 text-2xl font-semibold text-ivory">
         결제가 완료되었습니다.

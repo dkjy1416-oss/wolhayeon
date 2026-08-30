@@ -16,6 +16,9 @@ import {
   MAIN_WISH_OPTIONS,
   CURRENT_EMOTION_OPTIONS,
   optionLabel,
+  APPLICANT_GENDER_OPTIONS,
+  PARTNER_GENDER_OPTIONS,
+  LIFE_STAGE_OPTIONS,
 } from "@/lib/ritual-types";
 import { loadApplication, hasMeaningfulData } from "@/lib/ritual-storage";
 
@@ -99,10 +102,22 @@ export default function ConfirmPage() {
       <div className="mt-8 flex flex-col gap-3">
         <Group title="나">
           <Row label="이름" value={data.applicant_name} />
+          <Row
+            label="성별 / 출생연도"
+            value={`${optionLabel(APPLICANT_GENDER_OPTIONS, data.applicant_gender)} / ${data.applicant_birth_year ?? "-"}`}
+          />
+          <Row
+            label="현재 생활"
+            value={optionLabel(LIFE_STAGE_OPTIONS, data.life_stage)}
+          />
         </Group>
 
         <Group title="그 사람">
           <Row label="상대 이름" value={data.partner_name} />
+          <Row
+            label="상대 성별 / 출생연도"
+            value={`${data.partner_gender ? optionLabel(PARTNER_GENDER_OPTIONS, data.partner_gender) : "미입력"} / ${data.partner_birth_year ?? "미입력"}`}
+          />
         </Group>
 
         <Group title="우리의 관계">

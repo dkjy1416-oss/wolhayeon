@@ -198,3 +198,153 @@ export function ConsentCheck({
     </button>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  EmailField — [아이디] @ [도메인 선택▾] (+직접 입력) + 오타 제안       */
+/* ------------------------------------------------------------------ */
+import { useEffect as useEffectEmail, useState as useStateEmail } from "react";
+import {
+  EMAIL_DOMAINS,
+  CUSTOM_DOMAIN_VALUE,
+  normalizeEmailId,
+  normalizeDomain,
+  composeEmail,
+  suggestDomainFix,
+} from "@/lib/email-suggest";
+
+export function EmailField({
+  value,
+  onChange,
+}: {
+  /** 완성된 이메일 문자열 (DB 저장 형식 그대로) */
+  value: string;
+  onChange: (email: string) => void;
+}) {
+  /* 기존 값 복원: abc@naver.com → id/도메인 분리 */
+  const [id, setId] = useStateEmail("");
+  const [domainSel, setDomainSel] = useStateEmail<string>(EMAIL_DOMAINS[0]);
+  const [customDomain, setCustomDomain] = useStateEmail("");
+  const [dismissedFix, setDismissedFix] = useStateEmail<string | null>(null);
+  const [restored, setRestored] = useStateEmail(false);
+
+  useEffectEmail(() => {
+    if (restored) return;
+    setRestored(true);
+    const at = value.indexOf("@");
+    if (at > 0) {
+      const vid = value.slice(0, at);
+      const vdomain = value.slice(at + 1).toLowerCase();
+      setId(vid);
+      if ((EMAIL_DOMAINS as readonly string[]).includes(vdomain)) {
+        setDomainSel(vdomain);
+      } else {
+        setDomainSel(CUSTOM_DOMAIN_VALUE);
+        setCustomDomain(vdomain);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const activeDomain =
+    domainSel === CUSTOM_DOMAIN_VALUE ? customDomain : domainSel;
+
+  const emit = (nextId: string, nextDomain: string) => {
+    onChange(composeEmail(nextId, nextDomain));
+  };
+
+  const fix =
+    domainSel === CUSTOM_DOMAIN_VALUE ? suggestDomainFix(customDomain) : null;
+  const showFix =
+    !!fix && fix !== normalizeDomain(customDomain) && dismissedFix !== fix;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          inputMode="email"
+          autoComplete="off"
+          autoCapitalize="none"
+          value={id}
+          onChange={(e) => {
+            const v = normalizeEmailId(e.target.value);
+            setId(v);
+            emit(v, activeDomain);
+          }}
+          placeholder="이메일 아이디"
+          className="h-14 w-0 flex-1 rounded-xl border border-gold-dim/30 bg-ink-soft px-4 text-base text-ivory placeholder:text-ivory-dim/40 focus:border-gold/60 focus:outline-none"
+        />
+        <span className="text-ivory-dim">@</span>
+        <select
+          value={domainSel}
+          onChange={(e) => {
+            const v = e.target.value;
+            setDomainSel(v);
+            setDismissedFix(null);
+            emit(id, v === CUSTOM_DOMAIN_VALUE ? customDomain : v);
+          }}
+          className="h-14 w-[9.5rem] shrink-0 rounded-xl border border-gold-dim/30 bg-ink-soft px-3 text-[0.95rem] text-ivory focus:border-gold/60 focus:outline-none"
+        >
+          {EMAIL_DOMAINS.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+          <option value={CUSTOM_DOMAIN_VALUE}>직접 입력</option>
+        </select>
+      </div>
+
+      {domainSel === CUSTOM_DOMAIN_VALUE && (
+        <input
+          type="text"
+          inputMode="email"
+          autoCapitalize="none"
+          value={customDomain}
+          onChange={(e) => {
+            const v = normalizeDomain(e.target.value);
+            setCustomDomain(v);
+            setDismissedFix(null);
+            emit(id, v);
+          }}
+          placeholder="도메인 직접 입력 (예: company.co.kr)"
+          className="mt-3 h-14 w-full rounded-xl border border-gold-dim/30 bg-ink-soft px-4 text-base text-ivory placeholder:text-ivory-dim/40 focus:border-gold/60 focus:outline-none"
+        />
+      )}
+
+      {/* 오타 의심 시 — 자동 변경하지 않고 제안만 */}
+      {showFix && (
+        <div className="mt-3 rounded-xl border border-gold/40 bg-ink-soft px-4 py-3">
+          <p className="text-sm text-ivory">
+            혹시 <span className="text-gold">{fix}</span>을 입력하려고
+            하셨나요?
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setCustomDomain(fix!);
+                emit(id, fix!);
+              }}
+              className="rounded-full border border-gold/50 px-4 py-1.5 text-xs text-gold"
+            >
+              {fix}(으)로 변경
+            </button>
+            <button
+              type="button"
+              onClick={() => setDismissedFix(fix!)}
+              className="rounded-full border border-gold-dim/40 px-4 py-1.5 text-xs text-ivory-dim"
+            >
+              그대로 사용
+            </button>
+          </div>
+        </div>
+      )}
+
+      {value && (
+        <p className="mt-3 text-center text-sm text-ivory-dim">
+          입력된 주소: <span className="text-ivory">{value}</span>
+        </p>
+      )}
+    </div>
+  );
+}

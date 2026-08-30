@@ -20,6 +20,9 @@ export type DeliveryStatus = "waiting" | "sending" | "sent" | "failed";
 export interface RitualOrderRow extends RitualApplication {
   id: string;
   order_number: string;
+  /** 결제 전 무료 미리보기 (전체 유료 결과 아님) */
+  preview_content: Record<string, unknown> | null;
+  preview_generated_at: string | null;
   payment_amount: number;
   payment_status: PaymentStatus;
   /** 토스페이먼츠 paymentKey (승인 성공 시에만 존재) */
