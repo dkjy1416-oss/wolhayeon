@@ -348,3 +348,53 @@ export function EmailField({
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  YearSelect — 출생연도 선택 dropdown (모바일 네이티브 셀렉트)          */
+/* ------------------------------------------------------------------ */
+const YEAR_SELECT_MIN = 1940;
+
+export function YearSelect({
+  value,
+  onChange,
+  includeUnknown = false,
+  unknownLabel = "모름",
+  placeholder = "출생연도를 선택해주세요",
+}: {
+  /** 선택된 연도 (미선택/모름 = null) */
+  value: number | null;
+  onChange: (year: number | null) => void;
+  /** true면 첫 옵션으로 '모름'(null) 제공 (상대방용) */
+  includeUnknown?: boolean;
+  unknownLabel?: string;
+  placeholder?: string;
+}) {
+  const nowYear = new Date().getFullYear();
+  const maxYear = nowYear - 10; // 기존 공통 validation(isRealisticBirthYear)과 동일한 상한
+  const years: number[] = [];
+  for (let y = maxYear; y >= YEAR_SELECT_MIN; y--) years.push(y);
+
+  return (
+    <select
+      value={value === null ? (includeUnknown ? "unknown" : "") : String(value)}
+      onChange={(e) => {
+        const v = e.target.value;
+        onChange(v === "" || v === "unknown" ? null : Number(v));
+      }}
+      className="h-14 w-full appearance-none rounded-xl border border-gold-dim/30 bg-ink-soft px-4 text-base text-ivory focus:border-gold/60 focus:outline-none"
+    >
+      {includeUnknown ? (
+        <option value="unknown">{unknownLabel}</option>
+      ) : (
+        <option value="" disabled>
+          {placeholder}
+        </option>
+      )}
+      {years.map((y) => (
+        <option key={y} value={y}>
+          {y}년
+        </option>
+      ))}
+    </select>
+  );
+}

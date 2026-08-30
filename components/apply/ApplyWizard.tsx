@@ -47,6 +47,7 @@ import {
   TextAreaField,
   ConsentCheck,
   EmailField,
+  YearSelect,
 } from "./Fields";
 
 export type StepId =
@@ -272,21 +273,25 @@ export default function ApplyWizard() {
               </div>
               <div>
                 <p className="mb-2 text-sm text-ivory-dim">출생연도</p>
-                <TextField
-                  value={
-                    data.applicant_birth_year === null
-                      ? ""
-                      : String(data.applicant_birth_year)
-                  }
-                  onChange={(v) => {
-                    const digits = v.replace(/\D/g, "").slice(0, 4);
-                    set(
-                      "applicant_birth_year",
-                      digits.length === 4 ? Number(digits) : null
-                    );
-                  }}
-                  placeholder="예: 1998"
+                <YearSelect
+                  value={data.applicant_birth_year}
+                  onChange={(y) => set("applicant_birth_year", y)}
+                  placeholder="출생연도를 선택해주세요"
                 />
+                {data.applicant_birth_year !== null &&
+                  isRealisticBirthYear(data.applicant_birth_year) && (
+                    <p className="mt-2 text-xs text-ivory-dim/70">
+                      현재 약 만{" "}
+                      {Math.max(
+                        0,
+                        new Date().getFullYear() -
+                          data.applicant_birth_year -
+                          1
+                      )}
+                      ~
+                      {new Date().getFullYear() - data.applicant_birth_year}세
+                    </p>
+                  )}
                 {data.applicant_birth_year !== null &&
                   !isRealisticBirthYear(data.applicant_birth_year) && (
                     <p className="mt-2 text-xs text-thread">
@@ -304,7 +309,7 @@ export default function ApplyWizard() {
               </div>
             </div>
           ),
-          error: "성별, 출생연도(4자리), 현재 생활을 확인해주세요.",
+          error: "성별, 출생연도, 현재 생활을 확인해주세요.",
         };
       case "q2":
         return {
@@ -323,7 +328,7 @@ export default function ApplyWizard() {
       case "q2b":
         return {
           title: "그 사람에 대해서도 알려주실 수 있나요?",
-          hint: "선택 입력입니다. 모르시거나 답하고 싶지 않으면 비워두고 넘어가셔도 됩니다.",
+          hint: "선택 입력입니다. 모르시거나 답하고 싶지 않으면 ‘모름’을 선택하고 넘어가셔도 됩니다.",
           body: (
             <div className="flex flex-col gap-6">
               <div>
@@ -338,33 +343,25 @@ export default function ApplyWizard() {
               </div>
               <div>
                 <p className="mb-2 text-sm text-ivory-dim">
-                  상대방 출생연도 (선택 · 모르면 비워두세요)
+                  상대방 출생연도 (선택)
                 </p>
-                <TextField
-                  value={
-                    data.partner_birth_year === null
-                      ? ""
-                      : String(data.partner_birth_year)
-                  }
-                  onChange={(v) => {
-                    const digits = v.replace(/\D/g, "").slice(0, 4);
-                    set(
-                      "partner_birth_year",
-                      digits.length === 4 ? Number(digits) : null
-                    );
-                  }}
-                  placeholder="예: 1996 (모르면 비워두기)"
+                <YearSelect
+                  value={data.partner_birth_year}
+                  onChange={(y) => set("partner_birth_year", y)}
+                  includeUnknown
+                  unknownLabel="모름"
                 />
                 {data.partner_birth_year !== null &&
                   !isRealisticBirthYear(data.partner_birth_year) && (
                     <p className="mt-2 text-xs text-thread">
-                      출생연도를 다시 확인해주세요. 모르시면 비워두셔도 됩니다.
+                      출생연도를 다시 확인해주세요. 모르시면 '모름'을
+                      선택하셔도 됩니다.
                     </p>
                   )}
               </div>
             </div>
           ),
-          error: "출생연도를 확인해주세요. 모르시면 비워두셔도 됩니다.",
+          error: "출생연도를 확인해주세요. 모르시면 ‘모름’을 선택해주세요.",
         };
       case "q3":
         return {
