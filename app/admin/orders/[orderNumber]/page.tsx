@@ -20,6 +20,7 @@ import type { RitualOrderRow } from "@/lib/supabase/types";
 import ReviewEditor from "@/components/admin/ReviewEditor";
 import ResultLinkButtons from "@/components/admin/ResultLinkButtons";
 import DeliveryButton from "@/components/admin/DeliveryButton";
+import GenerateResultButton from "@/components/admin/GenerateResultButton";
 
 export const dynamic = "force-dynamic";
 
@@ -249,9 +250,29 @@ export default async function AdminOrderDetailPage({
 
       {/* B. AI 결과 검수 */}
       {!result ? (
-        <p className="mt-10 text-center text-sm text-ivory-dim">
-          아직 생성된 결과가 없습니다.
-        </p>
+        <div className="mt-10 text-center">
+          {order.generation_status === "generating" ? (
+            <p className="text-sm text-ivory-dim">
+              AI 결과를 생성하고 있습니다… 잠시 후 새로고침해주세요.
+            </p>
+          ) : order.payment_status === "paid" &&
+            (order.generation_status === "waiting" ||
+              order.generation_status === "failed") &&
+            order.review_status === "waiting" ? (
+            <>
+              <p className="text-sm text-ivory-dim">
+                아직 생성된 결과가 없습니다.
+              </p>
+              <GenerateResultButton orderNumber={order.order_number} />
+            </>
+          ) : (
+            /* 결제 미완료 / generated인데 결과 행 없음 등 비정상 상황:
+               생성 버튼을 노출하지 않음 */
+            <p className="text-sm text-ivory-dim">
+              아직 생성된 결과가 없습니다.
+            </p>
+          )}
+        </div>
       ) : (
         <ReviewEditor
           orderNumber={order.order_number}
