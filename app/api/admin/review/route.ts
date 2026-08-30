@@ -17,8 +17,11 @@ import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { RitualResultSchema } from "@/lib/ritual-result-schema";
 import { approveGuard, editGuard } from "@/lib/admin-review-rules";
+import { sendApprovedResultEmail } from "@/lib/result-email";
 
 export const dynamic = "force-dynamic";
+/** 승인 후 Resend 발송 호출까지 여유 실행 시간 확보 */
+export const maxDuration = 60;
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
@@ -189,7 +192,18 @@ export async function POST(request: Request) {
       );
       return bad(500, "approve_failed");
     }
-    return NextResponse.json({ ok: true, action: "approve" });
+
+    /* 승인이 완전히 끝난 뒤에만 자동 발송.
+       발송 실패는 승인을 취소/롤백하지 않으며 결과만 구분해 반환 */
+    let delivery = "failed";
+    try {
+      const sendRes = await sendApprovedResultEmail(orderNumber);
+      delivery = sendRes.status;
+    } catch {
+      console.error(`[admin:${requestId}] approve_delivery_error`);
+      delivery = "failed";
+    }
+    return NextResponse.json({ ok: true, action: "approve", delivery });
   } catch {
     console.error(`[admin:${requestId}] server_error`);
     return bad(500, "server_error");
