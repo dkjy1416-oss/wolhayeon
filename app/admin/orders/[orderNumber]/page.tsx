@@ -19,6 +19,7 @@ import {
 import type { RitualOrderRow } from "@/lib/supabase/types";
 import ReviewEditor from "@/components/admin/ReviewEditor";
 import ResultLinkButtons from "@/components/admin/ResultLinkButtons";
+import DeliveryButton from "@/components/admin/DeliveryButton";
 
 export const dynamic = "force-dynamic";
 
@@ -151,6 +152,13 @@ export default async function AdminOrderDetailPage({
               </span>
               <ResultLinkButtons token={result.result_token} />
             </div>
+            <DeliveryButton
+              orderNumber={order.order_number}
+              deliveryStatus={order.delivery_status}
+              deliveredAt={order.delivered_at ?? null}
+              errorCode={order.delivery_error_code ?? null}
+              toEmail={order.email}
+            />
           </div>
         )}
 
