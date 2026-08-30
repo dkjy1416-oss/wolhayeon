@@ -14,7 +14,7 @@ export type ReviewStatus =
   | "reviewing"
   | "approved"
   | "revision_required";
-export type DeliveryStatus = "waiting" | "sent" | "failed";
+export type DeliveryStatus = "waiting" | "sending" | "sent" | "failed";
 
 /** ritual_orders 테이블의 한 행 (조회 시) */
 export interface RitualOrderRow extends RitualApplication {
@@ -29,6 +29,18 @@ export interface RitualOrderRow extends RitualApplication {
   generation_status: GenerationStatus;
   review_status: ReviewStatus;
   delivery_status: DeliveryStatus;
+  /** Resend가 반환한 email id (발송 접수 성공 시) */
+  delivery_email_id: string | null;
+  /** 발송 당시 수신 주소 스냅샷 */
+  delivery_to_email: string | null;
+  /** 마지막 발송 시도 시각 */
+  delivery_attempted_at: string | null;
+  /** Resend 발송 요청 접수 성공 시각 */
+  delivered_at: string | null;
+  /** 관리자용 안전한 오류 코드 */
+  delivery_error_code: string | null;
+  /** 발송 시도 횟수 */
+  delivery_attempt_count: number;
   created_at: string;
   updated_at: string;
 }
