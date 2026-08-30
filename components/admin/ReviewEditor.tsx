@@ -235,7 +235,16 @@ export default function ReviewEditor({
     const r = await post({ action: "approve" });
     if (r.ok) {
       setApproved(true);
-      setMsg({ ok: true, text: "검수 내용 저장 후 최종 승인이 완료되었습니다." });
+      const d = (r.json as { delivery?: string } | null)?.delivery;
+      const text =
+        d === "sent"
+          ? "최종 승인과 결과 이메일 발송이 완료되었습니다."
+          : d === "already_sent"
+            ? "최종 승인 완료 — 결과 이메일은 이미 발송되었습니다."
+            : d === "sending_in_progress"
+              ? "최종 승인 완료 — 이메일 발송이 처리 중입니다."
+              : "최종 승인은 완료되었습니다. 이메일 발송은 실패했습니다. 아래 발송 버튼에서 다시 시도할 수 있습니다.";
+      setMsg({ ok: true, text });
       router.refresh();
     } else {
       setMsg({ ok: false, text: errText(r.json) });
