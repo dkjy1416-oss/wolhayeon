@@ -117,9 +117,11 @@ export default async function CompletePage({
             이 주문은 이미 결제가 완료되었습니다.
           </p>
           <p className="mt-3 text-center text-[0.88rem] font-light leading-[2] text-ivory-dim">
-            월화가 당신이 들려준 이야기를 바탕으로
+            결제 완료 화면이 열려 있다면
             <br />
-            개인 리추얼을 준비할 예정입니다.
+            그 화면에서 결과 준비가 이어집니다.
+            <br />
+            결과가 완성되면 입력한 이메일로도 전달됩니다.
           </p>
           <Link
             href="/"

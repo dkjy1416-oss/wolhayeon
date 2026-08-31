@@ -21,6 +21,7 @@ import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { confirmTossPayment } from "@/lib/toss";
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
+import { verifyPaidOwnership } from "@/lib/payment-ownership";
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
@@ -60,14 +61,28 @@ export async function confirmOrderPayment(params: {
     /* 1) 주문 존재 확인 — 개인정보 컬럼은 조회하지 않음 */
     const found = await supabase
       .from("ritual_orders")
-      .select("id, payment_amount, payment_status")
+      .select("id, payment_amount, payment_status, payment_key")
       .eq("order_number", orderNumber)
       .single();
     if (found.error || !found.data) return { status: "not_found" };
     const row = found.data;
 
-    /* 2) 이미 paid → 재승인/새로고침/paymentKey 재전송 모두 그대로 성공 (멱등) */
+    /* 2) 이미 paid → orderId만으로는 절대 통과시키지 않음.
+          실제 결제 리다이렉트에만 있는 paymentKey + amount 가
+          DB payment_key / 금액(16,900)과 정확히 일치할 때만 already_paid.
+          (정상 success URL 새로고침은 일치하므로 계속 이어짐) */
     if (row.payment_status === "paid") {
+      const owned = verifyPaidOwnership({
+        dbPaymentKey: row.payment_key,
+        dbAmount: row.payment_amount,
+        expectedAmount: RITUAL_PRICE_KRW,
+        paymentKey,
+        amount,
+      });
+      if (!owned) {
+        console.error(`[pay:${requestId}] paid_ownership_mismatch`);
+        return { status: "invalid_request" };
+      }
       return { status: "already_paid", orderNumber };
     }
     if (row.payment_status !== "pending") {
