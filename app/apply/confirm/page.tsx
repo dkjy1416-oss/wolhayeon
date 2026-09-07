@@ -265,7 +265,7 @@ export default function ConfirmPage() {
           </button>
         </div>
         <p className="mx-auto mt-2.5 max-w-md px-6 text-center text-[0.7rem] font-light text-ivory-dim/75">
-          결제 전, 월화가 먼저 읽은 개인화 메시지를 확인할 수 있어요.
+          결제 전, 월화가 먼저 읽은 마음을 짧게 보여드려요.
         </p>
         {errorMsg && (
           <p className="mx-auto mt-1 max-w-md px-6 text-center text-[0.75rem] text-thread">

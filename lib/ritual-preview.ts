@@ -28,9 +28,11 @@ import {
 } from "@/lib/ritual-preview-schema";
 import type { RitualOrderRow } from "@/lib/supabase/types";
 
-const PREVIEW_MAX_TOKENS = 2500;
+/* 무료 preview는 짧고 빠르게 — intro 3문장 + 편지 2~3문장 + teaser 4~5개면
+   충분하므로 상한을 낮춰 생성 시간을 단축 (truncation 여유는 확보) */
+const PREVIEW_MAX_TOKENS = 1400;
 /** 이 시간(ms) 넘게 content 없이 선점만 남아 있으면 비정상 종료로 보고 선점 해제 */
-const CLAIM_STALE_MS = 90_000;
+const CLAIM_STALE_MS = 70_000;
 
 export type PreviewOutcome =
   | { status: "ready"; preview: RitualPreview }

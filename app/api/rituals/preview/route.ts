@@ -47,8 +47,14 @@ export async function POST(request: Request) {
     case "not_found":
       return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
     case "failed":
-      return NextResponse.json({ ok: false, error: "failed" }, { status: 502 });
+      return NextResponse.json(
+        { ok: false, status: "failed", error: "failed" },
+        { status: 502 }
+      );
     default:
-      return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
+      return NextResponse.json(
+        { ok: false, status: "server_error", error: "server_error" },
+        { status: 500 }
+      );
   }
 }

@@ -190,7 +190,7 @@ export default function AutoResultProcessing({
       )}
 
       <p className="mt-8 text-[0.72rem] tracking-wide text-ivory-dim/80">
-        결과를 준비하는 동안 잠시 읽어보세요
+        결과를 준비하는 동안 월화가 짧게 전하는 이야기를 들어보세요
       </p>
       <div className="mt-3 w-full">
         <WaitingContent videos={waitingVideos} />

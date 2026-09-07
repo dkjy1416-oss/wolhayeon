@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * 결과 대기 중 콘텐츠 카드 (고정 콘텐츠 — AI 호출 없음).
+ * 결과 대기 중 콘텐츠 (고정 콘텐츠 — AI 호출 없음).
+ * [역할 고정] 대기영상 01~05는 "결제 후 전체 결과 생성 대기"에서만 사용한다.
+ * 무료 preview 단계에서는 절대 사용하지 않는다 (그쪽은 wolhwa-reading-loop 전용).
  *
  * - 현재는 text 카드만 사용. 가짜 후기·가상 고객 이름은 절대 사용하지 않음.
  * - 향후 실제 고객 동의를 받은 후기/월화 숏폼 영상이 준비되면
@@ -86,7 +88,7 @@ export default function WaitingContent({
             muted
             playsInline
             controls
-            preload="auto"
+            preload="metadata"
             onEnded={() => setIdx((i) => (i + 1) % videos.length)}
           />
         </div>

@@ -92,24 +92,19 @@ export default async function CompletePage({
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
 
   return (
-    <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col px-6 pb-16 pt-20">
+    <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col px-6 pb-16 pt-14">
       <p className="text-center text-xs tracking-[0.35em] text-gold/90">
         月下緣
       </p>
 
-      <h1 className="font-display mt-6 text-center text-2xl font-semibold text-ivory">
-        신청이 접수되었습니다.
+      <h1 className="font-display mt-6 text-center text-2xl font-semibold leading-[1.55] text-ivory">
+        월화의 이야기를
+        <br />
+        계속 열어볼게요.
       </h1>
-      <p className="mt-4 text-center text-[0.95rem] font-light leading-[2] text-ivory-dim">
-        당신의 이야기를 안전하게 받았습니다.
+      <p className="mt-4 text-center text-[0.92rem] font-light leading-[1.9] text-ivory-dim">
+        방금 본 미리보기 다음 이야기부터 이어집니다.
       </p>
-
-      <div className="mt-8 rounded-2xl border border-gold-dim/30 bg-ink-soft px-6 py-6 text-center">
-        <p className="text-xs tracking-wide text-ivory-dim">주문번호</p>
-        <p className="font-display mt-2 text-xl font-semibold tracking-wider text-gold">
-          {orderNumber}
-        </p>
-      </div>
 
       {alreadyPaid ? (
         <>
@@ -142,10 +137,7 @@ export default async function CompletePage({
         </p>
       ) : (
         <>
-          <h2 className="font-display mt-12 text-center text-xl font-semibold text-ivory">
-            결제를 완료해주세요
-          </h2>
-          <p className="font-display mt-4 text-center text-3xl font-semibold text-gold">
+          <p className="font-display mt-9 text-center text-3xl font-semibold text-gold">
             {RITUAL_PRICE_KRW.toLocaleString()}
             <span className="ml-1 text-lg text-ivory-dim">원</span>
           </p>
@@ -163,6 +155,10 @@ export default async function CompletePage({
 
           {/* 테스트 결제 단계 전용 — 실결제 전환 시 제거 (TestModeNotices.tsx 참고) */}
           <TestPaymentNotice />
+
+          <p className="mt-6 text-center text-[0.68rem] text-ivory-dim/45">
+            주문번호 {orderNumber}
+          </p>
 
           <Link
             href="/"

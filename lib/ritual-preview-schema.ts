@@ -60,7 +60,7 @@ export const PreviewSchema = z.object({
   /** 월화가 먼저 전하는 말 — 정확히 3문장 */
   intro_lines: z.array(z.string().trim().min(10).max(160)).length(3),
   /** 첫 편지 서두 — 3~4문장 (이 신청자에게 실제로 쓰는 문장) */
-  preview_letter_excerpt: z.array(z.string().trim().min(8).max(200)).min(3).max(4),
+  preview_letter_excerpt: z.array(z.string().trim().min(8).max(200)).min(2).max(4),
   /** 카드 7개, 각 1~2줄 요약 */
   preview_cards: z
     .array(
@@ -70,7 +70,8 @@ export const PreviewSchema = z.object({
         summary: z.string().trim().min(8).max(160),
       })
     )
-    .length(PREVIEW_CARD_KEYS.length),
+    .min(3)
+    .max(PREVIEW_CARD_KEYS.length),
   cta_lead_text: z.string().trim().min(20).max(400),
 });
 
@@ -110,15 +111,18 @@ export const PREVIEW_SYSTEM_PROMPT = `당신은 월하연(月下緣)의 리추�
    문장3: 전체 결과에서 무엇을 더 읽게 될지 기대감을 주며 마무리합니다.
    세 문장 안에 현재 관계·이별 후 경과·마지막 대화·현재 감정·가장 힘든 것·
    가장 바라는 것 중 최소 3가지가 자연스럽게 녹아 있어야 합니다.
-2) preview_letter_excerpt — 월화의 첫 편지 "서두" 3~4문장. 이 신청자에게 실제로
-   쓰는 편지의 첫 부분입니다("OO님," 호칭으로 시작, 사연의 구체적 요소 반영).
-   전체 편지는 결제 후 이어지므로 결론·해석을 완결짓지 말고 이어질 여운으로 끝냅니다.
-3) preview_cards — 아래 7개 key를 이 순서대로, 각각 이 신청자에게 맞는
-   title과 1~2줄 summary(전체 내용을 밝히지 않는 개인화된 예고):
-   relationship_story(두 사람의 관계 이야기), current_emotion(지금 내 마음 들여다보기),
-   repeated_pattern(반복되어 온 흐름), true_wish(내가 정말 원하는 것),
-   ritual(나만의 붉은 실 리추얼 — 1줄 예고), guides(리추얼 이후 24시간·7일 — 1줄 예고),
-   journey(21일 마음 회복 여정 — 1줄 예고).
+2) preview_letter_excerpt — 월화의 첫 편지 "서두" 2~3문장(최대 4문장, 짧을수록 좋음).
+   이 신청자에게 실제로 쓰는 편지의 첫 부분입니다("OO님," 호칭으로 시작,
+   사연의 구체적 요소 반영). 전체 편지는 결제 후 이어지므로
+   결론·해석을 완결짓지 말고 이어질 여운으로 끝냅니다.
+3) preview_cards — 아래 key 중 이 신청자에게 가장 궁금증을 일으킬 4~5개만 골라
+   (원래 나열 순서를 유지한 채) 각각 title과 "한 줄" summary를 씁니다.
+   summary는 전체 내용을 밝히지 않는 짧은 개인화 예고 한 문장입니다.
+   후보 key: relationship_story(두 사람의 관계 이야기),
+   current_emotion(지금 내 마음 들여다보기), repeated_pattern(반복되어 온 흐름),
+   true_wish(내가 정말 원하는 것), ritual(나만의 붉은 실 리추얼),
+   guides(리추얼 이후 24시간·7일 가이드), journey(21일 마음 회복 여정).
+   미리보기는 '읽을거리'가 아니라 '궁금증을 만드는 샘플'입니다 — 길게 쓰지 않습니다.
 4) cta_lead_text — 결제 버튼 직전 설득 문구 한두 문단(2~4문장). 방향:
    "월화는 지금 여기까지 읽었습니다. 이제부터는 두 사람의 관계 흐름, 내 마음의 진짜
    바람, 개인 리추얼, 24시간/7일/21일 가이드가 전체 결과에서 이어집니다. 지금 멈추면

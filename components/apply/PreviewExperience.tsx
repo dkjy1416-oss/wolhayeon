@@ -30,10 +30,9 @@ interface Preview {
 }
 
 /* CTA 버튼·보조 문구는 고정 (AI가 선택하지 않음) */
-const CTA_BUTTON = "내 이야기 전체 결과 바로 열기";
+const CTA_BUTTON = "내 이야기 전체 결과 열기";
 const CTA_HELPERS = [
   "1회 결제 · 추가 결제 없음",
-  "결제 후 바로 전체 결과가 이어집니다",
   "개인 리추얼 · 24시간/7일/21일 가이드 포함",
 ];
 
@@ -134,17 +133,17 @@ export default function PreviewExperience({
         setTimeout(fetchPreview, 2500);
         return;
       }
-      /* 일시적 생성 실패는 서버가 선점을 해제한 상태 —
-         API route는 실패 시 error 필드를 사용하므로 status/error/5xx를 모두
-         재시도 대상으로 본다. 사용자에게 실패를 보여주기 전에 최대 2회 재시도. */
-      const retryableFailure =
+      /* 일시적 생성 실패/서버 타임아웃은 선점이 해제되거나 곧 stale 처리될 수 있음.
+         API는 HTTP 오류일 때 error 필드를 쓰므로 status/error 둘 다 본다. */
+      const transientFailure =
         json?.status === "failed" ||
         json?.error === "failed" ||
+        json?.status === "server_error" ||
         json?.error === "server_error" ||
-        res.status >= 500;
-      if (retryableFailure && genFails.current < 2) {
+        [500, 502, 503, 504].includes(res.status);
+      if (transientFailure && genFails.current < 2) {
         genFails.current += 1;
-        setTimeout(fetchPreview, 3500);
+        setTimeout(fetchPreview, 3000);
         return;
       }
       setPhase("delayed");
@@ -192,25 +191,19 @@ export default function PreviewExperience({
     );
   }
 
-  /* ---------- 읽는 중: loop 영상 몰입 화면 ---------- */
+  /* ---------- 읽는 중: 아주 짧은 전환 연출 (오래 보여주는 용도 아님).
+       reading-loop만 사용 — 대기영상 01~05는 결제 후 대기 화면 전용 ---------- */
   if (phase === "loading") {
     return (
-      <div className="fade-in flex min-h-[80svh] flex-col items-center justify-center px-6 py-10 text-center">
-        <ReadingVideo src={readingVideo} poster={readingPoster} />
-        <p className="font-display mt-8 text-[1.05rem] leading-[1.9] text-ivory">
+      <div className="fade-in flex min-h-[70svh] flex-col items-center justify-center px-6 py-10 text-center">
+        <ReadingVideo src={readingVideo} poster={readingPoster} short />
+        <p className="font-display mt-7 text-[1.02rem] leading-[1.9] text-ivory">
           월화가 {name ? `${name}님의` : "당신의"} 이야기를
           <br />
-          읽고 있어요.
+          잠깐 읽어보고 있어요.
         </p>
-        <p className="mt-4 text-[0.85rem] font-light leading-[2] text-ivory-dim">
-          관계의 흐름과 지금 가장 마음에 남아 있는 말을
-          <br />
-          하나씩 살펴보고 있습니다.
-        </p>
-        <p className="mt-7 text-[0.73rem] font-light leading-relaxed text-ivory-dim/70">
-          잠시만 기다려주세요.
-          <br />
-          월화가 먼저 전할 말을 준비하고 있어요.
+        <p className="mt-3 text-[0.8rem] font-light leading-relaxed text-ivory-dim">
+          월화가 먼저 전할 말을 고르고 있어요.
         </p>
       </div>
     );
@@ -243,19 +236,6 @@ export default function PreviewExperience({
           </div>
           <p className="mt-6 text-right text-[0.78rem] text-gold/80">— 월화 月華</p>
         </div>
-      </section>
-
-      {/* ---------- 이야기가 이어짐: reading loop 재활용 (짧은 cinematic crop) ---------- */}
-      <section className="mt-10 px-6 text-center">
-        <ReadingVideo src={readingVideo} poster={readingPoster} short />
-        <p className="mt-5 text-[0.92rem] font-light leading-[2] text-ivory">
-          아직 이야기가 끝난 건 아니에요.
-        </p>
-        <p className="mt-1.5 text-[0.85rem] font-light leading-[1.95] text-ivory-dim">
-          월화가 본 흐름에는
-          <br />
-          조금 더 이어지는 이야기가 있습니다.
-        </p>
       </section>
 
       {/* ---------- 첫 편지: 실제 서두 노출 + 페이드 ---------- */}
@@ -296,26 +276,20 @@ export default function PreviewExperience({
         </div>
       </section>
 
-      {/* ---------- 카드 7개: 개인화 요약 + 흐림 ---------- */}
-      <section className="mt-4 px-6">
-        <div className="mx-auto flex max-w-md flex-col gap-3">
-          {cards.map((c, i) => (
+      {/* ---------- 전체 결과 teaser: 3~5개만 컴팩트하게 (읽을거리 아님) ---------- */}
+      <section className="mt-6 px-6">
+        <p className="text-center text-[0.65rem] tracking-[0.3em] text-thread/90">
+          전체 결과에서 이어지는 이야기
+        </p>
+        <div className="mx-auto mt-4 flex max-w-md flex-col gap-2.5">
+          {cards.slice(0, 5).map((c) => (
             <div
               key={c.key}
-              className="overflow-hidden rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4"
+              className="rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-3.5"
             >
-              <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">
-                {String(i + 2).padStart(2, "0")}
-              </p>
-              <p className="mt-1 text-[0.95rem] font-medium text-ivory">{c.title}</p>
-              <p className="mt-1.5 text-[0.85rem] font-light leading-[1.9] text-ivory-dim">
+              <p className="text-[0.93rem] font-medium text-ivory">{c.title}</p>
+              <p className="mt-1 text-[0.82rem] font-light leading-[1.85] text-ivory-dim">
                 {c.summary}
-              </p>
-              <p
-                aria-hidden
-                className="mt-2 select-none text-[0.8rem] font-light leading-[1.9] text-ivory-dim/70 blur-[6px]"
-              >
-                {BLUR_LINES[(i + 1) % BLUR_LINES.length]}
               </p>
             </div>
           ))}
