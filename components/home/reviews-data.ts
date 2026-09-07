@@ -15,12 +15,22 @@
  *   breakup_elapsed: "이별 3개월",   // 선택
  * }
  */
+export type ReviewOutcome =
+  | "reunited" // 재회 성공
+  | "contact_resumed" // 다시 연락 시작
+  | "clarity" // 마음이 선명해짐
+  | "recovery"; // 감정적 안정/회복
+
 export interface HomeReview {
   text: string;
   nickname: string;
   age_group?: string;
   relationship_context?: string;
   breakup_elapsed?: string;
+  /** 실제 확인된 결과 유형 (실데이터에만 기입) */
+  outcome?: ReviewOutcome;
+  /** 실제 고객임이 확인된 후기만 true — true+reunited일 때만 "재회 성공 사례" 배지 */
+  verified?: boolean;
 }
 
 export const HOME_REVIEWS: HomeReview[] = [];

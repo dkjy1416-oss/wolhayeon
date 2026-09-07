@@ -26,6 +26,7 @@ export default function Home() {
         <Header />
         <main>
           <HeroSection video={media.heroVideo} poster={media.heroPoster} />
+          <ReviewsSection />
           <EmotionSection emotionPhone={media.emotionPhone} />
           <WolhwaInsightSection gaze={media.wolhwaGaze} />
           <WolhwaReadingSection
@@ -33,7 +34,6 @@ export default function Home() {
             poster={media.readingPoster}
           />
           <HowItWorksSection ritualLetter={media.ritualLetter} />
-          <ReviewsSection />
           <QuestionsSection />
           <ResultPreviewSection resultCards={media.resultCards} />
           <WolhwaShortsSection shorts={media.shorts} />

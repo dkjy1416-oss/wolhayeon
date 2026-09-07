@@ -64,18 +64,16 @@ export default function HeroSection({
         </Reveal>
         <Reveal delay={240}>
           <p className="mt-6 text-[0.92rem] font-light leading-[2.05] text-ivory-dim">
-            마지막 대화를 몇 번이고 다시 읽고,
+            다시 이어질 가능성이 남아 있는지,
             <br />
-            연락이 올 것 같아 괜히 휴대폰을 확인하고,
+            지금 연락하면 오히려 멀어지는지,
             <br />
-            다시 만나고 싶은 건지
-            <br />
-            그때의 내가 그리운 건지도 헷갈릴 때.
+            다시 만난다면 무엇이 달라져야 하는지.
           </p>
           <p className="mt-4 text-[0.92rem] font-light leading-[2.05] text-ivory">
-            월화가 지금
+            월화가 먼저
             <br />
-            당신 마음이 머물러 있는 곳부터 읽어드립니다.
+            지금 두 사람 사이의 흐름부터 읽습니다.
           </p>
         </Reveal>
         <Reveal delay={360}>

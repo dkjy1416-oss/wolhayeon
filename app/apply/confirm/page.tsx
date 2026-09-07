@@ -20,7 +20,11 @@ import {
   PARTNER_GENDER_OPTIONS,
   LIFE_STAGE_OPTIONS,
 } from "@/lib/ritual-types";
-import { loadApplication, hasMeaningfulData } from "@/lib/ritual-storage";
+import {
+  loadApplication,
+  hasMeaningfulData,
+  getOrCreateSubmissionId,
+} from "@/lib/ritual-storage";
 
 function Row({ label, value }: { label: string; value: string }) {
   const empty = value.trim() === "";
@@ -57,6 +61,43 @@ function Group({
 
 export default function ConfirmPage() {
   const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  /* "월화에게 먼저 읽혀보기" — 별도 단계 없이 즉시 주문 생성 후 읽기 화면으로.
+     (가격은 미리보기가 정상 생성된 뒤에만 처음 노출) */
+  const handleReadNow = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submission_id: getOrCreateSubmissionId(),
+          application: loadApplication(),
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.ok && typeof json.order_number === "string") {
+        router.push(
+          `/apply/preview?order=${encodeURIComponent(json.order_number)}`
+        );
+        return; // 이동 중 재클릭 방지
+      }
+      setErrorMsg(
+        json?.message ??
+          "이야기를 저장하는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요."
+      );
+      setSubmitting(false);
+    } catch {
+      setErrorMsg(
+        "이야기를 저장하는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요."
+      );
+      setSubmitting(false);
+    }
+  };
   const [data, setData] = useState<RitualApplication | null>(null);
   const [empty, setEmpty] = useState(false);
 
@@ -73,13 +114,13 @@ export default function ConfirmPage() {
           아직 들려주신 이야기가 없습니다.
         </p>
         <p className="mt-4 text-sm text-ivory-dim">
-          신청서를 먼저 작성해주세요.
+          아직 들려주신 이야기가 없어요.
         </p>
         <Link
           href="/apply"
           className="mt-8 inline-flex h-13 items-center justify-center rounded-full border border-gold-dim/40 px-8 text-sm text-ivory"
         >
-          신청서 작성하기
+          내 이야기 들려주기
         </Link>
       </main>
     );
@@ -216,12 +257,21 @@ export default function ConfirmPage() {
           </button>
           <button
             type="button"
-            onClick={() => router.push("/apply/ready")}
-            className="inline-flex h-14 flex-1 items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory active:opacity-85"
+            onClick={handleReadNow}
+            disabled={submitting}
+            className="inline-flex h-14 flex-1 items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory active:opacity-85 disabled:opacity-60"
           >
-            이 내용으로 계속하기
+            {submitting ? "이야기를 전하고 있어요…" : "월화에게 먼저 읽혀보기"}
           </button>
         </div>
+        <p className="mx-auto mt-2.5 max-w-md px-6 text-center text-[0.7rem] font-light text-ivory-dim/75">
+          결제 전, 월화가 먼저 읽은 개인화 메시지를 확인할 수 있어요.
+        </p>
+        {errorMsg && (
+          <p className="mx-auto mt-1 max-w-md px-6 text-center text-[0.75rem] text-thread">
+            {errorMsg}
+          </p>
+        )}
       </div>
     </main>
   );

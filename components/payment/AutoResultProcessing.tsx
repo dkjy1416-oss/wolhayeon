@@ -12,7 +12,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearApplication } from "@/lib/ritual-storage";
-import WaitingContent from "@/components/payment/WaitingContent";
+import WaitingContent, {
+  type WaitingVideoItem,
+} from "@/components/payment/WaitingContent";
 
 const MESSAGES = [
   "월화가 당신의 이야기를 다시 천천히 읽고 있어요.",
@@ -29,6 +31,7 @@ export default function AutoResultProcessing({
   processToken,
   applicantName,
   introLines,
+  waitingVideos = [],
 }: {
   orderNumber: string;
   processToken: string;
@@ -36,6 +39,8 @@ export default function AutoResultProcessing({
   applicantName?: string | null;
   /** 결제 전 미리보기에서 이미 본 3문장 (검증된 경우에만 전달됨) */
   introLines?: string[] | null;
+  /** 대기 중 재생할 월화 영상 (서버에서 존재 확인 후 전달, 순서 고정) */
+  waitingVideos?: WaitingVideoItem[];
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<"working" | "delayed">("working");
@@ -188,7 +193,7 @@ export default function AutoResultProcessing({
         결과를 준비하는 동안 잠시 읽어보세요
       </p>
       <div className="mt-3 w-full">
-        <WaitingContent />
+        <WaitingContent videos={waitingVideos} />
       </div>
 
       <p className="mt-8 text-[0.78rem] font-light leading-[1.9] text-ivory-dim">

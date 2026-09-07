@@ -4,6 +4,7 @@ import { createProcessToken } from "@/lib/customer-process-auth";
 import AutoResultProcessing from "@/components/payment/AutoResultProcessing";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PreviewSchema } from "@/lib/ritual-preview-schema";
+import { getWaitingVideos } from "@/lib/home-media";
 
 async function SuccessView({ orderNumber }: { orderNumber: string }) {
   /* 서버가 결제를 success/already_paid로 확인한 경우에만 이 뷰가 렌더되며,
@@ -71,6 +72,7 @@ async function SuccessView({ orderNumber }: { orderNumber: string }) {
       processToken={processToken}
       applicantName={applicantName}
       introLines={introLines}
+      waitingVideos={getWaitingVideos()}
     />
   );
 }

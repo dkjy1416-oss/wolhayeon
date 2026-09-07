@@ -2,10 +2,11 @@ import Reveal from "@/components/home/Reveal";
 
 /** SECTION 06 — "다시 만날 수 있을까?"보다 깊은 질문 (cinematic editorial) */
 const QUESTIONS = [
-  "왜 아직 이 사람이\n마음에 남아 있는지.",
-  "지금 연락하는 게 나은지,\n조금 기다리는 게 나은지.",
-  "다시 만난다면\n무엇이 달라져야 하는지.",
-  "놓아야 한다면\n어떻게 덜 무너지면서 놓을 수 있는지.",
+  "다시 이어질 가능성이\n남아 있을까?",
+  "지금 연락하면\n더 멀어질까?",
+  "상대에게 먼저 연락하지 않고\n내가 할 수 있는 건 무엇일까?",
+  "다시 만난다면\n이번에는 무엇이 달라져야 할까?",
+  "아직 남아 있는 감정은\n재회를 원하는 마음일까,\n끝내지 못한 마음일까?",
 ];
 
 export default function QuestionsSection() {

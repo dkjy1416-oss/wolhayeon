@@ -15,7 +15,9 @@ export default function ReviewsSection() {
       <div className="mx-auto max-w-5xl">
         <Reveal>
           <h2 className="font-display text-center text-[1.5rem] font-semibold leading-snug text-ivory">
-            저만 이런 줄 알았어요.
+            월하연을 지나
+            <br />
+            다시 이어진 이야기
           </h2>
           <p className="mt-4 text-center text-[0.88rem] font-light leading-[1.9] text-ivory-dim">
             비슷한 마음을 지나온 사람들이
@@ -30,6 +32,11 @@ export default function ReviewsSection() {
                 key={i}
                 className="w-[82%] shrink-0 snap-center border border-gold-dim/30 bg-ink px-7 py-8"
               >
+                {r.verified && r.outcome === "reunited" && (
+                  <span className="mb-3 inline-block rounded-full border border-thread/40 px-3 py-1 text-[0.62rem] tracking-wide text-thread">
+                    재회 성공 사례
+                  </span>
+                )}
                 <p className="font-display text-2xl leading-none text-gold/60">
                   “
                 </p>

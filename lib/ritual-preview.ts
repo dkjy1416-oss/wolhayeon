@@ -29,6 +29,8 @@ import {
 import type { RitualOrderRow } from "@/lib/supabase/types";
 
 const PREVIEW_MAX_TOKENS = 2500;
+/** 이 시간(ms) 넘게 content 없이 선점만 남아 있으면 비정상 종료로 보고 선점 해제 */
+const CLAIM_STALE_MS = 90_000;
 
 export type PreviewOutcome =
   | { status: "ready"; preview: RitualPreview }
@@ -87,12 +89,32 @@ export async function getOrCreatePreview(
       /* 다른 요청이 선점함 — 콘텐츠가 이미 생겼는지 재확인 */
       const probe = await supabase
         .from("ritual_orders")
-        .select("preview_content")
+        .select("preview_content, preview_generated_at")
         .eq("id", order.id)
         .maybeSingle();
       const parsedProbe = PreviewSchema.safeParse(probe.data?.preview_content);
       if (parsedProbe.success)
         return { status: "ready", preview: parsedProbe.data };
+      /* orphan claim 복구: 생성 도중 함수가 비정상 종료되면 선점만 남아
+         영원히 pending이 된다. 선점이 충분히 오래됐고 content가 없으면
+         선점을 해제해 다음 폴링이 재생성할 수 있게 한다. */
+      const claimedAtStr = probe.data?.preview_generated_at as string | null;
+      const claimedAt = claimedAtStr ? Date.parse(claimedAtStr) : NaN;
+      if (
+        Number.isFinite(claimedAt) &&
+        Date.now() - claimedAt > CLAIM_STALE_MS
+      ) {
+        await supabase
+          .from("ritual_orders")
+          .update({ preview_generated_at: null })
+          .eq("id", order.id)
+          .is("preview_content", null)
+          .lt(
+            "preview_generated_at",
+            new Date(Date.now() - CLAIM_STALE_MS).toISOString()
+          );
+        console.error("[preview] stale_claim_released");
+      }
       return { status: "pending" };
     }
 

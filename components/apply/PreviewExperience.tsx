@@ -1,18 +1,21 @@
 "use client";
 
 /**
- * 결제 전 무료 미리보기 화면 (개인화 강화판).
+ * 결제 전 무료 미리보기 화면 (읽기 몰입판).
+ * 흐름: 읽는 중(loop 영상) → 같은 화면에서 fade 전환 → 개인화 preview → 처음으로 가격 노출.
  * - 개인화 preview가 ready일 때만 미리보기+결제 CTA 표시.
- *   실패 시에는 범용 문구/결제 버튼 없이 "다시 읽어보기"만 제공.
- * - 월화가 먼저 전하는 말: AI 생성 3문장 (고정 문구 없음)
- * - 첫 편지: 실제 서두 3~4문장 노출 + 아래 페이드/블러 (전체 편지는 결제 후)
- * - 카드 7개: 각 1~2줄 개인화 요약 + 흐린 자리표시 (전체 결과는 브라우저로 오지 않음)
- * - CTA 직전 설득 문구 · 버튼 · 보조 문구
+ *   실패 시에는 loop 영상 + "다시 읽어보기"만 (결제 버튼 절대 없음).
+ * - 특정 시간 약속 / 가짜 진행률 / 가짜 단계 없음.
+ * - 일시적 생성 실패(failed)는 짧게 자동 재시도 후에만 실패 화면으로.
  */
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { getOrCreateSubmissionId } from "@/lib/ritual-storage";
+import {
+  getOrCreateSubmissionId,
+  loadApplication,
+} from "@/lib/ritual-storage";
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
+import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 
 interface PreviewCard {
   key: string;
@@ -41,69 +44,143 @@ const BLUR_LINES = [
   "붉은 실을 손에 감고 준비된 문장을 읽는 다섯 번의 호흡, 그 시간 동안 정리되는 것들과 내려놓게 되는 것들에 대하여",
 ];
 
+/** 읽는 중 / 실패 화면 공용 — 월화 reading loop 영상 */
+function ReadingVideo({
+  src,
+  poster,
+  short = false,
+}: {
+  src: string | null;
+  poster: string | null;
+  short?: boolean;
+}) {
+  if (!src && !poster) return null;
+  return (
+    <div
+      className={`relative mx-auto w-full max-w-[300px] overflow-hidden rounded-sm ${
+        short ? "aspect-[16/10]" : "aspect-[9/16] max-w-[260px]"
+      }`}
+    >
+      {src ? (
+        <video
+          className={`h-full w-full object-cover ${short ? "object-[50%_18%]" : ""}`}
+          src={src}
+          poster={poster ?? undefined}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={poster!}
+          alt=""
+          className="h-full w-full object-cover"
+          aria-hidden
+        />
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-ink/15" />
+    </div>
+  );
+}
+
 export default function PreviewExperience({
   orderNumber,
+  readingVideo,
+  readingPoster,
 }: {
   orderNumber: string;
+  readingVideo: string | null;
+  readingPoster: string | null;
 }) {
   const [phase, setPhase] = useState<"loading" | "ready" | "delayed">(
     "loading"
   );
   const [preview, setPreview] = useState<Preview | null>(null);
-  const tries = useRef(0);
+  const [name, setName] = useState<string>("");
+  const tries = useRef(0); // pending 폴링 횟수
+  const genFails = useRef(0); // 생성 실패(failed) 자동 재시도 횟수
   const started = useRef(false);
 
+  useEffect(() => {
+    /* 같은 브라우저 세션의 신청 데이터에서 표시용 이름만 */
+    try {
+      setName(loadApplication().applicant_name?.trim() ?? "");
+    } catch {
+      /* 이름 없이 진행 */
+    }
+  }, []);
+
   const fetchPreview = async () => {
-      tries.current += 1;
-      try {
-        const res = await fetch("/api/rituals/preview", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderNumber,
-            submissionId: getOrCreateSubmissionId(),
-          }),
-        });
-        const json = await res.json().catch(() => null);
-        if (json?.status === "ready" && json.preview) {
-          setPreview(json.preview as Preview);
-          setPhase("ready");
-          return;
-        }
-        if (json?.status === "pending" && tries.current < 12) {
-          setTimeout(fetchPreview, 2500);
-          return;
-        }
-        setPhase("delayed");
-      } catch {
-        if (tries.current < 3) setTimeout(fetchPreview, 2500);
-        else setPhase("delayed");
+    tries.current += 1;
+    try {
+      const res = await fetch("/api/rituals/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderNumber,
+          submissionId: getOrCreateSubmissionId(),
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (json?.status === "ready" && json.preview) {
+        setPreview(json.preview as Preview);
+        setPhase("ready");
+        return;
       }
+      if (json?.status === "pending" && tries.current < 14) {
+        setTimeout(fetchPreview, 2500);
+        return;
+      }
+      /* 일시적 생성 실패는 서버가 선점을 해제한 상태 —
+         API route는 실패 시 error 필드를 사용하므로 status/error/5xx를 모두
+         재시도 대상으로 본다. 사용자에게 실패를 보여주기 전에 최대 2회 재시도. */
+      const retryableFailure =
+        json?.status === "failed" ||
+        json?.error === "failed" ||
+        json?.error === "server_error" ||
+        res.status >= 500;
+      if (retryableFailure && genFails.current < 2) {
+        genFails.current += 1;
+        setTimeout(fetchPreview, 3500);
+        return;
+      }
+      setPhase("delayed");
+    } catch {
+      if (tries.current < 4) setTimeout(fetchPreview, 2500);
+      else setPhase("delayed");
+    }
   };
 
   useEffect(() => {
-    if (started.current) return;
+    if (started.current) return; // StrictMode/재마운트 중복 호출 방지
     started.current = true;
     fetchPreview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNumber]);
 
-  /* 개인화 미리보기 실패 → 범용 문구/결제 CTA 대신 재시도 안내만 */
+  /* ---------- 실패: loop 영상 유지 + 재시도만 (결제 버튼 없음) ---------- */
   if (phase === "delayed") {
     return (
-      <div className="flex min-h-[60svh] flex-col items-center justify-center px-6 text-center">
-        <p className="font-display text-lg leading-relaxed text-ivory">
+      <div className="fade-in flex min-h-[80svh] flex-col items-center justify-center px-6 py-10 text-center">
+        <ReadingVideo src={readingVideo} poster={readingPoster} />
+        <p className="font-display mt-8 text-lg leading-relaxed text-ivory">
           월화가 이야기를 읽는 과정이
           <br />
           조금 늦어지고 있어요.
         </p>
-        <p className="mt-3 text-[0.85rem] font-light leading-relaxed text-ivory-dim">
+        <p className="mt-3 text-[0.85rem] font-light leading-[1.95] text-ivory-dim">
+          입력하신 내용은 그대로 남아 있어요.
+          <br />
           잠시 후 다시 읽어볼게요.
         </p>
         <button
           type="button"
           onClick={() => {
             tries.current = 0;
+            genFails.current = 0;
             setPhase("loading");
             fetchPreview();
           }}
@@ -115,38 +192,43 @@ export default function PreviewExperience({
     );
   }
 
+  /* ---------- 읽는 중: loop 영상 몰입 화면 ---------- */
   if (phase === "loading") {
     return (
-      <div className="flex min-h-[60svh] flex-col items-center justify-center px-6 text-center">
-        <span
-          aria-hidden
-          className="block h-10 w-px animate-pulse bg-gradient-to-b from-transparent via-thread/80 to-thread/20"
-        />
-        <p className="font-display mt-8 text-lg text-ivory">
-          월화가 잠시 당신의 이야기를 읽고 있어요…
-        </p>
-        <p className="mt-3 text-[0.8rem] font-light leading-relaxed text-ivory-dim">
-          적어주신 마음을 천천히 살피고 있습니다.
+      <div className="fade-in flex min-h-[80svh] flex-col items-center justify-center px-6 py-10 text-center">
+        <ReadingVideo src={readingVideo} poster={readingPoster} />
+        <p className="font-display mt-8 text-[1.05rem] leading-[1.9] text-ivory">
+          월화가 {name ? `${name}님의` : "당신의"} 이야기를
           <br />
-          잠시만 그대로 계세요.
+          읽고 있어요.
+        </p>
+        <p className="mt-4 text-[0.85rem] font-light leading-[2] text-ivory-dim">
+          관계의 흐름과 지금 가장 마음에 남아 있는 말을
+          <br />
+          하나씩 살펴보고 있습니다.
+        </p>
+        <p className="mt-7 text-[0.73rem] font-light leading-relaxed text-ivory-dim/70">
+          잠시만 기다려주세요.
+          <br />
+          월화가 먼저 전할 말을 준비하고 있어요.
         </p>
       </div>
     );
   }
 
-  /* 여기부터는 개인화 preview가 ready인 경우에만 렌더 */
+  /* ---------- ready: 같은 화면에서 fade로 preview 공개 ---------- */
   if (!preview) return null;
   const cards = preview.preview_cards;
   const leadText = preview.cta_lead_text;
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
 
   return (
-    <div className="pb-16">
-      {/* ---------- 월화가 먼저 전하는 말 (AI 3문장) ---------- */}
+    <div className="fade-in pb-16">
+      {/* ---------- 월화가 먼저 읽은 마음 (AI 3문장) ---------- */}
       <section className="px-6 pt-4">
         <div className="mx-auto max-w-md rounded-2xl border border-gold/25 bg-ink-soft px-6 py-8">
           <p className="text-center text-[0.65rem] tracking-[0.3em] text-gold/80">
-            월화가 먼저 전하는 말
+            월화가 먼저 읽은 마음
           </p>
           <div className="mx-auto mt-5 h-px w-10 bg-gold/40" />
           <div className="mt-6 flex flex-col gap-4">
@@ -163,12 +245,22 @@ export default function PreviewExperience({
         </div>
       </section>
 
-      {/* ---------- 첫 편지: 실제 서두 노출 + 페이드 ---------- */}
-      <section className="mt-8 px-6">
-        <p className="text-center text-[0.65rem] tracking-[0.3em] text-thread/90">
-          전체 리추얼에서 이어질 이야기
+      {/* ---------- 이야기가 이어짐: reading loop 재활용 (짧은 cinematic crop) ---------- */}
+      <section className="mt-10 px-6 text-center">
+        <ReadingVideo src={readingVideo} poster={readingPoster} short />
+        <p className="mt-5 text-[0.92rem] font-light leading-[2] text-ivory">
+          아직 이야기가 끝난 건 아니에요.
         </p>
-        <div className="mx-auto mt-5 max-w-md overflow-hidden rounded-2xl border border-gold/25 bg-ink-soft">
+        <p className="mt-1.5 text-[0.85rem] font-light leading-[1.95] text-ivory-dim">
+          월화가 본 흐름에는
+          <br />
+          조금 더 이어지는 이야기가 있습니다.
+        </p>
+      </section>
+
+      {/* ---------- 첫 편지: 실제 서두 노출 + 페이드 ---------- */}
+      <section className="mt-10 px-6">
+        <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-gold/25 bg-ink-soft">
           <div className="px-6 pt-7">
             <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">01</p>
             <p className="font-display mt-1 text-[1.05rem] font-semibold text-ivory">
@@ -200,9 +292,6 @@ export default function PreviewExperience({
           </div>
           <div className="border-t border-gold-dim/20 px-6 py-3.5 text-center">
             <p className="text-[0.72rem] text-gold/80">이 편지는 전체 결과에서 이어집니다</p>
-            <p className="mt-1 text-[0.68rem] text-ivory-dim/60">
-              관계의 흐름과 지금의 마음은 아래 전체 결과에서 더 깊게 이어집니다
-            </p>
           </div>
         </div>
       </section>
@@ -233,11 +322,11 @@ export default function PreviewExperience({
         </div>
       </section>
 
-      {/* ---------- CTA ---------- */}
+      {/* ---------- 가격은 여기서 처음 등장 ---------- */}
       <section className="mt-12 px-6 text-center">
         <div className="mx-auto max-w-md rounded-2xl border border-thread/30 bg-gradient-to-b from-[#160d10] to-ink-soft px-6 py-7">
           <p className="text-[0.65rem] tracking-[0.3em] text-thread/90">
-            월화는 지금 여기까지 읽었습니다
+            여기까지가 월화가 먼저 전한 이야기예요
           </p>
           <p className="mt-4 whitespace-pre-line text-[0.9rem] font-light leading-[2] text-ivory">
             {leadText}
@@ -245,7 +334,7 @@ export default function PreviewExperience({
         </div>
         <Link
           href={payHref}
-          className="mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
+          className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
         >
           {CTA_BUTTON} · {RITUAL_PRICE_KRW.toLocaleString()}원
         </Link>
@@ -256,6 +345,8 @@ export default function PreviewExperience({
             </p>
           ))}
         </div>
+        {/* 테스트 결제 모드 안내 (라이브 키 전환 시 컴포넌트 내부에서 끔) */}
+        <DevPaymentNotice />
       </section>
     </div>
   );

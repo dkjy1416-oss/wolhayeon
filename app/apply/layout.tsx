@@ -5,7 +5,7 @@ import type { Metadata } from "next";
  * 신청 과정은 검색엔진에 노출되지 않도록 noindex, nofollow를 설정합니다.
  */
 export const metadata: Metadata = {
-  title: "리추얼 신청 | 월하연 月下緣",
+  title: "이야기 들려주기 | 월하연 月下緣",
   robots: {
     index: false,
     follow: false,
