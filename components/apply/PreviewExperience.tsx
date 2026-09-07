@@ -102,6 +102,7 @@ export default function PreviewExperience({
   const tries = useRef(0); // pending 폴링 횟수
   const genFails = useRef(0); // 생성 실패(failed) 자동 재시도 횟수
   const started = useRef(false);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     /* 같은 브라우저 세션의 신청 데이터에서 표시용 이름만 */
@@ -111,6 +112,14 @@ export default function PreviewExperience({
       /* 이름 없이 진행 */
     }
   }, []);
+
+  const scheduleRetry = (delayMs: number) => {
+    if (retryTimer.current) clearTimeout(retryTimer.current);
+    retryTimer.current = setTimeout(() => {
+      retryTimer.current = null;
+      fetchPreview();
+    }, delayMs);
+  };
 
   const fetchPreview = async () => {
     tries.current += 1;
@@ -129,8 +138,21 @@ export default function PreviewExperience({
         setPhase("ready");
         return;
       }
-      if (json?.status === "pending" && tries.current < 14) {
-        setTimeout(fetchPreview, 2500);
+      if (json?.status === "pending") {
+        if (tries.current < 14) {
+          scheduleRetry(2500);
+          return;
+        }
+        /* 오래 걸리면 안내 화면은 보여주되 자동 재시도는 계속한다.
+           stale claim(70초) 복구 뒤 다음 요청이 다시 생성할 수 있도록
+           약 80초 이상 폴링 여유를 둔다. 사용자가 버튼을 누르지 않아도
+           ready가 오면 자동으로 preview 화면으로 넘어간다. */
+        if (tries.current < 32) {
+          setPhase("delayed");
+          scheduleRetry(2500);
+          return;
+        }
+        setPhase("delayed");
         return;
       }
       /* 일시적 생성 실패/서버 타임아웃은 선점이 해제되거나 곧 stale 처리될 수 있음.
@@ -143,12 +165,12 @@ export default function PreviewExperience({
         [500, 502, 503, 504].includes(res.status);
       if (transientFailure && genFails.current < 2) {
         genFails.current += 1;
-        setTimeout(fetchPreview, 3000);
+        scheduleRetry(3000);
         return;
       }
       setPhase("delayed");
     } catch {
-      if (tries.current < 4) setTimeout(fetchPreview, 2500);
+      if (tries.current < 4) scheduleRetry(2500);
       else setPhase("delayed");
     }
   };
@@ -157,6 +179,12 @@ export default function PreviewExperience({
     if (started.current) return; // StrictMode/재마운트 중복 호출 방지
     started.current = true;
     fetchPreview();
+    return () => {
+      if (retryTimer.current) {
+        clearTimeout(retryTimer.current);
+        retryTimer.current = null;
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNumber]);
 
@@ -178,6 +206,10 @@ export default function PreviewExperience({
         <button
           type="button"
           onClick={() => {
+            if (retryTimer.current) {
+              clearTimeout(retryTimer.current);
+              retryTimer.current = null;
+            }
             tries.current = 0;
             genFails.current = 0;
             setPhase("loading");
