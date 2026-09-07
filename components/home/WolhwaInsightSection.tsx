@@ -28,6 +28,13 @@ export default function WolhwaInsightSection({
             <br />
             당신이 말한 것만 보지 않습니다.
           </p>
+          <p className="mt-6 text-center text-[0.88rem] font-light leading-[2.05] text-ivory-dim">
+            헤어진 뒤 다시 이어질 가능성과
+            <br />
+            관계에 남아 있는 흐름을 함께 살펴보는,
+            <br />
+            월하연의 붉은 실 안내자입니다.
+          </p>
         </Reveal>
         <p className="mt-8 text-center text-[0.66rem] tracking-[0.3em] text-thread/80">
           월하연이 관계를 바라보는 시선
@@ -51,11 +58,11 @@ export default function WolhwaInsightSection({
           </Reveal>
           <Reveal delay={200}>
             <p className="font-display text-center text-[1.02rem] font-medium leading-[2] text-gold">
-              “월화는 재회를 약속하기보다
+              “월화는 다시 이어질 가능성만 묻기보다
               <br />
-              지금 당신 마음이
+              지금 두 사람 사이에
               <br />
-              어디에 머물러 있는지부터 봅니다.”
+              무엇이 남아 있는지부터 봅니다.”
             </p>
           </Reveal>
         </div>

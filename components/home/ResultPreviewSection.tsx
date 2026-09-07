@@ -32,6 +32,23 @@ export default function ResultPreviewSection({
         </Reveal>
       </div>
 
+      <div className="px-6">
+        <Reveal>
+          <p className="mx-auto mt-6 max-w-sm text-center text-[0.88rem] font-light leading-[2.1] text-ivory-dim">
+            왜 아직 이 사람이 마음에 남아 있는지,
+            <br />
+            지금 연락하는 것이 나은지,
+            <br />두 사람 사이에서 반복된 흐름,
+            <br />
+            다시 만난다면 달라져야 할 것,
+            <br />
+            지금 내가 할 수 있는 행동,
+            <br />
+            그리고 24시간 · 7일 · 21일 가이드까지.
+          </p>
+        </Reveal>
+      </div>
+
       {/* 결과를 갖고 싶게 만드는 대표 비주얼 */}
       <Reveal className="mt-10 px-3">
         <HomeImage

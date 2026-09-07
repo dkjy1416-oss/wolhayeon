@@ -4,15 +4,13 @@ import DisclaimerSection from "@/components/DisclaimerSection";
 import { getHomeMedia } from "@/lib/home-media";
 
 import HeroSection from "@/components/home/HeroSection";
-import EmotionSection from "@/components/home/EmotionSection";
+import ReunionQuestionsSection from "@/components/home/ReunionQuestionsSection";
 import WolhwaInsightSection from "@/components/home/WolhwaInsightSection";
 import WolhwaReadingSection from "@/components/home/WolhwaReadingSection";
 import HowItWorksSection from "@/components/home/HowItWorksSection";
 import ReviewsSection from "@/components/home/ReviewsSection";
-import QuestionsSection from "@/components/home/QuestionsSection";
 import ResultPreviewSection from "@/components/home/ResultPreviewSection";
 import WolhwaShortsSection from "@/components/home/WolhwaShortsSection";
-import BrandStatementSection from "@/components/home/BrandStatementSection";
 import FinalCTASection from "@/components/home/FinalCTASection";
 import StickyMobileCta from "@/components/home/StickyMobileCta";
 
@@ -26,18 +24,16 @@ export default function Home() {
         <Header />
         <main>
           <HeroSection video={media.heroVideo} poster={media.heroPoster} />
-          <ReviewsSection />
-          <EmotionSection emotionPhone={media.emotionPhone} />
+          <ReunionQuestionsSection />
           <WolhwaInsightSection gaze={media.wolhwaGaze} />
+          <ReviewsSection emotionPhone={media.emotionPhone} />
           <WolhwaReadingSection
             video={media.readingLoop}
             poster={media.readingPoster}
           />
           <HowItWorksSection ritualLetter={media.ritualLetter} />
-          <QuestionsSection />
           <ResultPreviewSection resultCards={media.resultCards} />
           <WolhwaShortsSection shorts={media.shorts} />
-          <BrandStatementSection bgLetter={media.ritualLetter} />
           <FinalCTASection />
           <DisclaimerSection />
         </main>
