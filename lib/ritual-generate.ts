@@ -17,10 +17,15 @@ import { randomUUID } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { WOLHWA_SYSTEM_PROMPT, buildUserPrompt } from "@/lib/wolhwa-prompt";
 import {
-  parseRitualResult,
-  RitualResultStructSchema,
+  WOLHWA_SYSTEM_PROMPT,
+  buildCoreUserPrompt,
+  buildPlanUserPrompt,
+} from "@/lib/wolhwa-prompt";
+import {
+  parseRitualResultObject,
+  RitualCoreStructSchema,
+  RitualPlanStructSchema,
   RitualResultSchema,
 } from "@/lib/ritual-result-schema";
 import { PreviewSchema } from "@/lib/ritual-preview-schema";
@@ -37,7 +42,11 @@ export function getModelId(): string {
 
 /** 15개 파트 한국어 결과는 8천 토큰을 넘을 수 있어 여유 있게 설정.
  *  (1차 실패 원인: 8192에서 출력이 잘려 JSON이 중간에 끊김) */
-const MAX_OUTPUT_TOKENS = 20000;
+/* 병렬 두 호출의 그룹별 출력 상한.
+   기존 전체 결과가 한 호출 약 10~14k 토큰이었고 각 그룹은 그 절반 수준이라
+   9000이면 JSON 절단 없이 충분한 여유 (stop_reason=max_tokens 시 실패 처리). */
+const CORE_MAX_TOKENS = 9000;
+const PLAN_MAX_TOKENS = 9000;
 
 export type GenerateOutcome =
   | { status: "success"; orderNumber: string; resultVersion: number }
@@ -99,6 +108,9 @@ export async function generateRitualForOrder(
     const letterOpening = previewParsed.success
       ? previewParsed.data.preview_letter_excerpt
       : null;
+    const introLines = previewParsed.success
+      ? previewParsed.data.intro_lines
+      : null;
 
     /* 선점 이후의 모든 실패는 failed로 되돌린다 */
     const markFailed = async (code: string) => {
@@ -117,49 +129,86 @@ export async function generateRitualForOrder(
       return { status: "generation_failed", code: "config_missing" };
     }
 
-    let rawText = "";
-    try {
-      const client = new Anthropic({ apiKey });
+    /* 2-b) GROUP A(관계/감정 핵심) + GROUP B(실행 가이드)를 병렬 호출.
+       두 호출 모두 동일한 컨텍스트·안전 규칙을 받고, 자기 그룹 파트만 생성. */
+    const genStartedAt = Date.now();
+    const client = new Anthropic({ apiKey });
+
+    const callGroup = async (
+      label: "core" | "plan",
+      prompt: string,
+      schema: typeof RitualCoreStructSchema | typeof RitualPlanStructSchema,
+      maxTokens: number
+    ): Promise<string> => {
+      const t0 = Date.now();
       const message = await client.messages.create({
         model: getModelId(),
-        max_tokens: MAX_OUTPUT_TOKENS,
+        max_tokens: maxTokens,
         system: WOLHWA_SYSTEM_PROMPT,
-        messages: [
-          { role: "user", content: buildUserPrompt(order, letterOpening) },
-        ],
-        /* Anthropic 공식 구조화 출력: 모델이 이 JSON schema에 맞는
-           JSON만 생성하도록 API 차원에서 강제.
-           → 코드펜스·설명문·앞뒤 문장·깨진 JSON이 발생하지 않음 */
-        output_config: {
-          format: zodOutputFormat(RitualResultStructSchema),
-        },
+        messages: [{ role: "user", content: prompt }],
+        /* 구조화 출력: 그룹 스키마에 맞는 JSON만 생성하도록 API 차원 강제 */
+        output_config: { format: zodOutputFormat(schema) },
       });
-
-      /* 출력이 잘렸거나 모델이 거부한 경우를 명확히 구분 */
       if (message.stop_reason === "max_tokens") {
-        await markFailed("output_truncated");
-        return { status: "generation_failed", code: "output_truncated" };
+        throw { code: `output_truncated_${label}` };
       }
       if (message.stop_reason === "refusal") {
-        await markFailed("model_refusal");
-        return { status: "generation_failed", code: "model_refusal" };
+        throw { code: `model_refusal_${label}` };
       }
-
-      rawText = message.content
-        .filter(
-          (block): block is Anthropic.TextBlock => block.type === "text"
-        )
-        .map((block) => block.text)
+      const text = message.content
+        .filter((b): b is Anthropic.TextBlock => b.type === "text")
+        .map((b) => b.text)
         .join("");
+      console.error(`[perf] ${label}_ms=${Date.now() - t0}`);
+      return text;
+    };
+
+    let coreText = "";
+    let planText = "";
+    try {
+      [coreText, planText] = await Promise.all([
+        callGroup(
+          "core",
+          buildCoreUserPrompt(order, letterOpening, introLines),
+          RitualCoreStructSchema,
+          CORE_MAX_TOKENS
+        ),
+        callGroup(
+          "plan",
+          buildPlanUserPrompt(order, introLines),
+          RitualPlanStructSchema,
+          PLAN_MAX_TOKENS
+        ),
+      ]);
     } catch (e) {
+      /* 한쪽이라도 실패하면 부분 결과를 저장하지 않고 failed 처리 */
+      const thrownCode = (e as { code?: string })?.code;
       const code =
-        e instanceof Anthropic.APIError ? `api_${e.status}` : "api_error";
+        typeof thrownCode === "string"
+          ? thrownCode
+          : e instanceof Anthropic.APIError
+            ? `api_${e.status}`
+            : "api_error";
       await markFailed(code);
       return { status: "generation_failed", code };
     }
 
-    /* 3) JSON 구조 검증 — 잘못된 JSON은 저장하지 않음 */
-    const parsed = parseRitualResult(rawText);
+    /* 3) 두 그룹 병합 후 전체 구조 검증 — 실패 시 부분 저장 없이 failed */
+    const mergeStartedAt = Date.now();
+    let coreJson: unknown;
+    let planJson: unknown;
+    try {
+      coreJson = JSON.parse(coreText.trim());
+      planJson = JSON.parse(planText.trim());
+    } catch {
+      await markFailed("json_parse_error");
+      return { status: "generation_failed", code: "invalid_result" };
+    }
+    const merged = {
+      ...(coreJson as Record<string, unknown>),
+      ...(planJson as Record<string, unknown>),
+    };
+    const parsed = parseRitualResultObject(merged);
     if (!parsed.ok) {
       await markFailed(`validation_${parsed.reason}`);
       return { status: "generation_failed", code: "invalid_result" };
@@ -179,6 +228,9 @@ export async function generateRitualForOrder(
       }
       parsed.data = finalCheck.data;
     }
+    console.error(`[perf] merge_validation_ms=${Date.now() - mergeStartedAt}`);
+    /* 병렬 호출 → parse → merge → 스키마 검증 → 서두 결합까지 완료 시점 */
+    console.error(`[perf] generation_total_ms=${Date.now() - genStartedAt}`);
 
     /* 4) 다음 result_version 계산 후 저장 (order_id+version unique가 경합 보호) */
     const latest = await supabase

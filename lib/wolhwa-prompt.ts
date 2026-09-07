@@ -157,11 +157,13 @@ function label(options: Parameters<typeof optionLabel>[0], v: string | null) {
   return v ? optionLabel(options, v) : "해당 없음";
 }
 
-export function buildUserPrompt(
+/** 두 병렬 호출이 공유하는 relationship context (신청서 요약 + 안전/방향 지시).
+ *  별도 AI 호출 없이 DB 데이터만으로 서버가 조합. */
+export function buildContextSections(
   order: RitualOrderRow,
-  /** 결제 전 미리보기에서 고객에게 이미 보여준 첫 편지 서두 (있을 때만) */
-  letterOpening?: string[] | null
-): string {
+  /** 결제 전 미리보기에서 월화가 먼저 전한 3문장 (있을 때만 — 톤 참고용) */
+  introLines?: string[] | null
+): string[] {
   const highRisk = order.safety_concerns.some((v) =>
     HIGH_RISK_SAFETY_VALUES.includes(v)
   );
@@ -245,17 +247,34 @@ part_07의 title과 meaning, part_09의 단계, part_10의 문장이
 가이드는 신청자 자신의 하루와 마음을 돌보는 행동으로만 구성합니다.`);
   }
 
-  const hasOpening = !!letterOpening && letterOpening.length > 0;
-  if (hasOpening) {
-    sections.push(`[이미 고객에게 먼저 보여준 월화의 첫 편지 서두]
-${letterOpening!.map((l, i) => `문장${i + 1}: ${l}`).join("\n")}
+  if (introLines && introLines.length === 3) {
+    sections.push(`[결제 전 월화가 먼저 전한 3문장 — 톤·흐름 참고]
+${introLines.map((l, i) => `${i + 1}. ${l}`).join("\n")}
+이 문장들의 시선과 어조를 이어받되, 본문에 그대로 반복하지 마세요.`);
+  }
+
+  return sections;
+}
+
+const OPENING_SECTION = (letterOpening: string[]) => `[이미 고객에게 먼저 보여준 월화의 첫 편지 서두]
+${letterOpening.map((l, i) => `문장${i + 1}: ${l}`).join("\n")}
 
 이 서두는 결제 전에 고객이 실제로 읽은 문장입니다. 반드시 지키세요:
 - 위 문장을 바꾸거나 다듬지 마세요.
 - part_01_letter.content 에 위 문장을 다시 쓰지 마세요. 같은 내용을 처음부터
   반복하지도 마세요. (서버가 위 서두를 편지 맨 앞에 그대로 붙입니다)
 - part_01_letter.content 는 "이 서두 바로 다음 문장"부터 시작해, 서두의 흐름과
-  호칭·어조를 그대로 이어받아 자연스럽게 편지를 이어 쓰세요.`);
+  호칭·어조를 그대로 이어받아 자연스럽게 편지를 이어 쓰세요.`;
+
+export function buildUserPrompt(
+  order: RitualOrderRow,
+  letterOpening?: string[] | null,
+  introLines?: string[] | null
+): string {
+  const sections = buildContextSections(order, introLines);
+  const hasOpening = !!letterOpening && letterOpening.length > 0;
+  if (hasOpening) {
+    sections.push(OPENING_SECTION(letterOpening!));
   }
 
   sections.push(`[출력할 JSON 구조 — key 이름과 구조를 정확히 지키세요]
@@ -326,5 +345,132 @@ part_13(21일 일일 프로그램)은 역할이 완전히 다릅니다.
 
 JSON만 출력하세요.`);
 
+  return sections.join("\n\n");
+}
+
+/* ================================================================
+ * 병렬 생성용 그룹 프롬프트 (동일 컨텍스트 + 자기 그룹 파트만 생성)
+ * ================================================================ */
+
+const CORE_ONLY_RULE = `이 요청에서는 위 8개 key만 생성합니다.
+part_08~part_13, bonus_journal_questions 등 다른 key는 절대 포함하지 마세요.
+(실행 가이드는 같은 컨텍스트로 별도 흐름에서 함께 작성되고 있습니다 —
+이 사실을 고객 문장에 언급하지는 마세요)`;
+
+const PLAN_ONLY_RULE = `이 요청에서는 위 7개 key만 생성합니다.
+part_01~part_07, part_14 등 다른 key는 절대 포함하지 마세요.
+(편지와 해석 파트는 같은 컨텍스트로 별도 흐름에서 함께 작성되고 있습니다 —
+이 사실을 고객 문장에 언급하지는 마세요)`;
+
+/** GROUP A — 관계/감정 핵심 (part_01~07, part_14) */
+export function buildCoreUserPrompt(
+  order: RitualOrderRow,
+  letterOpening?: string[] | null,
+  introLines?: string[] | null
+): string {
+  const sections = buildContextSections(order, introLines);
+  const hasOpening = !!letterOpening && letterOpening.length > 0;
+  if (hasOpening) sections.push(OPENING_SECTION(letterOpening!));
+
+  sections.push(`[출력할 JSON 구조 — key 이름과 구조를 정확히 지키세요]
+{
+  "part_01_letter": { "title": "", "content": "" },
+  "part_02_relationship_story": { "title": "", "content": "" },
+  "part_03_current_emotion": { "title": "", "content": "" },
+  "part_04_repeated_pattern": { "title": "", "content": "" },
+  "part_05_true_wish": { "title": "", "content": "" },
+  "part_06_controllable_now": { "title": "", "content": "" },
+  "part_07_ritual": { "title": "", "meaning": "" },
+  "part_14_final_letter": { "title": "", "content": "" }
+}
+
+각 파트 안내:
+- part_01: ${order.applicant_name}님께 보내는 월화의 첫 편지 (사연을 읽었음이 느껴지게)${
+    hasOpening
+      ? " — 단, 위에 제시된 서두 '이후'의 이어지는 내용만 작성 (서두 반복 금지)"
+      : ""
+  }
+- part_02: 두 사람의 관계 흐름 정리 (신청 내용에 근거, 단정 없이)
+- part_03: 지금 마음 들여다보기
+- part_04: 관계에서 반복된 흐름 (판단이 아닌 관찰)
+- part_05: ${order.applicant_name}님이 정말 원하는 것
+- part_06: 지금 스스로 할 수 있는 것
+- part_07: 리추얼의 이름과 의미 (짧은 한자 상징명 + 우리말 풀이)
+- part_14: 마무리 편지
+
+[분량 지침 — 반복 없이 밀도 있게]
+- part_01~06, part_14는 각각 2~4개의 짧은 문단으로 씁니다.
+- 같은 신청 내용을 파트마다 다시 길게 요약하지 않습니다.
+  예: part_02에서 관계 배경을 충분히 다뤘다면 part_03에서 동일한 이별
+  상황을 다시 장황하게 설명하지 않습니다.
+- 각 파트는 서로 다른 새로운 통찰 하나에 집중합니다.
+
+${CORE_ONLY_RULE}
+
+JSON만 출력하세요.`);
+  return sections.join("\n\n");
+}
+
+/** GROUP B — 실행/리추얼 가이드 (part_08~13, bonus) */
+export function buildPlanUserPrompt(
+  order: RitualOrderRow,
+  introLines?: string[] | null
+): string {
+  const sections = buildContextSections(order, introLines);
+
+  sections.push(`[출력할 JSON 구조 — key 이름과 구조를 정확히 지키세요]
+{
+  "part_08_preparation": { "items": ["문자열"] },
+  "part_09_ritual_steps": { "steps": ["문자열"] },
+  "part_10_personal_words": { "lines": ["문자열"] },
+  "part_11_24h_guide": { "items": ["문자열"] },
+  "part_12_7day_guide": { "items": ["문자열"] },
+  "part_13_21day_plan": { "days": [ { "day": 1, "title": "", "action": "", "reflection": "" } ] },
+  "bonus_journal_questions": { "title": "", "intro": "", "questions": ["문자열"] }
+}
+
+각 파트 안내:
+- part_08: 준비물 (붉은 실, 종이, 펜, 물 중심 — 구매 유도 금지)
+- part_09: 약 5분의 리추얼 진행 순서 (4~7단계, 시작과 끝의 작은 여닫는 의식 포함)
+- part_10: 리추얼 중 소리 내어 읽을 개인 문장 3~6줄 (사연 반영)
+- part_11: 리추얼 이후 24시간 가이드 — "오늘 하루"의 즉각적인 행동
+  안전장치만 담습니다. 감정이 출렁이는 순간 바로 붙잡을 수 있는,
+  오늘 밤까지만 유효한 구체적 행동들입니다.
+- part_12: 7일 행동 가이드 — 일일 행동이 아니라, 앞으로 일주일 동안
+  유지할 관계·감정 관리의 "원칙"들입니다. (예: 연락에 대한 나만의 기준,
+  마음이 흔들릴 때의 약속 같은 지침 형태)
+- part_13: 21일 마음 회복 플랜 — days 배열에 DAY 1부터 DAY 21까지
+  정확히 21개를 순서대로 만듭니다. 1~7일은 감정을 바라보기, 8~14일은
+  일상 회복, 15~21일은 관계를 다른 거리에서 보기의 흐름을 따르되
+  각 날의 행동은 이 신청자의 사연과 상황(연락 상태 포함)에 맞춥니다.
+  하루 5~15분이면 충분한 쉬운 행동만 제안하고, 어렵거나 비용이 들거나
+  시간이 많이 드는 행동은 금지합니다. 행동을 매일 반복 복사하지 않습니다.
+
+[21일 분량 지침 — 간결하게]
+- title: 짧은 제목 한 줄
+- action: 1~2문장
+- reflection: 1문장
+하루마다 긴 에세이를 만들지 않습니다.
+
+[세 가이드의 역할 분리 — 중요]
+part_11(오늘 하루의 즉각 안전장치), part_12(일주일의 원칙),
+part_13(21일 일일 프로그램)은 역할이 완전히 다릅니다.
+같은 행동(예: SNS 확인 대신 산책, 호흡하기, 감정 기록하기)을
+세 영역에서 반복하지 마세요. 하나의 행동은 세 파트 중
+가장 어울리는 한 곳에만 배치합니다.
+
+- bonus: '월화의 마음 기록장' — 단순 질문 목록이 아니라 매일 펼쳐
+  기록할 수 있는 작은 기록장입니다. title(기록장의 이름),
+  intro(월화가 건네는 짧은 여는 글), questions(기록 항목 7~10개)로
+  구성합니다. questions에는 질문형과 기록형을 섞습니다. 예:
+  "오늘 가장 많이 떠오른 생각", "오늘 마음이 흔들린 순간",
+  "내가 통제할 수 있었던 행동", "상대에게 듣고 싶은 말",
+  "사실 내가 나에게 해주고 싶은 말", "오늘의 마음 온도 (0~10)",
+  "내일 하나만 지킬 것" — 이 예시를 그대로 베끼지 말고
+  ${order.applicant_name}님의 사연에 맞게 변형해 만드세요.
+
+${PLAN_ONLY_RULE}
+
+JSON만 출력하세요.`);
   return sections.join("\n\n");
 }

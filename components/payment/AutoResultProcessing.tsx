@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearApplication } from "@/lib/ritual-storage";
+import WaitingContent from "@/components/payment/WaitingContent";
 
 const MESSAGES = [
   "월화가 당신의 이야기를 다시 천천히 읽고 있어요.",
@@ -26,9 +27,15 @@ const MAX_WAIT_MS = 10 * 60 * 1000;
 export default function AutoResultProcessing({
   orderNumber,
   processToken,
+  applicantName,
+  introLines,
 }: {
   orderNumber: string;
   processToken: string;
+  /** 대기 화면 개인화용 (없으면 일반 문구) — 표시 전용 */
+  applicantName?: string | null;
+  /** 결제 전 미리보기에서 이미 본 3문장 (검증된 경우에만 전달됨) */
+  introLines?: string[] | null;
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<"working" | "delayed">("working");
@@ -134,28 +141,62 @@ export default function AutoResultProcessing({
     );
   }
 
+  const hasIntro = !!introLines && introLines.length === 3;
+  const name = applicantName?.trim();
+
   return (
-    <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col items-center justify-center px-6 py-20 text-center">
+    <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col items-center px-6 pb-16 pt-14 text-center">
       <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
-      <p className="mt-6 text-[0.72rem] tracking-[0.25em] text-thread/90">
+      <p className="mt-5 text-[0.72rem] tracking-[0.25em] text-thread/90">
         결제가 완료되었습니다
       </p>
-      <span
-        aria-hidden
-        className="mt-10 block h-12 w-px animate-pulse bg-gradient-to-b from-transparent via-thread/80 to-thread/20"
-      />
+
       <p
         key={msgIdx}
-        className="font-display mt-8 min-h-[3.6rem] whitespace-pre-line text-[1.05rem] leading-[1.9] text-ivory"
+        className="font-display mt-7 min-h-[3.2rem] whitespace-pre-line text-[1.02rem] leading-[1.9] text-ivory"
       >
-        {MESSAGES[msgIdx]}
+        {name
+          ? `${name}님의 이야기를 이어서 읽고 있어요.`
+          : MESSAGES[msgIdx]}
       </p>
+      {name && (
+        <p className="mt-1 text-[0.78rem] font-light text-ivory-dim">
+          {MESSAGES[msgIdx]}
+        </p>
+      )}
+
+      {/* 결제 전에 이미 본 개인화 3문장 (새 AI 호출 없음) */}
+      {hasIntro && (
+        <div className="mt-7 w-full rounded-2xl border border-gold/25 bg-ink-soft px-6 py-6 text-left">
+          <p className="text-center text-[0.65rem] tracking-[0.3em] text-gold/80">
+            월화가 먼저 읽은 마음
+          </p>
+          <div className="mt-4 flex flex-col gap-3">
+            {introLines!.map((line, i) => (
+              <p
+                key={i}
+                className="text-[0.88rem] font-light leading-[1.95] text-ivory"
+              >
+                {line}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="mt-8 text-[0.72rem] tracking-wide text-ivory-dim/80">
+        결과를 준비하는 동안 잠시 읽어보세요
+      </p>
+      <div className="mt-3 w-full">
+        <WaitingContent />
+      </div>
+
       <p className="mt-8 text-[0.78rem] font-light leading-[1.9] text-ivory-dim">
-        보통 1~3분 정도 걸립니다.
+        결과가 완성되면 이 화면에서 바로 열어드릴게요.
         <br />
-        이 화면을 닫지 말고 잠시만 기다려주세요.
+        이 화면을 그대로 두시면 자동으로 이어집니다.
       </p>
-      <div className="mt-10 w-full rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-4">
+      <div className="mt-7 w-full rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-4">
         <p className="text-[0.68rem] tracking-wide text-ivory-dim">주문번호</p>
         <p className="font-display mt-1 text-base tracking-wider text-gold">
           {orderNumber}

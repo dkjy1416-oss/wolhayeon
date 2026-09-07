@@ -54,6 +54,31 @@ export const RitualResultStructSchema = z.object({
   }),
 });
 
+/* ---------- 1-b) 병렬 생성용 그룹 스키마 ---------- */
+
+/** GROUP A — 관계/감정 핵심 (편지·해석·리추얼 의미) */
+export const RitualCoreStructSchema = RitualResultStructSchema.pick({
+  part_01_letter: true,
+  part_02_relationship_story: true,
+  part_03_current_emotion: true,
+  part_04_repeated_pattern: true,
+  part_05_true_wish: true,
+  part_06_controllable_now: true,
+  part_07_ritual: true,
+  part_14_final_letter: true,
+});
+
+/** GROUP B — 실행/리추얼 가이드 (준비물·순서·문장·가이드·21일·기록장) */
+export const RitualPlanStructSchema = RitualResultStructSchema.pick({
+  part_08_preparation: true,
+  part_09_ritual_steps: true,
+  part_10_personal_words: true,
+  part_11_24h_guide: true,
+  part_12_7day_guide: true,
+  part_13_21day_plan: true,
+  bonus_journal_questions: true,
+});
+
 /* ---------- 2) 품질 검증용 (DB 저장 전) ---------- */
 
 const text = z.string().trim().min(10);
@@ -108,6 +133,10 @@ export type RitualResult = z.infer<typeof RitualResultSchema>;
  * AI 응답 텍스트에서 JSON을 안전하게 추출·검증.
  * 구조화 출력 사용 시 코드펜스가 나올 수 없지만, 방어적으로 유지합니다.
  */
+export type ParseResult =
+  | { ok: true; data: RitualResult }
+  | { ok: false; reason: string };
+
 export function parseRitualResult(
   raw: string
 ): { ok: true; data: RitualResult } | { ok: false; reason: string } {
@@ -125,6 +154,13 @@ export function parseRitualResult(
   } catch {
     return { ok: false, reason: "json_parse_error" };
   }
+  return parseRitualResultObject(parsed);
+}
+
+/** 이미 파싱된 객체(예: 병렬 생성 병합 결과)에 대한 전체 검증 */
+export function parseRitualResultObject(
+  parsed: unknown
+): ParseResult {
   const result = RitualResultSchema.safeParse(parsed);
   if (result.success) {
     /* 고객 문장에 개발 용어(part_01, JSON, schema 등)가 새어 나오면 저장 거부 */

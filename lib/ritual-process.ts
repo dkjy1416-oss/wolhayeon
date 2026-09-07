@@ -65,7 +65,9 @@ export async function processPaidOrder(
     }
 
     /* 2) 자동 승인 (이미 승인이면 그대로 통과) */
+    const approveStartedAt = Date.now();
     const approve = await autoApproveResult(orderNumber);
+    console.error(`[perf] auto_approve_ms=${Date.now() - approveStartedAt}`);
     if (approve.status === "needs_admin") return { status: "delayed" };
     if (approve.status === "not_ready") {
       /* 생성 직후 상태 전파 지연 등 — 재요청 시 이어서 처리 */
@@ -76,12 +78,14 @@ export async function processPaidOrder(
 
     /* 3) 이메일 — 실패해도 결과는 공개 */
     let delivery = "failed";
+    const emailStartedAt = Date.now();
     try {
       const mail = await sendApprovedResultEmail(orderNumber);
       delivery = mail.status;
     } catch {
       delivery = "failed";
     }
+    console.error(`[perf] email_ms=${Date.now() - emailStartedAt}`);
 
     return {
       status: "ready",

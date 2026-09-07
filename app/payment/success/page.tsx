@@ -2,12 +2,39 @@ import Link from "next/link";
 import { confirmOrderPayment } from "@/lib/payment-confirm";
 import { createProcessToken } from "@/lib/customer-process-auth";
 import AutoResultProcessing from "@/components/payment/AutoResultProcessing";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { PreviewSchema } from "@/lib/ritual-preview-schema";
 
-function SuccessView({ orderNumber }: { orderNumber: string }) {
+async function SuccessView({ orderNumber }: { orderNumber: string }) {
   /* 서버가 결제를 success/already_paid로 확인한 경우에만 이 뷰가 렌더되며,
      그 주문에 한해 30분짜리 서명 처리 토큰을 발급해 자동 처리 화면을 시작.
      (RITUAL_ADMIN_SECRET 자체는 전달되지 않고 서명 결과만 전달) */
   const processToken = createProcessToken(orderNumber);
+
+  /* 대기 화면 개인화: 결제 검증을 통과한 이 주문의 applicant_name과
+     검증된 preview intro 3문장만 읽어 전달.
+     - 새 AI 호출 없음 (이미 생성된 preview_content 재사용)
+     - 사연 전체·이메일·result_token·paymentKey는 client로 전달하지 않음
+     - preview가 없거나 구조가 다른 기존 주문은 introLines=null */
+  let applicantName: string | null = null;
+  let introLines: string[] | null = null;
+  try {
+    const supabase = getSupabaseAdmin();
+    const row = await supabase
+      .from("ritual_orders")
+      .select("applicant_name, preview_content")
+      .eq("order_number", orderNumber)
+      .maybeSingle();
+    if (row.data) {
+      applicantName = row.data.applicant_name ?? null;
+      const pv = PreviewSchema.safeParse(row.data.preview_content);
+      if (pv.success && pv.data.intro_lines.length === 3) {
+        introLines = pv.data.intro_lines;
+      }
+    }
+  } catch {
+    /* 조회 실패 시 개인화 없이 진행 (대기 화면은 정상 동작) */
+  }
 
   if (!processToken) {
     /* 서명키 미설정 등 — 결제는 완료 상태이므로 안내만 (재결제 유도 없음) */
@@ -39,7 +66,12 @@ function SuccessView({ orderNumber }: { orderNumber: string }) {
   }
 
   return (
-    <AutoResultProcessing orderNumber={orderNumber} processToken={processToken} />
+    <AutoResultProcessing
+      orderNumber={orderNumber}
+      processToken={processToken}
+      applicantName={applicantName}
+      introLines={introLines}
+    />
   );
 }
 
