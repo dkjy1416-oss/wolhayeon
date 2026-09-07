@@ -1,94 +1,144 @@
 "use client";
 
 /**
- * 결과 대기 중 콘텐츠 카드 (고정 콘텐츠 — AI 호출 없음).
- *
- * - 현재는 text 카드만 사용. 가짜 후기·가상 고객 이름은 절대 사용하지 않음.
- * - 향후 실제 고객 동의를 받은 후기/월화 숏폼 영상이 준비되면
- *   ITEMS에 { kind: "video", src: "/waiting/xxx.mp4", title } 항목을
- *   추가하는 것만으로 연결되도록 구조를 미리 지원.
- *   (현재 영상 파일이 없으므로 video 항목은 넣지 않음 — 404 태그 방지)
+ * 결과 대기 중 월화 영상 콘텐츠.
+ * - 사용자가 제작한 실제 영상만 사용.
+ * - 한 번에 현재 영상 하나만 렌더/로드.
+ * - 자동재생은 muted. 소리는 사용자가 버튼을 눌렀을 때만 켜짐.
+ * - 영상이 끝나면 다음 영상으로 이동.
+ * - 결과 ready 처리는 AutoResultProcessing이 별도로 수행하므로
+ *   영상 도중에도 결과가 완성되면 즉시 결과 페이지로 이동한다.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-type WaitingItem =
-  | { kind: "text"; title: string; body: string }
-  | { kind: "video"; title: string; src: string };
+type WaitingVideo = {
+  id: string;
+  title: string;
+  src: string;
+  poster: string;
+};
 
-const ITEMS: WaitingItem[] = [
+const VIDEOS: WaitingVideo[] = [
   {
-    kind: "text",
+    id: "05",
+    title: "그 사람이 필요한 걸까, 그때가 그리운 걸까",
+    src: "/wolhwa/shorts/05.mp4",
+    poster: "/wolhwa/shorts/05-poster.webp",
+  },
+  {
+    id: "01",
     title: "연락하고 싶은 밤에",
-    body: "지금 보내려는 말을 메모장에 먼저 적어보세요.\n내일도 같은 말을 보내고 싶은지 한 번 더 보는 것만으로도\n충동과 진짜 마음을 구분하기 쉬워집니다.",
+    src: "/wolhwa/shorts/01.mp4",
+    poster: "/wolhwa/shorts/01-poster.webp",
   },
   {
-    kind: "text",
-    title: "상대의 마음이 너무 궁금할 때",
-    body: "답을 상상하는 것보다,\n지금 확인할 수 있는 사실과 내 추측을\n한 번 나누어 보는 편이 도움이 됩니다.",
+    id: "02",
+    title: "답장이 없을 때 자꾸 확인하는 이유",
+    src: "/wolhwa/shorts/02.mp4",
+    poster: "/wolhwa/shorts/02-poster.webp",
   },
   {
-    kind: "text",
-    title: "재회를 생각하고 있다면",
-    body: "다시 만나는 것만큼 중요한 건\n다시 만났을 때 무엇이 달라질 수 있는지입니다.",
+    id: "03",
+    title: "재회하고 싶다면 먼저 볼 것",
+    src: "/wolhwa/shorts/03.mp4",
+    poster: "/wolhwa/shorts/03-poster.webp",
   },
   {
-    kind: "text",
-    title: "답장이 없을 때",
-    body: "연락의 빈도가 마음의 크기를\n정확히 보여주는 것은 아닙니다.",
-  },
-  {
-    kind: "text",
-    title: "오늘 밤의 마음",
-    body: "지금의 감정에 이름을 붙여보는 것만으로도\n마음은 조금 정리되기 시작합니다.\n그리움인지, 서운함인지, 걱정인지.",
+    id: "04",
+    title: "다시 만나도 같은 이유로 헤어질 때",
+    src: "/wolhwa/shorts/04.mp4",
+    poster: "/wolhwa/shorts/04-poster.webp",
   },
 ];
 
-const ROTATE_MS = 10000;
-
 export default function WaitingContent() {
   const [idx, setIdx] = useState(0);
+  const [muted, setMuted] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const next = () => {
+    setIdx((i) => (i + 1) % VIDEOS.length);
+  };
 
   useEffect(() => {
-    const id = setInterval(
-      () => setIdx((i) => (i + 1) % ITEMS.length),
-      ROTATE_MS
-    );
-    return () => clearInterval(id);
-  }, []);
+    setMuted(true);
+    setFailed(false);
+  }, [idx]);
 
-  const item = ITEMS[idx];
+  const toggleSound = () => {
+    const nextMuted = !muted;
+    setMuted(nextMuted);
+    if (videoRef.current) {
+      videoRef.current.muted = nextMuted;
+      if (videoRef.current.paused) {
+        videoRef.current.play().catch(() => {});
+      }
+    }
+  };
+
+  const item = VIDEOS[idx];
 
   return (
     <div className="w-full">
-      <div
-        key={idx}
-        className="min-h-36 rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-6 text-center"
-      >
-        <p className="font-display text-[0.95rem] font-medium text-gold">
-          “{item.title}”
-        </p>
-        {item.kind === "text" ? (
-          <p className="mt-3 whitespace-pre-line text-[0.85rem] font-light leading-[1.95] text-ivory-dim">
-            {item.body}
+      <div className="overflow-hidden rounded-2xl border border-gold-dim/25 bg-ink-soft">
+        <div className="px-5 pb-4 pt-5 text-center">
+          <p className="font-display text-[0.95rem] font-medium leading-[1.7] text-gold">
+            “{item.title}”
           </p>
+        </div>
+
+        {!failed ? (
+          <div className="relative mx-auto aspect-[9/16] w-full max-w-[280px] overflow-hidden bg-ink">
+            <video
+              key={item.id}
+              ref={videoRef}
+              className="h-full w-full object-cover"
+              src={item.src}
+              poster={item.poster}
+              autoPlay
+              muted={muted}
+              playsInline
+              preload="metadata"
+              onEnded={next}
+              onError={() => setFailed(true)}
+            />
+            <button
+              type="button"
+              onClick={toggleSound}
+              className="absolute bottom-3 right-3 rounded-full border border-ivory/25 bg-ink/75 px-3 py-2 text-[0.68rem] text-ivory backdrop-blur-sm"
+              aria-label={muted ? "영상 소리 켜기" : "영상 소리 끄기"}
+            >
+              {muted ? "소리 켜기" : "소리 끄기"}
+            </button>
+          </div>
         ) : (
-          /* 실제 영상 파일이 추가된 뒤에만 이 분기가 렌더됨 */
-          <video
-            className="mt-3 w-full rounded-xl"
-            src={item.src}
-            controls
-            playsInline
-            preload="metadata"
-          />
+          <div className="px-6 pb-7 text-center">
+            <p className="text-[0.82rem] font-light leading-[1.9] text-ivory-dim">
+              영상을 불러오지 못했어요.
+              <br />
+              결과 준비는 계속 진행되고 있습니다.
+            </p>
+            <button
+              type="button"
+              onClick={next}
+              className="mt-4 text-[0.75rem] text-gold underline underline-offset-4"
+            >
+              다음 이야기 보기
+            </button>
+          </div>
         )}
       </div>
-      <div className="mt-3 flex items-center justify-center gap-1.5">
-        {ITEMS.map((_, i) => (
-          <span
-            key={i}
-            aria-hidden
-            className={`h-1 rounded-full transition-all ${
-              i === idx ? "w-4 bg-gold/70" : "w-1 bg-gold-dim/40"
+
+      <div className="mt-3 flex items-center justify-center gap-2">
+        {VIDEOS.map((v, i) => (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => setIdx(i)}
+            aria-label={`${i + 1}번째 영상 보기`}
+            className={`h-1.5 rounded-full transition-all ${
+              i === idx ? "w-5 bg-gold/70" : "w-1.5 bg-gold-dim/40"
             }`}
           />
         ))}

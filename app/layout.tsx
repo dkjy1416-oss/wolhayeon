@@ -17,9 +17,9 @@ const notoSansKr = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "월하연 月下緣 | 붉은 인연의 실 리추얼",
+  title: "월하연 月下緣 | 헤어진 뒤, 아직 남아 있는 마음을 읽는 시간",
   description:
-    "달빛 아래, 두 사람의 마음을 돌아보는 개인화 리추얼. 월하연의 상징적 리추얼 콘텐츠로 당신의 인연을 조용히 되돌아보세요.",
+    "연락해야 할지, 기다려야 할지, 놓아야 할지 헷갈릴 때. 월화가 관계의 흐름과 지금의 마음을 함께 들여다봅니다.",
 };
 
 export const viewport: Viewport = {
