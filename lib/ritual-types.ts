@@ -281,7 +281,19 @@ export function isRealisticBirthYear(
   );
 }
 
-/** 미성년/학생 여부(향후 AI 분기용 — 이번 단계에서는 저장만) */
+/** 출생연도 → 내부 컨텍스트용 대략 연령 표기 (정확한 만 나이로 단정하지 않음)
+ *  예: "1997년생 — 현재 약 28~29세" */
+export function approxAgeLabel(
+  birthYear: number | null,
+  nowYear: number = new Date().getFullYear()
+): string {
+  if (birthYear === null || !Number.isInteger(birthYear)) return "미입력";
+  const hi = nowYear - birthYear;
+  const lo = Math.max(0, hi - 1);
+  return `${birthYear}년생 — 현재 약 ${lo}~${hi}세`;
+}
+
+/** 미성년/학생 여부 (AI 분기용) */
 export function isLikelyMinor(
   birthYear: number | null,
   lifeStage: string,

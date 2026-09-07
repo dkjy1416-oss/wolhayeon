@@ -21,7 +21,10 @@ import { WOLHWA_SYSTEM_PROMPT, buildUserPrompt } from "@/lib/wolhwa-prompt";
 import {
   parseRitualResult,
   RitualResultStructSchema,
+  RitualResultSchema,
 } from "@/lib/ritual-result-schema";
+import { PreviewSchema } from "@/lib/ritual-preview-schema";
+import { mergeLetterOpening } from "@/lib/letter-merge";
 import type { RitualOrderRow } from "@/lib/supabase/types";
 
 /** 모델 ID는 이 한 곳에서만 관리.
@@ -91,6 +94,12 @@ export async function generateRitualForOrder(
 
     const order = claim.data as RitualOrderRow & { id: string };
 
+    /* 결제 전 미리보기에서 고객이 이미 본 첫 편지 서두 (정상 구조일 때만 사용) */
+    const previewParsed = PreviewSchema.safeParse(order.preview_content);
+    const letterOpening = previewParsed.success
+      ? previewParsed.data.preview_letter_excerpt
+      : null;
+
     /* 선점 이후의 모든 실패는 failed로 되돌린다 */
     const markFailed = async (code: string) => {
       console.error(`[gen:${requestId}] failed code=${code}`);
@@ -115,7 +124,9 @@ export async function generateRitualForOrder(
         model: getModelId(),
         max_tokens: MAX_OUTPUT_TOKENS,
         system: WOLHWA_SYSTEM_PROMPT,
-        messages: [{ role: "user", content: buildUserPrompt(order) }],
+        messages: [
+          { role: "user", content: buildUserPrompt(order, letterOpening) },
+        ],
         /* Anthropic 공식 구조화 출력: 모델이 이 JSON schema에 맞는
            JSON만 생성하도록 API 차원에서 강제.
            → 코드펜스·설명문·앞뒤 문장·깨진 JSON이 발생하지 않음 */
@@ -152,6 +163,21 @@ export async function generateRitualForOrder(
     if (!parsed.ok) {
       await markFailed(`validation_${parsed.reason}`);
       return { status: "generation_failed", code: "invalid_result" };
+    }
+
+    /* 3-b) 미리보기 서두를 첫 편지 맨 앞에 정확히 결합 (중복 방지 포함).
+       결합 후 최종 구조를 한 번 더 전체 검증 — 실패 시 DB 저장 금지 */
+    if (letterOpening) {
+      parsed.data.part_01_letter.content = mergeLetterOpening(
+        letterOpening,
+        parsed.data.part_01_letter.content
+      );
+      const finalCheck = RitualResultSchema.safeParse(parsed.data);
+      if (!finalCheck.success) {
+        await markFailed("merged_letter_invalid");
+        return { status: "generation_failed", code: "merged_letter_invalid" };
+      }
+      parsed.data = finalCheck.data;
     }
 
     /* 4) 다음 result_version 계산 후 저장 (order_id+version unique가 경합 보호) */

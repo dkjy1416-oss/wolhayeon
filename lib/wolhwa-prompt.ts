@@ -17,6 +17,11 @@ import {
   MAIN_WISH_OPTIONS,
   CURRENT_EMOTION_OPTIONS,
   SAFETY_CONCERN_OPTIONS,
+  APPLICANT_GENDER_OPTIONS,
+  PARTNER_GENDER_OPTIONS,
+  LIFE_STAGE_OPTIONS,
+  approxAgeLabel,
+  isLikelyMinor,
   optionLabel,
 } from "@/lib/ritual-types";
 
@@ -82,6 +87,23 @@ export const WOLHWA_SYSTEM_PROMPT = `당신은 월하연(月下緣)의 리추얼
 - 차단을 우회하는 방법, 지인·SNS 등을 통한 우회 연락 권유
 리추얼은 상대가 아니라 신청자 자신의 마음을 위한 상징적 시간임을 일관되게 유지합니다.
 
+[연령·성별·생활단계 사용 규칙]
+- 연령과 생활단계는 운명이나 성격 판단 기준이 아니라, 현재 삶의 맥락을
+  이해하기 위한 정보로만 사용합니다. 정확한 만 나이로 단정하지 않습니다.
+- 성별을 근거로 한 일반화("남자는 원래…", "여자는 원래…")는 절대 쓰지 않습니다.
+- 중·고등학생/미성년 가능성이 높은 신청자: 결혼 가능성을 핵심 결과로 다루지 않고,
+  감정 이해·건강한 관계·경계·학업과 일상·의사소통을 중심으로 씁니다.
+- 대학생·대학원생: 학업/진로, 첫 장기연애일 가능성, 생활 변화, 관계와 개인
+  성장의 균형을 자연스럽게 고려합니다.
+- 성인 직장인/자영업자: 생활 패턴, 시간, 경제적 독립, 장기 관계의 현실적 조건을
+  필요할 때 고려합니다.
+- 장기간 교제했고 신청 내용에 실제로 결혼 이야기가 있었거나, 연령/상황상 장기
+  관계를 진지하게 고민하는 경우에만 "재회 이후 장기적인 관계 또는 결혼까지 가기
+  위해 무엇이 달라져야 하는지"를 현실적인 조건으로 분석할 수 있습니다.
+  "결혼하게 됩니다", "결혼할 운명입니다", "몇 년 안에 결혼합니다" 같은 확정
+  예측은 금지이며, 나이가 많다는 이유만으로 결혼을 원하는 사람이라고
+  추정하지 않습니다.
+
 [사실 준수 — 상대방 마음 추정 완전 금지]
 - 신청서에 없는 사실(구체적 사건, 대화, 상대의 생각)을 만들어내지 않습니다.
 - 상대가 직접 한 말은 "그가 그렇게 말했다"까지만 사실로 사용합니다.
@@ -135,7 +157,11 @@ function label(options: Parameters<typeof optionLabel>[0], v: string | null) {
   return v ? optionLabel(options, v) : "해당 없음";
 }
 
-export function buildUserPrompt(order: RitualOrderRow): string {
+export function buildUserPrompt(
+  order: RitualOrderRow,
+  /** 결제 전 미리보기에서 고객에게 이미 보여준 첫 편지 서두 (있을 때만) */
+  letterOpening?: string[] | null
+): string {
   const highRisk = order.safety_concerns.some((v) =>
     HIGH_RISK_SAFETY_VALUES.includes(v)
   );
@@ -155,9 +181,18 @@ export function buildUserPrompt(order: RitualOrderRow): string {
 
   const sections: string[] = [];
 
+  const minor = isLikelyMinor(order.applicant_birth_year, order.life_stage);
+
   sections.push(`[신청서 내용]
 - 신청자 이름: ${order.applicant_name}
+- 신청자 성별: ${order.applicant_gender ? optionLabel(APPLICANT_GENDER_OPTIONS, order.applicant_gender) : "미입력"}
+- 신청자 출생연도/연령대: ${approxAgeLabel(order.applicant_birth_year)}
+- 현재 생활단계: ${order.life_stage ? optionLabel(LIFE_STAGE_OPTIONS, order.life_stage) : "미입력"}${
+    minor ? " (미성년/학생 가능성 높음 — 연령 규칙 적용)" : ""
+  }
 - 상대 이름: ${order.partner_name}
+- 상대 성별: ${order.partner_gender ? optionLabel(PARTNER_GENDER_OPTIONS, order.partner_gender) : "미입력"}
+- 상대 출생연도/연령대: ${approxAgeLabel(order.partner_birth_year)}
 - 현재 관계: ${label(RELATIONSHIP_TYPE_OPTIONS, order.relationship_type)}${
     order.relationship_type === "other" && order.relationship_type_other
       ? ` (${order.relationship_type_other})`
@@ -210,6 +245,19 @@ part_07의 title과 meaning, part_09의 단계, part_10의 문장이
 가이드는 신청자 자신의 하루와 마음을 돌보는 행동으로만 구성합니다.`);
   }
 
+  const hasOpening = !!letterOpening && letterOpening.length > 0;
+  if (hasOpening) {
+    sections.push(`[이미 고객에게 먼저 보여준 월화의 첫 편지 서두]
+${letterOpening!.map((l, i) => `문장${i + 1}: ${l}`).join("\n")}
+
+이 서두는 결제 전에 고객이 실제로 읽은 문장입니다. 반드시 지키세요:
+- 위 문장을 바꾸거나 다듬지 마세요.
+- part_01_letter.content 에 위 문장을 다시 쓰지 마세요. 같은 내용을 처음부터
+  반복하지도 마세요. (서버가 위 서두를 편지 맨 앞에 그대로 붙입니다)
+- part_01_letter.content 는 "이 서두 바로 다음 문장"부터 시작해, 서두의 흐름과
+  호칭·어조를 그대로 이어받아 자연스럽게 편지를 이어 쓰세요.`);
+  }
+
   sections.push(`[출력할 JSON 구조 — key 이름과 구조를 정확히 지키세요]
 {
   "part_01_letter": { "title": "", "content": "" },
@@ -230,7 +278,11 @@ part_07의 title과 meaning, part_09의 단계, part_10의 문장이
 }
 
 각 파트 안내:
-- part_01: ${order.applicant_name}님께 보내는 월화의 첫 편지 (사연을 읽었음이 느껴지게)
+- part_01: ${order.applicant_name}님께 보내는 월화의 첫 편지 (사연을 읽었음이 느껴지게)${
+    hasOpening
+      ? " — 단, 위에 제시된 서두 '이후'의 이어지는 내용만 작성 (서두 반복 금지)"
+      : ""
+  }
 - part_02: 두 사람의 관계 흐름 정리 (신청 내용에 근거, 단정 없이)
 - part_03: 지금 마음 들여다보기
 - part_04: 관계에서 반복된 흐름 (판단이 아닌 관찰)

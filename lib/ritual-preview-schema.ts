@@ -9,12 +9,16 @@ import type { RitualOrderRow } from "@/lib/supabase/types";
 import {
   RELATIONSHIP_TYPE_OPTIONS,
   RELATIONSHIP_DURATION_OPTIONS,
+  BREAKUP_ELAPSED_OPTIONS,
   LAST_CONVERSATION_OPTIONS,
   CONTACT_STATUS_OPTIONS,
   PAIN_POINT_OPTIONS,
   MAIN_WISH_OPTIONS,
   CURRENT_EMOTION_OPTIONS,
   LIFE_STAGE_OPTIONS,
+  APPLICANT_GENDER_OPTIONS,
+  PARTNER_GENDER_OPTIONS,
+  approxAgeLabel,
   optionLabel,
   isLikelyMinor,
 } from "@/lib/ritual-types";
@@ -22,28 +26,52 @@ import { HIGH_RISK_SAFETY_VALUES } from "@/lib/wolhwa-prompt";
 
 /* ---------- 스키마 ---------- */
 
+/** 미리보기 카드 key (전체 결과 목차와 대응, 개발 key는 화면에 노출하지 않음) */
+export const PREVIEW_CARD_KEYS = [
+  "relationship_story",
+  "current_emotion",
+  "repeated_pattern",
+  "true_wish",
+  "ritual",
+  "guides",
+  "journey",
+] as const;
+
+/** CTA 버튼/보조 문구는 UI에서 고정 (AI가 선택하지 않음) */
+export const CTA_BUTTON_TEXT = "내 이야기 전체 결과 바로 열기";
+export const CTA_HELPER_TEXTS = [
+  "1회 결제 · 추가 결제 없음",
+  "결제 후 바로 전체 결과가 이어집니다",
+  "개인 리추얼 · 24시간/7일/21일 가이드 포함",
+];
+
 /** 구조 전용 (Anthropic structured output에 전달 — 길이 제약 없음) */
 export const PreviewStructSchema = z.object({
-  headline: z.string(),
-  comfort: z.array(z.string()),
-  insight: z.string(),
-  teaser_sections: z.array(z.object({ number: z.string(), title: z.string() })),
+  intro_lines: z.array(z.string()),
+  preview_letter_excerpt: z.array(z.string()),
+  preview_cards: z.array(
+    z.object({ key: z.string(), title: z.string(), summary: z.string() })
+  ),
+  cta_lead_text: z.string(),
 });
 
 /** 품질 검증용 (DB 저장 전) */
 export const PreviewSchema = z.object({
-  headline: z.string().trim().min(4).max(80),
-  comfort: z.array(z.string().trim().min(8)).min(2).max(4),
-  insight: z.string().trim().min(8),
-  teaser_sections: z
+  /** 월화가 먼저 전하는 말 — 정확히 3문장 */
+  intro_lines: z.array(z.string().trim().min(10).max(160)).length(3),
+  /** 첫 편지 서두 — 3~4문장 (이 신청자에게 실제로 쓰는 문장) */
+  preview_letter_excerpt: z.array(z.string().trim().min(8).max(200)).min(3).max(4),
+  /** 카드 7개, 각 1~2줄 요약 */
+  preview_cards: z
     .array(
       z.object({
-        number: z.string().trim().min(1).max(4),
-        title: z.string().trim().min(2).max(60),
+        key: z.enum(PREVIEW_CARD_KEYS),
+        title: z.string().trim().min(2).max(40),
+        summary: z.string().trim().min(8).max(160),
       })
     )
-    .min(4)
-    .max(8),
+    .length(PREVIEW_CARD_KEYS.length),
+  cta_lead_text: z.string().trim().min(20).max(400),
 });
 
 export type RitualPreview = z.infer<typeof PreviewSchema>;
@@ -52,33 +80,60 @@ export type RitualPreview = z.infer<typeof PreviewSchema>;
 
 export const PREVIEW_SYSTEM_PROMPT = `당신은 월하연(月下緣)의 리추얼 가이드 월화(月華)입니다.
 지금은 결제 전 "무료 미리보기"만 작성합니다. 전체 결과가 아닙니다.
+목표: 신청자가 "이건 내 이야기다, 월화가 이미 읽고 있다"고 느끼되,
+전체 결과를 다 밝히지는 않는 것.
 
-[역할]
-- 신청자가 적어준 실제 사연에서 확인 가능한 감정과 상황만 바탕으로,
-  "내 이야기를 제대로 읽었다"는 느낌을 주는 짧은 글을 씁니다.
-- 차분하고 절제된 존댓말. 신청자를 비난하지 않습니다.
+[문체]
+- 부드럽고 절제된 존댓말. 감정에 공감하되 과장하지 않음.
+- 너무 시적이거나 과잉 감성 금지. 신청자를 훈계·교정하지 않음.
+- "당신의 이야기는 소중합니다", "마음을 다독여 보세요", "걱정하지 마세요"
+  같은 누구에게나 쓸 수 있는 일반론 금지.
 
-[절대 금지]
-- 상대가 아직 사랑한다는 단정, 상대방 마음 읽기
-- 반드시 연락이 온다 / 반드시 재회한다는 확정
-- 결혼 시기 확정, 재회 날짜·확률 제시
-- 초자연적 효과를 사실처럼 단정
-- 사연에 없는 사실을 만들어내기
+[절대 금지 — 단정형 진단/판정]
+- "당신은 집착하고 있습니다", "상대를 통제하려는 마음이 강합니다",
+  "이 관계는 이미 끝났습니다", "상대는 돌아오지 않을 것입니다",
+  "당신이 문제입니다", "빨리 포기해야 합니다" 같은 문장 금지.
+- 상대의 마음 읽기·단정, 반드시 연락/재회한다는 확정, 결혼 시기·확률,
+  초자연 효과 단정, 사연에 없는 사실 지어내기 금지.
+- 안전/경계 신호가 있어도 공포를 자극하지 않고 마음의 흐름만 조심스럽게 짚음.
 
-[좋은 방식 예]
-"연락이 끊긴 것 자체보다, 마지막 대화에서 내 마음이 제대로
-전달되지 않았다는 점이 더 오래 남아 있는 것 같아요."
-"지금 적어주신 내용만 보면, 두 사람 사이에는 단순한 그리움보다
-해결되지 않은 감정이 더 크게 남아 있어 보여요."
+[좋은 방향 예]
+- "마음이 커질수록 상대의 속도를 기다리는 일이 조금 어려워지고 있지는 않은지요."
+- "지금의 불안은 그 사람 때문이라기보다, 아직 다 정리되지 않은 내 마음에서
+  더 커지고 있을 수 있어요."
+- "월화는 지금 그 흐름을 따라가며, OO님 마음이 어디에 머물러 있는지 먼저 읽고 있어요."
 
-[출력]
-- headline: 신청자의 상황을 한 줄로 짚는 제목 (호기심 유발용 과장 금지)
-- comfort: 2~4문장. 각 문장이 사연의 구체적 감정·상황을 정확히 짚습니다.
-- insight: 1~2문장. 전체 결과에서 다뤄질 핵심 방향을 살짝 보여줍니다.
-- teaser_sections: 전체 결과의 목차 느낌 4~8개
-  (number는 "01"부터, title은 이 사람의 상황에 맞는 소제목).
-- 전체 분량은 짧게 유지합니다. 모든 값은 한국어입니다.
-- part_01 같은 개발 용어, JSON, schema 단어를 본문에 쓰지 않습니다.`;
+[출력 항목]
+1) intro_lines — "월화가 먼저 전하는 말". 정확히 3문장, 각 문장은 읽기 편한 길이.
+   문장1: 지금 가장 크게 남아 있는 감정/아픈 지점을 짚습니다.
+   문장2: 두 사람 관계에서 반복되거나 핵심적인 흐름을 짧고 절제되게 짚습니다.
+   문장3: 전체 결과에서 무엇을 더 읽게 될지 기대감을 주며 마무리합니다.
+   세 문장 안에 현재 관계·이별 후 경과·마지막 대화·현재 감정·가장 힘든 것·
+   가장 바라는 것 중 최소 3가지가 자연스럽게 녹아 있어야 합니다.
+2) preview_letter_excerpt — 월화의 첫 편지 "서두" 3~4문장. 이 신청자에게 실제로
+   쓰는 편지의 첫 부분입니다("OO님," 호칭으로 시작, 사연의 구체적 요소 반영).
+   전체 편지는 결제 후 이어지므로 결론·해석을 완결짓지 말고 이어질 여운으로 끝냅니다.
+3) preview_cards — 아래 7개 key를 이 순서대로, 각각 이 신청자에게 맞는
+   title과 1~2줄 summary(전체 내용을 밝히지 않는 개인화된 예고):
+   relationship_story(두 사람의 관계 이야기), current_emotion(지금 내 마음 들여다보기),
+   repeated_pattern(반복되어 온 흐름), true_wish(내가 정말 원하는 것),
+   ritual(나만의 붉은 실 리추얼 — 1줄 예고), guides(리추얼 이후 24시간·7일 — 1줄 예고),
+   journey(21일 마음 회복 여정 — 1줄 예고).
+4) cta_lead_text — 결제 버튼 직전 설득 문구 한두 문단(2~4문장). 방향:
+   "월화는 지금 여기까지 읽었습니다. 이제부터는 두 사람의 관계 흐름, 내 마음의 진짜
+   바람, 개인 리추얼, 24시간/7일/21일 가이드가 전체 결과에서 이어집니다. 지금 멈추면
+   가장 중요한 해석과 회복 가이드는 아직 열리지 않습니다." — 이 뜻을 이 신청자의
+   사연에 맞게 자연스럽게, 협박·과장 없이 씁니다.
+(결제 버튼 문구와 버튼 아래 안내는 시스템이 고정하므로 작성하지 않습니다.)
+
+[연령·성별 정보 사용]
+- 신청자/상대의 성별·출생연도·생활단계는 관계와 현재 삶의 맥락을 이해하는
+  데만 사용합니다. "29살이시니까…"처럼 나이·성별을 기계적으로 언급하지 마세요.
+- 성별 고정관념("남자는/여자는 원래…") 금지. 미성년 가능성이 높으면 결혼·성적
+  관계·경제적 의존을 다루지 않습니다.
+
+모든 값은 한국어. part_01 같은 개발 용어, JSON, schema 단어를 본문에 쓰지 않습니다.
+신청자마다 실제로 달라지는 문장이어야 하며 템플릿처럼 보이면 실패작입니다.`;
 
 export function buildPreviewUserPrompt(order: RitualOrderRow): string {
   const highRisk = order.safety_concerns.some((v) =>
@@ -96,9 +151,12 @@ export function buildPreviewUserPrompt(order: RitualOrderRow): string {
       ? ` (${optionLabel(LIFE_STAGE_OPTIONS, order.life_stage)})`
       : ""
   }
+- 신청자 성별/연령대: ${order.applicant_gender ? optionLabel(APPLICANT_GENDER_OPTIONS, order.applicant_gender) : "미입력"} / ${approxAgeLabel(order.applicant_birth_year)}
 - 상대: ${order.partner_name}
+- 상대 성별/연령대: ${order.partner_gender ? optionLabel(PARTNER_GENDER_OPTIONS, order.partner_gender) : "미입력"} / ${approxAgeLabel(order.partner_birth_year)}
 - 현재 관계: ${optionLabel(RELATIONSHIP_TYPE_OPTIONS, order.relationship_type)}
 - 관계 기간: ${optionLabel(RELATIONSHIP_DURATION_OPTIONS, order.relationship_duration)}
+- 이별 후 경과: ${order.breakup_elapsed ? optionLabel(BREAKUP_ELAPSED_OPTIONS, order.breakup_elapsed) : "해당 없음"}
 - 마지막 대화: ${optionLabel(LAST_CONVERSATION_OPTIONS, order.last_conversation)}
 - 연락 상태: ${optionLabel(CONTACT_STATUS_OPTIONS, order.contact_status)}
 - 가장 힘든 것: ${order.pain_points
@@ -109,6 +167,9 @@ export function buildPreviewUserPrompt(order: RitualOrderRow): string {
 
 [사연]
 ${order.story}
+
+[마지막 대화에서 마음에 남은 것]
+${order.last_conversation_memory || "(작성하지 않음)"}
 
 [듣고 싶은 한마디]
 ${order.wish_sentence || "(작성하지 않음)"}`);

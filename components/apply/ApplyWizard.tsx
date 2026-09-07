@@ -257,10 +257,14 @@ export default function ApplyWizard() {
           ),
           error: "이름 또는 닉네임을 입력해주세요.",
         };
-      case "q1b":
+      case "q1b": {
+        /* 이전 단계에서 입력한 이름을 표시용으로만 사용 (trim, 비어 있으면 폴백) */
+        const trimmedName = data.applicant_name.trim();
         return {
-          title: "당신에 대해 조금만 더 알려주세요.",
-          hint: "같은 이야기라도 상황에 따라 필요한 말이 달라, 결과를 더 정확하게 준비하는 데 사용됩니다.",
+          title: trimmedName
+            ? `${trimmedName} 님에 대해 조금만 더 알려주세요.`
+            : "당신에 대해 조금만 더 알려주세요.",
+          hint: "같은 이야기라도 지금의 나이와 생활에 따라 필요한 말이 달라져요. 결과를 더 정확하게 준비하는 데 사용됩니다.",
           body: (
             <div className="flex flex-col gap-6">
               <div>
@@ -309,8 +313,9 @@ export default function ApplyWizard() {
               </div>
             </div>
           ),
-          error: "성별, 출생연도, 현재 생활을 확인해주세요.",
+          error: "성별, 출생연도(4자리), 현재 생활을 확인해주세요.",
         };
+      }
       case "q2":
         return {
           title: "그 사람을 어떻게 불러드릴까요?",
@@ -328,7 +333,7 @@ export default function ApplyWizard() {
       case "q2b":
         return {
           title: "그 사람에 대해서도 알려주실 수 있나요?",
-          hint: "선택 입력입니다. 모르시거나 답하고 싶지 않으면 ‘모름’을 선택하고 넘어가셔도 됩니다.",
+          hint: "선택 입력입니다. 모르시거나 답하고 싶지 않으면 비워두고 넘어가셔도 됩니다.",
           body: (
             <div className="flex flex-col gap-6">
               <div>
@@ -361,7 +366,7 @@ export default function ApplyWizard() {
               </div>
             </div>
           ),
-          error: "출생연도를 확인해주세요. 모르시면 ‘모름’을 선택해주세요.",
+          error: "출생연도를 확인해주세요. 모르시면 비워두셔도 됩니다.",
         };
       case "q3":
         return {

@@ -28,7 +28,7 @@ import {
 } from "@/lib/ritual-preview-schema";
 import type { RitualOrderRow } from "@/lib/supabase/types";
 
-const PREVIEW_MAX_TOKENS = 1500;
+const PREVIEW_MAX_TOKENS = 2500;
 
 export type PreviewOutcome =
   | { status: "ready"; preview: RitualPreview }
@@ -64,7 +64,11 @@ export async function getOrCreatePreview(
     if (order.preview_content) {
       const cached = PreviewSchema.safeParse(order.preview_content);
       if (cached.success) return { status: "ready", preview: cached.data };
-      /* 캐시가 깨져 있으면 아래에서 재생성 시도 */
+      /* 구 구조/깨진 캐시 → 초기화 후 아래에서 재생성 (1회 비용) */
+      await supabase
+        .from("ritual_orders")
+        .update({ preview_content: null, preview_generated_at: null })
+        .eq("id", order.id);
     }
 
     /* 원자적 선점: preview_generated_at IS NULL 인 경우에만 */
