@@ -41,52 +41,45 @@ export default function HeroSection({
           <div className="h-full w-full bg-gradient-to-b from-[#141019] via-ink-soft to-ink" />
         )}
         {/* 카피 가독성용 어두운 그라데이션 */}
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/55 via-ink/15 to-ink" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/45 via-transparent to-ink" />
         <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
       </div>
 
       <div className="relative flex min-h-[100svh] flex-col justify-end px-6 pb-14 pt-24">
         <Reveal>
-          <p className="text-[0.78rem] font-light leading-[1.9] tracking-wide text-gold/90">
-            헤어진 뒤, 제일 힘든 건
+          <p className="text-[0.78rem] font-light leading-[1.8] tracking-wide text-gold/90">
+            헤어진 뒤,
             <br />
-            끝난 건지 아닌지 모르는 시간입니다.
+            제일 헷갈리는 순간.
           </p>
         </Reveal>
-        <Reveal delay={120}>
-          <h1 className="font-display mt-5 text-[1.9rem] font-semibold leading-[1.5] text-ivory">
-            연락해야 할까.
+        <Reveal delay={100}>
+          <h1 className="font-display mt-5 text-[2.15rem] font-semibold leading-[1.42] text-ivory">
+            그 사람에게
             <br />
-            기다려야 할까.
-            <br />
-            아니면 이제 정말 놓아야 할까.
+            다시 연락해도 될까.
           </h1>
         </Reveal>
-        <Reveal delay={240}>
-          <p className="mt-6 text-[0.92rem] font-light leading-[2.05] text-ivory-dim">
-            다시 이어질 가능성이 남아 있는지,
+        <Reveal delay={200}>
+          <p className="mt-6 text-[0.95rem] font-light leading-[2.05] text-ivory-dim">
+            지금 움직여야 하는지,
             <br />
-            지금 연락하면 오히려 멀어지는지,
+            조금 더 기다려야 하는지.
             <br />
-            다시 만난다면 무엇이 달라져야 하는지.
-          </p>
-          <p className="mt-4 text-[0.92rem] font-light leading-[2.05] text-ivory">
-            월화가 먼저
-            <br />
-            지금 두 사람 사이의 흐름부터 읽습니다.
+            <span className="text-ivory">
+              월화가 먼저 두 사람의 흐름부터 읽어드려요.
+            </span>
           </p>
         </Reveal>
-        <Reveal delay={360}>
+        <Reveal delay={300}>
           <Link
             href="/apply"
-            className="cta-glow mt-9 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
+            className="cta-glow mt-9 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.98rem] font-medium text-ivory transition-opacity active:opacity-85"
           >
-            내 이야기 먼저 들려주기
+            내 이야기 먼저 읽어보기
           </Link>
-          <p className="mt-3 text-center text-[0.73rem] font-light leading-relaxed text-ivory-dim/80">
-            결제 전에 월화가 내 사연을 읽은
-            <br />
-            개인화 메시지를 먼저 보여드려요.
+          <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/80">
+            결제 전 개인화 미리보기 제공
           </p>
         </Reveal>
       </div>
