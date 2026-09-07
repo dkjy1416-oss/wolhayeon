@@ -1,7 +1,12 @@
 import Link from "next/link";
 import Reveal from "@/components/home/Reveal";
 import HomeImage from "@/components/home/HomeImage";
-import { HOME_REVIEWS, badgeFor } from "@/components/home/reviews-data";
+import {
+  HOME_REVIEWS,
+  DEMO_REVIEWS,
+  badgeFor,
+  demoBadgeFor,
+} from "@/components/home/reviews-data";
 
 /**
  * 실제 후기가 있으면 → "다시 이어진 이야기" carousel (편지형 카드, 별점 없음)
@@ -102,7 +107,63 @@ export default function ReviewsSection({
     );
   }
 
-  /* ---------- 실데이터 전: 재회 고민 공감 editorial (후기 아님) ---------- */
+  /* ---------- 실데이터 전 + 예시 데이터 있음: "예시 후기" carousel ----------
+     (모든 카드에 "예시 후기" badge 필수 — 실제 후기로 오해 금지.
+      HOME_REVIEWS에 실후기가 추가되면 이 분기는 자동으로 표시되지 않음) */
+  if (DEMO_REVIEWS.length > 0) {
+    return (
+      <section className="bg-ink-soft/40 py-20">
+        <div className="px-6">
+          <Reveal>
+            <h2 className="font-display text-center text-[1.4rem] font-semibold leading-snug text-ivory">
+              비슷한 마음을 지나온 이야기
+            </h2>
+            <p className="mt-4 text-center text-[0.78rem] font-light leading-[1.9] text-ivory-dim/85">
+              아래 내용은 서비스 흐름을 보여주기 위한 예시 후기입니다.
+            </p>
+          </Reveal>
+        </div>
+        <div className="scrollbar-none mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-4">
+          {DEMO_REVIEWS.map((r) => {
+            const secondary = demoBadgeFor(r.outcome);
+            return (
+              <div
+                key={r.id}
+                className="w-[88%] shrink-0 snap-center border border-gold-dim/30 bg-gradient-to-b from-[#141013] to-ink px-6 py-7"
+              >
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-block rounded-full border border-gold-dim/50 bg-ink px-3 py-1 text-[0.62rem] tracking-wide text-gold/90">
+                    예시 후기
+                  </span>
+                  {secondary && (
+                    <span className="inline-block rounded-full border border-thread/40 px-3 py-1 text-[0.62rem] tracking-wide text-thread">
+                      {secondary}
+                    </span>
+                  )}
+                </div>
+                <p className="font-display mt-3 text-2xl leading-none text-gold/60">
+                  “
+                </p>
+                <p className="mt-2 text-[0.9rem] font-light leading-[2.05] text-ivory">
+                  {r.text}
+                </p>
+                <div className="mt-6 border-t border-gold-dim/20 pt-4">
+                  <p className="text-[0.7rem] font-light text-ivory-dim/70">
+                    {r.context}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="px-6">
+          <SectionCta />
+        </div>
+      </section>
+    );
+  }
+
+  /* ---------- 데이터 전무: 재회 고민 공감 editorial (후기 아님) ---------- */
   return (
     <section className="bg-ink-soft/40 py-20">
       <div className="px-6">
