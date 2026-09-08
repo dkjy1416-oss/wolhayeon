@@ -56,11 +56,15 @@ const ROTATE_MS = 10000;
 
 export default function WaitingContent({
   videos = [],
+  immersive = false,
 }: {
   /** 실제 존재가 확인된 대기 영상 (순서 05→01→02→03→04). 비면 텍스트 카드 사용 */
   videos?: WaitingVideoItem[];
+  /** true면 네이티브 플레이어처럼 보이지 않는 100svh 풀스크린 루프형 영상 */
+  immersive?: boolean;
 }) {
   const [idx, setIdx] = useState(0);
+  const [soundOn, setSoundOn] = useState(false);
   const useVideos = videos.length > 0;
 
   useEffect(() => {
@@ -72,10 +76,69 @@ export default function WaitingContent({
     return () => clearInterval(id);
   }, [useVideos]);
 
-  /* ---------- 영상 모드: 한 번에 한 개만 렌더/로드, autoplay muted,
-     소리는 사용자가 컨트롤로 켤 때만, 끝나면 다음으로 순환 ---------- */
+  /* ---------- 영상 모드 ----------
+     immersive=true:
+     - iPhone 네이티브 controls 제거
+     - 화면 전체를 채우는 object-cover
+     - 05→01→02→03→04 자동으로 딱딱 이어짐
+     - 사용자가 버튼을 누른 뒤에만 소리 ON
+     일반 모드:
+     - 기존 카드형 표현 유지
+  ---------- */
   if (useVideos) {
     const v = videos[idx % videos.length];
+
+    if (immersive) {
+      return (
+        <div className="relative h-[100svh] w-full overflow-hidden bg-black">
+          <video
+            key={v.id}
+            className="absolute inset-0 h-full w-full object-cover"
+            src={v.src}
+            poster={v.poster ?? undefined}
+            autoPlay
+            muted={!soundOn}
+            playsInline
+            preload="auto"
+            onEnded={() => setIdx((i) => (i + 1) % videos.length)}
+          />
+
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/80"
+          />
+
+          <button
+            type="button"
+            onClick={() => setSoundOn((v) => !v)}
+            className="absolute right-4 top-[max(1rem,env(safe-area-inset-top))] z-20 rounded-full border border-white/20 bg-black/35 px-3 py-2 text-[0.7rem] text-white/90 backdrop-blur"
+            aria-label={soundOn ? "영상 소리 끄기" : "영상 소리 켜기"}
+          >
+            {soundOn ? "소리 끄기" : "소리 켜기"}
+          </button>
+
+          <div className="absolute inset-x-0 bottom-0 z-10 px-6 pb-[max(2.2rem,env(safe-area-inset-bottom))] text-center">
+            <p className="whitespace-pre-line font-display text-[1.15rem] font-medium leading-[1.65] text-ivory">
+              {v.title}
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-1.5">
+              {videos.map((_, i) => (
+                <span
+                  key={i}
+                  aria-hidden
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    i === idx % videos.length
+                      ? "w-6 bg-gold/90"
+                      : "w-1.5 bg-white/30"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="w-full">
         <div className="relative mx-auto aspect-[9/16] w-full max-w-[280px] overflow-hidden rounded-xl border border-gold-dim/25 bg-ink-soft">

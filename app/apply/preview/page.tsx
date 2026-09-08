@@ -43,10 +43,7 @@ export default async function ApplyPreviewPage({
   }
 
   return (
-    <main className="mx-auto min-h-[100svh] w-full max-w-lg pt-14">
-      <p className="text-center text-xs tracking-[0.35em] text-gold/90">
-        月下緣
-      </p>
+    <main className="mx-auto min-h-[100svh] w-full max-w-lg overflow-hidden">
       <PreviewExperience
         orderNumber={orderNumber}
         readingVideo={found("wolhwa/wolhwa-reading-loop.mp4")}

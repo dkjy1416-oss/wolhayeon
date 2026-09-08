@@ -3,9 +3,10 @@
 /**
  * 결제 전 무료 미리보기 화면 (읽기 몰입판).
  * 흐름: 읽는 중(loop 영상) → 같은 화면에서 fade 전환 → 개인화 preview → 처음으로 가격 노출.
- * - 정상 흐름은 preview ready → 미리보기 → 결제 CTA.
- * - preview가 늦어져도 고객을 막아두지 않는다: 짧은 soft-wait 뒤 대기영상 + 결제 CTA를 함께 노출.
- * - preview 생성/재시도는 뒤에서 계속되며 ready가 오면 자동으로 미리보기로 전환.
+ * - 정상 흐름은 preview ready → 무료 미리보기 → 그 다음에만 결제 CTA.
+ * - preview가 늦어지면 결제를 먼저 보여주지 않는다. 대기영상 05→01→02→03→04를
+ *   풀스크린 루프형으로 보여주며 preview 생성/재시도를 뒤에서 계속한다.
+ * - preview가 준비되면 현재 영상이 끝나기를 기다리지 않고 즉시 무료 미리보기로 전환.
  * - 특정 시간 약속 / 가짜 진행률 / 가짜 단계 없음.
  */
 import { useEffect, useRef, useState } from "react";
@@ -124,7 +125,7 @@ export default function PreviewExperience({
       /* 무료 preview 때문에 결제 전 사용자를 오래 묶어두지 않는다.
          API 요청은 취소하지 않고 계속 진행시키며, 화면만 non-blocking fallback으로 전환한다. */
       setPhase((current) => (current === "loading" ? "delayed" : current));
-    }, 8000);
+    }, 3500);
   };
 
   const scheduleRetry = (delayMs: number) => {
@@ -213,136 +214,158 @@ export default function PreviewExperience({
 
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
 
-  /* ---------- preview 지연: 고객을 막지 않는 fallback ----------
-       실제 대기영상 + 결제 CTA를 즉시 제공하고 preview는 뒤에서 계속 준비한다. ---------- */
+  /* ---------- preview 생성이 조금 늦는 경우 ----------
+       여기는 결제 유도 화면이 아니라 "무료 미리보기를 준비하는 몰입 구간".
+       결제는 preview가 실제로 공개된 뒤에만 등장한다. ---------- */
   if (phase === "delayed") {
     return (
-      <div className="fade-in mx-auto w-full max-w-md px-6 pb-16 pt-7 text-center">
-        <p className="font-display text-[1.02rem] leading-[1.9] text-ivory">
-          월화가 {name ? `${name}님의` : "당신의"} 이야기를
-          <br />
-          조금 더 읽고 있어요.
-        </p>
-        <p className="mt-2 text-[0.8rem] font-light leading-[1.8] text-ivory-dim">
-          미리보기는 뒤에서 계속 준비하고 있어요.
-          <br />
-          기다리지 않고 전체 결과를 바로 열어도 됩니다.
-        </p>
+      <div className="relative h-[100svh] w-full overflow-hidden bg-black">
+        <WaitingContent videos={waitingVideos} immersive />
 
-        <div className="mt-6">
-          <p className="mb-3 text-[0.7rem] tracking-wide text-gold/80">
-            기다리는 동안 월화가 짧게 전하는 이야기
-          </p>
-          <WaitingContent videos={waitingVideos} />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-6 pt-[max(1.4rem,env(safe-area-inset-top))] text-center">
+          <p className="text-[0.68rem] tracking-[0.36em] text-gold/90">月下緣</p>
+          <div className="mt-6 inline-block rounded-full border border-white/15 bg-black/30 px-4 py-2 backdrop-blur">
+            <p className="text-[0.72rem] text-ivory/90">
+              월화가 {name ? `${name}님의` : "당신의"} 이야기를 읽고 있어요
+            </p>
+          </div>
         </div>
 
-        <div className="mt-8 rounded-2xl border border-thread/30 bg-gradient-to-b from-[#160d10] to-ink-soft px-5 py-6">
-          <p className="text-[0.7rem] tracking-[0.24em] text-thread/90">
-            전체 결과 바로 이어보기
-          </p>
-          <p className="font-display mt-3 text-2xl font-semibold text-gold">
-            {RITUAL_PRICE_KRW.toLocaleString()}원
-          </p>
-          <p className="mt-2 text-[0.72rem] text-ivory-dim/75">
-            1회 결제 · 추가 결제 없음
-          </p>
-
-          <Link
-            href={payHref}
-            className="cta-glow mt-5 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
-          >
-            전체 결과 바로 열기 · {RITUAL_PRICE_KRW.toLocaleString()}원
-          </Link>
-          <p className="mt-3 text-[0.7rem] leading-[1.7] text-ivory-dim/65">
-            결제 후에는 같은 대기 영상과 함께
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-20 px-7 text-center">
+          <p className="text-[0.78rem] font-light leading-[1.8] text-ivory/80">
+            무료 미리보기가 준비되면
             <br />
-            전체 결과 준비가 자동으로 이어집니다.
+            이 화면에서 바로 이어집니다.
           </p>
-          <DevPaymentNotice />
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            if (retryTimer.current) {
-              clearTimeout(retryTimer.current);
-              retryTimer.current = null;
-            }
-            if (softWaitTimer.current) {
-              clearTimeout(softWaitTimer.current);
-              softWaitTimer.current = null;
-            }
-            tries.current = 0;
-            genFails.current = 0;
-            setPhase("loading");
-            startSoftWaitTimer();
-            fetchPreview();
-          }}
-          className="mt-6 text-[0.78rem] text-ivory-dim/70 underline decoration-gold-dim/40 underline-offset-4"
-        >
-          미리보기 다시 읽어보기
-        </button>
+        {tries.current >= 32 ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (retryTimer.current) {
+                clearTimeout(retryTimer.current);
+                retryTimer.current = null;
+              }
+              tries.current = 0;
+              genFails.current = 0;
+              fetchPreview();
+            }}
+            className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/25 bg-black/45 px-5 py-2.5 text-[0.72rem] text-ivory backdrop-blur"
+          >
+            미리보기 다시 준비하기
+          </button>
+        ) : null}
       </div>
     );
   }
 
-  /* ---------- 읽는 중: 최대한 짧은 전환 연출.
-       약 8초를 넘기면 고객을 묶어두지 않고 대기영상+결제 fallback으로 전환 ---------- */
+  /* ---------- 처음 3.5초: reading-loop를 풀스크린으로 짧게 보여주는 전환 ---------- */
   if (phase === "loading") {
     return (
-      <div className="fade-in flex min-h-[70svh] flex-col items-center justify-center px-6 py-10 text-center">
-        <ReadingVideo src={readingVideo} poster={readingPoster} short />
-        <p className="font-display mt-7 text-[1.02rem] leading-[1.9] text-ivory">
-          월화가 {name ? `${name}님의` : "당신의"} 이야기를
-          <br />
-          잠깐 읽어보고 있어요.
-        </p>
-        <p className="mt-3 text-[0.8rem] font-light leading-relaxed text-ivory-dim">
-          월화가 먼저 전할 말을 고르고 있어요.
-        </p>
+      <div className="relative h-[100svh] w-full overflow-hidden bg-black">
+        {readingVideo ? (
+          <video
+            className="absolute inset-0 h-full w-full object-cover"
+            src={readingVideo}
+            poster={readingPoster ?? undefined}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+          />
+        ) : readingPoster ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={readingPoster}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : null}
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/80"
+        />
+
+        <div className="absolute inset-x-0 top-0 z-10 px-6 pt-[max(1.4rem,env(safe-area-inset-top))] text-center">
+          <p className="text-[0.68rem] tracking-[0.36em] text-gold/90">月下緣</p>
+        </div>
+
+        <div className="absolute inset-x-0 bottom-[max(3rem,env(safe-area-inset-bottom))] z-10 px-7 text-center">
+          <p className="font-display text-[1.25rem] font-medium leading-[1.7] text-ivory">
+            월화가 {name ? `${name}님의` : "당신의"} 이야기를
+            <br />
+            먼저 읽고 있어요.
+          </p>
+          <p className="mt-3 text-[0.78rem] font-light leading-[1.8] text-ivory/70">
+            결제 전에, 지금 이 자리에서
+            <br />
+            개인화 미리보기를 먼저 보여드릴게요.
+          </p>
+        </div>
       </div>
     );
   }
 
-  /* ---------- ready: 같은 화면에서 fade로 preview 공개 ---------- */
+  /* ---------- ready: 무료 개인화 미리보기 공개 ----------
+       이 구간이 결제를 결정하는 핵심 구간.
+       실제 사연에 대한 구체적인 "맞다"는 감각을 주되 전체 해석은 열지 않는다. ---------- */
   if (!preview) return null;
   const cards = preview.preview_cards;
   const leadText = preview.cta_lead_text;
 
   return (
-    <div className="fade-in pb-16">
-      {/* ---------- 월화가 먼저 읽은 마음 (AI 3문장) ---------- */}
-      <section className="px-6 pt-4">
-        <div className="mx-auto max-w-md rounded-2xl border border-gold/25 bg-ink-soft px-6 py-8">
-          <p className="text-center text-[0.65rem] tracking-[0.3em] text-gold/80">
-            월화가 먼저 읽은 마음
-          </p>
-          <div className="mx-auto mt-5 h-px w-10 bg-gold/40" />
-          <div className="mt-6 flex flex-col gap-4">
+    <div className="fade-in min-h-[100svh] bg-ink pb-16">
+      <div className="px-6 pt-[max(1.5rem,env(safe-area-inset-top))] text-center">
+        <p className="text-[0.68rem] tracking-[0.36em] text-gold/90">月下緣</p>
+        <p className="mt-7 text-[0.7rem] tracking-[0.2em] text-thread/90">
+          무료 개인화 미리보기
+        </p>
+        <h1 className="font-display mt-3 text-[1.45rem] font-semibold leading-[1.6] text-ivory">
+          월화가 먼저 읽은
+          <br />
+          두 사람 사이의 흐름
+        </h1>
+      </div>
+
+      {/* 1. "내 얘기 맞네"를 만드는 핵심 3문장 */}
+      <section className="px-6 pt-7">
+        <div className="mx-auto max-w-md border-y border-gold-dim/25 py-7">
+          <div className="flex flex-col gap-4">
             {preview.intro_lines.map((line, i) => (
               <p
                 key={i}
-                className="text-[0.95rem] font-light leading-[2.05] text-ivory"
+                className={`font-light leading-[2.05] ${
+                  i === 0
+                    ? "font-display text-[1.05rem] font-medium text-ivory"
+                    : "text-[0.92rem] text-ivory/90"
+                }`}
               >
                 {line}
               </p>
             ))}
           </div>
-          <p className="mt-6 text-right text-[0.78rem] text-gold/80">— 월화 月華</p>
+          <p className="mt-6 text-right text-[0.75rem] text-gold/80">— 월화 月華</p>
         </div>
       </section>
 
-      {/* ---------- 첫 편지: 실제 서두 노출 + 페이드 ---------- */}
-      <section className="mt-10 px-6">
-        <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-gold/25 bg-ink-soft">
+      {/* 2. 첫 편지 일부를 실제로 무료 공개 */}
+      <section className="mt-9 px-6">
+        <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-gold/25 bg-gradient-to-b from-[#17100f] to-ink-soft">
           <div className="px-6 pt-7">
-            <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">01</p>
-            <p className="font-display mt-1 text-[1.05rem] font-semibold text-ivory">
+            <p className="text-[0.66rem] tracking-[0.25em] text-gold/75">
+              FIRST LETTER
+            </p>
+            <p className="font-display mt-2 text-[1.12rem] font-semibold text-ivory">
               월화의 첫 편지
             </p>
           </div>
-          <div className="relative px-6 pb-6 pt-4">
-            <div className="flex flex-col gap-3">
+
+          <div className="relative px-6 pb-7 pt-5">
+            <div className="flex flex-col gap-3.5">
               {preview.preview_letter_excerpt.map((line, i) => (
                 <p
                   key={i}
@@ -352,70 +375,104 @@ export default function PreviewExperience({
                 </p>
               ))}
             </div>
-            {/* 이어지는 부분: 자리표시 문장 흐림 + 그라데이션 페이드 */}
+
             <p
               aria-hidden
-              className="mt-3 select-none text-[0.92rem] font-light leading-[2.05] text-ivory-dim blur-[5px]"
+              className="mt-4 select-none text-[0.9rem] font-light leading-[2.05] text-ivory-dim blur-[5px]"
             >
               {BLUR_LINES[0]}
             </p>
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-ink-soft via-ink-soft/80 to-transparent"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-ink-soft via-ink-soft/85 to-transparent"
             />
           </div>
-          <div className="border-t border-gold-dim/20 px-6 py-3.5 text-center">
-            <p className="text-[0.72rem] text-gold/80">이 편지는 전체 결과에서 이어집니다</p>
+
+          <div className="border-t border-gold-dim/20 px-6 py-4 text-center">
+            <p className="text-[0.72rem] leading-[1.7] text-gold/85">
+              여기서부터는 아직 열지 않은 이야기예요.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ---------- 전체 결과 teaser: 3~5개만 컴팩트하게 (읽을거리 아님) ---------- */}
-      <section className="mt-6 px-6">
-        <p className="text-center text-[0.65rem] tracking-[0.3em] text-thread/90">
-          전체 결과에서 이어지는 이야기
+      {/* 3. 결제하면 무엇을 얻는지: 답은 숨기고 "내 사연에 맞는 질문"만 보여줌 */}
+      <section className="mt-10 px-6">
+        <p className="text-center text-[0.68rem] tracking-[0.26em] text-thread/90">
+          전체 결과에서 이어서 읽는 것
         </p>
-        <div className="mx-auto mt-4 flex max-w-md flex-col gap-2.5">
-          {cards.slice(0, 5).map((c) => (
+        <p className="mx-auto mt-3 max-w-sm text-center text-[0.78rem] font-light leading-[1.85] text-ivory-dim">
+          일반적인 연애 조언이 아니라,
+          <br />
+          방금 들려준 이야기 안에서 이어집니다.
+        </p>
+
+        <div className="mx-auto mt-5 flex max-w-md flex-col gap-2.5">
+          {cards.slice(0, 5).map((c, i) => (
             <div
               key={c.key}
-              className="rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-3.5"
+              className="relative overflow-hidden rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4"
             >
-              <p className="text-[0.93rem] font-medium text-ivory">{c.title}</p>
-              <p className="mt-1 text-[0.82rem] font-light leading-[1.85] text-ivory-dim">
-                {c.summary}
-              </p>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 text-[0.72rem] text-gold/70">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.94rem] font-medium text-ivory">{c.title}</p>
+                  <p className="mt-1.5 text-[0.81rem] font-light leading-[1.8] text-ivory-dim">
+                    {c.summary}
+                  </p>
+                </div>
+                <span aria-hidden className="text-[0.78rem] text-gold/55">잠금</span>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ---------- 가격은 여기서 처음 등장 ---------- */}
-      <section className="mt-12 px-6 text-center">
-        <div className="mx-auto max-w-md rounded-2xl border border-thread/30 bg-gradient-to-b from-[#160d10] to-ink-soft px-6 py-7">
-          <p className="text-[0.65rem] tracking-[0.3em] text-thread/90">
-            여기까지가 월화가 먼저 전한 이야기예요
+      {/* 4. 결제 전환: 무료 미리보기를 충분히 본 뒤 처음 가격 등장 */}
+      <section className="mt-11 px-6 text-center">
+        <div className="mx-auto max-w-md rounded-2xl border border-thread/30 bg-gradient-to-b from-[#1d0d12] to-[#0d0b0c] px-6 py-7">
+          <p className="text-[0.68rem] tracking-[0.25em] text-thread/90">
+            무료 미리보기는 여기까지
           </p>
-          <p className="mt-4 whitespace-pre-line text-[0.9rem] font-light leading-[2] text-ivory">
+          <p className="font-display mt-4 text-[1.15rem] font-semibold leading-[1.75] text-ivory">
+            이제 가장 궁금한 부분부터
+            <br />
+            끝까지 이어서 읽을 수 있어요.
+          </p>
+          <p className="mt-4 whitespace-pre-line text-[0.86rem] font-light leading-[1.95] text-ivory-dim">
             {leadText}
           </p>
-        </div>
-        <Link
-          href={payHref}
-          className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
-        >
-          {CTA_BUTTON} · {RITUAL_PRICE_KRW.toLocaleString()}원
-        </Link>
-        <div className="mx-auto mt-4 flex max-w-md flex-col gap-1">
-          {CTA_HELPERS.map((h, i) => (
-            <p key={i} className="text-[0.72rem] text-ivory-dim/70">
-              {h}
+
+          <div className="mt-6 border-t border-gold-dim/20 pt-5">
+            <p className="font-display text-[1.65rem] font-semibold text-gold">
+              {RITUAL_PRICE_KRW.toLocaleString()}원
             </p>
-          ))}
+            <p className="mt-1.5 text-[0.72rem] text-ivory-dim/70">
+              1회 결제 · 추가 결제 없음
+            </p>
+          </div>
+
+          <Link
+            href={payHref}
+            className="cta-glow mt-6 inline-flex h-15 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep px-4 text-[0.96rem] font-semibold text-ivory transition-opacity active:opacity-85"
+          >
+            지금 내 전체 이야기 이어보기
+          </Link>
+
+          <div className="mt-4 flex flex-col gap-1.5">
+            <p className="text-[0.72rem] text-ivory-dim/75">
+              관계 흐름 · 반복된 패턴 · 지금 할 수 있는 행동
+            </p>
+            <p className="text-[0.72rem] text-ivory-dim/75">
+              개인 리추얼 · 24시간/7일/21일 가이드 포함
+            </p>
+          </div>
+          <DevPaymentNotice />
         </div>
-        {/* 테스트 결제 모드 안내 (라이브 키 전환 시 컴포넌트 내부에서 끔) */}
-        <DevPaymentNotice />
       </section>
     </div>
   );
 }
+
