@@ -2,6 +2,7 @@ import Link from "next/link";
 import fs from "fs";
 import path from "path";
 import PreviewExperience from "@/components/apply/PreviewExperience";
+import { getWaitingVideos } from "@/lib/home-media";
 
 function found(publicPath: string): string | null {
   try {
@@ -50,6 +51,7 @@ export default async function ApplyPreviewPage({
         orderNumber={orderNumber}
         readingVideo={found("wolhwa/wolhwa-reading-loop.mp4")}
         readingPoster={found("wolhwa/reading-poster.webp")}
+        waitingVideos={getWaitingVideos()}
       />
     </main>
   );

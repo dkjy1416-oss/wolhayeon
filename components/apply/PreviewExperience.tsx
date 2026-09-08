@@ -3,10 +3,10 @@
 /**
  * 결제 전 무료 미리보기 화면 (읽기 몰입판).
  * 흐름: 읽는 중(loop 영상) → 같은 화면에서 fade 전환 → 개인화 preview → 처음으로 가격 노출.
- * - 개인화 preview가 ready일 때만 미리보기+결제 CTA 표시.
- *   실패 시에는 loop 영상 + "다시 읽어보기"만 (결제 버튼 절대 없음).
+ * - 정상 흐름은 preview ready → 미리보기 → 결제 CTA.
+ * - preview가 늦어져도 고객을 막아두지 않는다: 짧은 soft-wait 뒤 대기영상 + 결제 CTA를 함께 노출.
+ * - preview 생성/재시도는 뒤에서 계속되며 ready가 오면 자동으로 미리보기로 전환.
  * - 특정 시간 약속 / 가짜 진행률 / 가짜 단계 없음.
- * - 일시적 생성 실패(failed)는 짧게 자동 재시도 후에만 실패 화면으로.
  */
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/ritual-storage";
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
+import WaitingContent, { type WaitingVideoItem } from "@/components/payment/WaitingContent";
 
 interface PreviewCard {
   key: string;
@@ -89,10 +90,12 @@ export default function PreviewExperience({
   orderNumber,
   readingVideo,
   readingPoster,
+  waitingVideos = [],
 }: {
   orderNumber: string;
   readingVideo: string | null;
   readingPoster: string | null;
+  waitingVideos?: WaitingVideoItem[];
 }) {
   const [phase, setPhase] = useState<"loading" | "ready" | "delayed">(
     "loading"
@@ -103,6 +106,7 @@ export default function PreviewExperience({
   const genFails = useRef(0); // 생성 실패(failed) 자동 재시도 횟수
   const started = useRef(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const softWaitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     /* 같은 브라우저 세션의 신청 데이터에서 표시용 이름만 */
@@ -112,6 +116,16 @@ export default function PreviewExperience({
       /* 이름 없이 진행 */
     }
   }, []);
+
+  const startSoftWaitTimer = () => {
+    if (softWaitTimer.current) clearTimeout(softWaitTimer.current);
+    softWaitTimer.current = setTimeout(() => {
+      softWaitTimer.current = null;
+      /* 무료 preview 때문에 결제 전 사용자를 오래 묶어두지 않는다.
+         API 요청은 취소하지 않고 계속 진행시키며, 화면만 non-blocking fallback으로 전환한다. */
+      setPhase((current) => (current === "loading" ? "delayed" : current));
+    }, 8000);
+  };
 
   const scheduleRetry = (delayMs: number) => {
     if (retryTimer.current) clearTimeout(retryTimer.current);
@@ -134,6 +148,10 @@ export default function PreviewExperience({
       });
       const json = await res.json().catch(() => null);
       if (json?.status === "ready" && json.preview) {
+        if (softWaitTimer.current) {
+          clearTimeout(softWaitTimer.current);
+          softWaitTimer.current = null;
+        }
         setPreview(json.preview as Preview);
         setPhase("ready");
         return;
@@ -178,31 +196,71 @@ export default function PreviewExperience({
   useEffect(() => {
     if (started.current) return; // StrictMode/재마운트 중복 호출 방지
     started.current = true;
+    startSoftWaitTimer();
     fetchPreview();
     return () => {
       if (retryTimer.current) {
         clearTimeout(retryTimer.current);
         retryTimer.current = null;
       }
+      if (softWaitTimer.current) {
+        clearTimeout(softWaitTimer.current);
+        softWaitTimer.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNumber]);
 
-  /* ---------- 실패: loop 영상 유지 + 재시도만 (결제 버튼 없음) ---------- */
+  const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
+
+  /* ---------- preview 지연: 고객을 막지 않는 fallback ----------
+       실제 대기영상 + 결제 CTA를 즉시 제공하고 preview는 뒤에서 계속 준비한다. ---------- */
   if (phase === "delayed") {
     return (
-      <div className="fade-in flex min-h-[80svh] flex-col items-center justify-center px-6 py-10 text-center">
-        <ReadingVideo src={readingVideo} poster={readingPoster} />
-        <p className="font-display mt-8 text-lg leading-relaxed text-ivory">
-          월화가 이야기를 읽는 과정이
+      <div className="fade-in mx-auto w-full max-w-md px-6 pb-16 pt-7 text-center">
+        <p className="font-display text-[1.02rem] leading-[1.9] text-ivory">
+          월화가 {name ? `${name}님의` : "당신의"} 이야기를
           <br />
-          조금 늦어지고 있어요.
+          조금 더 읽고 있어요.
         </p>
-        <p className="mt-3 text-[0.85rem] font-light leading-[1.95] text-ivory-dim">
-          입력하신 내용은 그대로 남아 있어요.
+        <p className="mt-2 text-[0.8rem] font-light leading-[1.8] text-ivory-dim">
+          미리보기는 뒤에서 계속 준비하고 있어요.
           <br />
-          잠시 후 다시 읽어볼게요.
+          기다리지 않고 전체 결과를 바로 열어도 됩니다.
         </p>
+
+        <div className="mt-6">
+          <p className="mb-3 text-[0.7rem] tracking-wide text-gold/80">
+            기다리는 동안 월화가 짧게 전하는 이야기
+          </p>
+          <WaitingContent videos={waitingVideos} />
+        </div>
+
+        <div className="mt-8 rounded-2xl border border-thread/30 bg-gradient-to-b from-[#160d10] to-ink-soft px-5 py-6">
+          <p className="text-[0.7rem] tracking-[0.24em] text-thread/90">
+            전체 결과 바로 이어보기
+          </p>
+          <p className="font-display mt-3 text-2xl font-semibold text-gold">
+            {RITUAL_PRICE_KRW.toLocaleString()}원
+          </p>
+          <p className="mt-2 text-[0.72rem] text-ivory-dim/75">
+            1회 결제 · 추가 결제 없음
+          </p>
+
+          <Link
+            href={payHref}
+            className="cta-glow mt-5 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
+          >
+            전체 결과 바로 열기 · {RITUAL_PRICE_KRW.toLocaleString()}원
+          </Link>
+          <p className="mt-3 text-[0.7rem] leading-[1.7] text-ivory-dim/65">
+            결제 후에는 같은 대기 영상과 함께
+            <br />
+            전체 결과 준비가 자동으로 이어집니다.
+          </p>
+          <DevPaymentNotice />
+        </div>
+
         <button
           type="button"
           onClick={() => {
@@ -210,21 +268,26 @@ export default function PreviewExperience({
               clearTimeout(retryTimer.current);
               retryTimer.current = null;
             }
+            if (softWaitTimer.current) {
+              clearTimeout(softWaitTimer.current);
+              softWaitTimer.current = null;
+            }
             tries.current = 0;
             genFails.current = 0;
             setPhase("loading");
+            startSoftWaitTimer();
             fetchPreview();
           }}
-          className="mt-8 inline-flex h-13 items-center justify-center rounded-full border border-gold-dim/40 px-8 text-sm text-ivory hover:border-gold/60"
+          className="mt-6 text-[0.78rem] text-ivory-dim/70 underline decoration-gold-dim/40 underline-offset-4"
         >
-          다시 읽어보기
+          미리보기 다시 읽어보기
         </button>
       </div>
     );
   }
 
-  /* ---------- 읽는 중: 아주 짧은 전환 연출 (오래 보여주는 용도 아님).
-       reading-loop만 사용 — 대기영상 01~05는 결제 후 대기 화면 전용 ---------- */
+  /* ---------- 읽는 중: 최대한 짧은 전환 연출.
+       약 8초를 넘기면 고객을 묶어두지 않고 대기영상+결제 fallback으로 전환 ---------- */
   if (phase === "loading") {
     return (
       <div className="fade-in flex min-h-[70svh] flex-col items-center justify-center px-6 py-10 text-center">
@@ -245,7 +308,6 @@ export default function PreviewExperience({
   if (!preview) return null;
   const cards = preview.preview_cards;
   const leadText = preview.cta_lead_text;
-  const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
 
   return (
     <div className="fade-in pb-16">
