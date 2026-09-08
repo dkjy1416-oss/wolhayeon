@@ -18,6 +18,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sanitizeAndValidateApplication } from "@/lib/ritual-validation";
+import { createPreviewToken } from "@/lib/preview-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -86,9 +87,11 @@ export async function POST(request: Request) {
         .eq("submission_id", submissionId)
         .single();
       if (!existing.error && existing.data) {
+        const previewToken = createPreviewToken(existing.data.order_number);
         return NextResponse.json({
           ok: true,
           order_number: existing.data.order_number,
+          preview_token: previewToken,
           duplicate: true,
         });
       }
@@ -118,7 +121,12 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, order_number: res.data.order_number });
+    const previewToken = createPreviewToken(res.data.order_number);
+    return NextResponse.json({
+      ok: true,
+      order_number: res.data.order_number,
+      preview_token: previewToken,
+    });
   } catch (e) {
     // env 누락 등 초기화 실패 — 상세 내용은 사용자에게 노출하지 않음
     const code = e instanceof Error ? e.constructor.name : "unknown";

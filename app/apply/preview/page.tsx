@@ -19,9 +19,9 @@ const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 export default async function ApplyPreviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string }>;
+  searchParams: Promise<{ order?: string; pt?: string }>;
 }) {
-  const { order } = await searchParams;
+  const { order, pt } = await searchParams;
   const orderNumber =
     typeof order === "string" && ORDER_NUMBER_RE.test(order) ? order : null;
 
@@ -45,6 +45,9 @@ export default async function ApplyPreviewPage({
     <main className="mx-auto min-h-[100svh] w-full max-w-lg overflow-hidden">
       <PreviewExperience
         orderNumber={orderNumber}
+        previewToken={
+          typeof pt === "string" && pt.length <= 160 ? pt : null
+        }
         readingVideo={found("wolhwa/wolhwa-reading-loop.mp4")}
         readingPoster={found("wolhwa/reading-poster.webp")}
       />

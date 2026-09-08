@@ -81,8 +81,13 @@ export default function ConfirmPage() {
       });
       const json = await res.json().catch(() => null);
       if (res.ok && json?.ok && typeof json.order_number === "string") {
+        const token =
+          typeof json.preview_token === "string" ? json.preview_token : "";
+        const tokenQuery = token
+          ? `&pt=${encodeURIComponent(token)}`
+          : "";
         router.push(
-          `/apply/preview?order=${encodeURIComponent(json.order_number)}`
+          `/apply/preview?order=${encodeURIComponent(json.order_number)}${tokenQuery}`
         );
         return; // 이동 중 재클릭 방지
       }

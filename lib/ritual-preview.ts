@@ -30,7 +30,7 @@ import type { RitualOrderRow } from "@/lib/supabase/types";
 
 /* 무료 preview는 짧고 빠르게 — intro 3문장 + 편지 2~3문장 + teaser 4~5개면
    충분하므로 상한을 낮춰 생성 시간을 단축 (truncation 여유는 확보) */
-const PREVIEW_MAX_TOKENS = 1400;
+const PREVIEW_MAX_TOKENS = 2000;
 /** 이 시간(ms) 넘게 content 없이 선점만 남아 있으면 비정상 종료로 보고 선점 해제 */
 const CLAIM_STALE_MS = 70_000;
 
@@ -43,7 +43,8 @@ export type PreviewOutcome =
 
 export async function getOrCreatePreview(
   orderNumber: string,
-  submissionId: string
+  submissionId: string | null,
+  tokenAuthorized = false
 ): Promise<PreviewOutcome> {
   try {
     const supabase = getSupabaseAdmin();
@@ -59,8 +60,15 @@ export async function getOrCreatePreview(
       submission_id: string | null;
     };
 
-    /* 신청 세션 확인 — 주문번호만으로는 접근 불가 */
-    if (!order.submission_id || order.submission_id !== submissionId) {
+    /* 신청 세션 또는 서버 서명 preview token 확인.
+       모바일 Safari/인앱 브라우저에서 sessionStorage가 유실되어도
+       방금 발급된 서명 토큰이 있으면 같은 주문의 preview는 이어갈 수 있다. */
+    if (
+      !tokenAuthorized &&
+      (!submissionId ||
+        !order.submission_id ||
+        order.submission_id !== submissionId)
+    ) {
       return { status: "not_found" };
     }
 

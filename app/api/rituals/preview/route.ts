@@ -6,6 +6,7 @@
  */
 import { NextResponse } from "next/server";
 import { getOrCreatePreview } from "@/lib/ritual-preview";
+import { verifyPreviewToken } from "@/lib/preview-auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -24,19 +25,29 @@ export async function POST(request: Request) {
   const b = (body ?? {}) as Record<string, unknown>;
   const orderNumber = b.orderNumber;
   const submissionId = b.submissionId;
+  const previewToken = b.previewToken;
 
   if (
     typeof orderNumber !== "string" ||
-    !ORDER_NUMBER_RE.test(orderNumber) ||
-    typeof submissionId !== "string" ||
-    !UUID_RE.test(submissionId)
+    !ORDER_NUMBER_RE.test(orderNumber)
   ) {
+    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
+
+  const normalizedSubmissionId =
+    typeof submissionId === "string" && UUID_RE.test(submissionId)
+      ? submissionId.toLowerCase()
+      : null;
+  const tokenAuthorized = verifyPreviewToken(orderNumber, previewToken);
+
+  if (!normalizedSubmissionId && !tokenAuthorized) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
   const result = await getOrCreatePreview(
     orderNumber,
-    submissionId.toLowerCase()
+    normalizedSubmissionId,
+    tokenAuthorized
   );
 
   switch (result.status) {
