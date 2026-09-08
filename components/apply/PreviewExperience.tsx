@@ -149,8 +149,7 @@ export default function PreviewExperience({
           return;
         }
         /* 안내 화면으로 바뀌어도 자동 폴링을 계속한다.
-           서버 stale claim(70초)을 넘길 수 있도록 충분히 이어가고,
-           ready가 오면 사용자가 버튼을 누르지 않아도 자동으로 미리보기로 전환한다. */
+           stale claim(70초)을 넘길 수 있도록 여유를 둔다. */
         if (tries.current < 32) {
           setPhase("delayed");
           scheduleRetry(2500);
@@ -174,8 +173,9 @@ export default function PreviewExperience({
       }
       setPhase("delayed");
     } catch {
-      if (tries.current < 4) scheduleRetry(2500);
-      else {
+      if (tries.current < 4) {
+        scheduleRetry(2500);
+      } else {
         setPhase("delayed");
         if (tries.current < 32) scheduleRetry(2500);
       }
@@ -241,10 +241,12 @@ export default function PreviewExperience({
           <p className="font-display mt-5 text-[1.15rem] leading-[1.9] text-ivory">
             월화가 {name ? `${name}님의` : "당신의"} 이야기를
             <br />
-            조용히 읽고 있어요.
+            먼저 읽고 있어요.
           </p>
-          <p className="mt-3 text-[0.82rem] font-light leading-relaxed text-ivory-dim">
-            먼저 전할 말을 고르고 있어요.
+          <p className="mt-3 text-[0.82rem] font-light leading-[1.95] text-ivory-dim">
+            조금만 기다리면
+            <br />
+            무료 개인화 미리보기가 바로 이어집니다.
           </p>
         </FullBleedReading>
       </div>
@@ -257,23 +259,19 @@ export default function PreviewExperience({
   const leadText = preview.cta_lead_text;
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
 
-  const ctaLabel = name
-    ? `${name}님의 전체 리추얼 확인하기`
-    : "내 전체 결과 이어서 보기";
+  const priceText = `${RITUAL_PRICE_KRW.toLocaleString()}원`;
+  const ctaLabel = `내 전체 이야기 이어서 보기 · ${priceText}`;
 
   return (
     <div className="fade-in pb-16">
       {/* ---------- full-bleed: 이름 제목 + 월화의 개인화 문장 3줄 ---------- */}
       <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[88svh]">
         <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
-        <p className="mt-4 text-[0.64rem] tracking-[0.28em] text-gold/75">
+        <p className="mt-4 text-[0.66rem] tracking-[0.3em] text-thread/90">
           무료 개인화 미리보기
         </p>
-        <p className="mt-2 text-[0.68rem] tracking-[0.22em] text-thread/90">
-          {name ? `${name}님에게 먼저 도착한 흐름` : "먼저 도착한 흐름"}
-        </p>
         <p className="font-display mt-2 text-[1.35rem] font-semibold leading-snug text-ivory">
-          월화가 먼저 전하는 말
+          {name ? `${name}님에게 먼저 보인 흐름` : "당신에게 먼저 보인 흐름"}
         </p>
         <div className="mt-5 flex flex-col gap-3.5">
           {preview.intro_lines.map((line, i) => (
@@ -288,27 +286,8 @@ export default function PreviewExperience({
         <p className="mt-4 text-right text-[0.78rem] text-gold/80">— 월화 月華</p>
       </FullBleedReading>
 
-      {/* ---------- 핵심 전환 CTA (미리보기 직후 즉시) ---------- */}
-      <section className="px-6 pt-8">
-        <p className="text-center text-[0.88rem] font-light leading-[1.95] text-ivory">
-          {name ? `${name}님에게 지금 가장 궁금한 답은` : "지금 가장 궁금한 답은"}
-          <br />아직 다음 이야기 안에 남아 있어요.
-        </p>
-        <Link
-          href={payHref}
-          className="cta-glow mt-6 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.97rem] font-medium text-ivory transition-opacity active:opacity-85"
-        >
-          {ctaLabel}
-        </Link>
-        <p className="mt-3 text-center text-[0.75rem] font-light leading-[1.9] text-ivory-dim">
-          지금 보신 미리보기 뒤에, 관계의 흐름 · 반복된 패턴
-          <br />
-          행동 가이드 · 개인 리추얼이 이어집니다.
-        </p>
-        <p className="mt-1.5 text-center text-[0.7rem] text-ivory-dim/70">
-          1회 결제 {RITUAL_PRICE_KRW.toLocaleString()}원 · 정기결제 없음
-        </p>
-      </section>
+      {/* 개인화 3문장 다음에는 바로 첫 편지와 잠긴 결과로 이어진다.
+          가격/결제는 충분한 무료 미리보기를 본 뒤 처음 노출한다. */}
 
       {/* ---------- 첫 편지: 실제 서두 노출 + 페이드 ---------- */}
       <section className="mt-10 px-6">
@@ -333,9 +312,15 @@ export default function PreviewExperience({
             {/* 이어지는 부분: 자리표시 문장 흐림 + 그라데이션 페이드 */}
             <p
               aria-hidden
-              className="mt-3 select-none text-[0.92rem] font-light leading-[2.05] text-ivory-dim blur-[5px]"
+              className="mt-3 select-none text-[0.92rem] font-light leading-[2.05] text-ivory-dim blur-[4px]"
             >
               {BLUR_LINES[0]}
+            </p>
+            <p
+              aria-hidden
+              className="mt-2 select-none text-[0.92rem] font-light leading-[2.05] text-ivory-dim/70 blur-[7px]"
+            >
+              {BLUR_LINES[1]}
             </p>
             <div
               aria-hidden
@@ -350,21 +335,53 @@ export default function PreviewExperience({
 
       {/* ---------- 전체 결과 teaser: 3~5개만 컴팩트하게 (읽을거리 아님) ---------- */}
       <section className="mt-6 px-6">
-        <p className="text-center text-[0.65rem] tracking-[0.3em] text-thread/90">
+        <p className="font-display text-center text-[1.02rem] font-medium text-ivory">
           전체 결과에서 이어지는 이야기
         </p>
         <div className="mx-auto mt-4 flex max-w-md flex-col gap-2.5">
-          {cards.slice(0, 5).map((c) => (
-            <div
-              key={c.key}
-              className="rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-3.5"
-            >
-              <p className="text-[0.93rem] font-medium text-ivory">{c.title}</p>
-              <p className="mt-1 text-[0.82rem] font-light leading-[1.85] text-ivory-dim">
-                {c.summary}
-              </p>
-            </div>
-          ))}
+          {cards.slice(0, 5).map((c, i) => {
+            /* 진행형 잠금: 앞 카드는 선명, 뒤로 갈수록 흐려지고 잠금 표시 */
+            const lockLevel = i < 2 ? 0 : i - 1; // 0,0,1,2,3
+            return (
+              <div
+                key={c.key}
+                className="relative overflow-hidden rounded-xl border border-gold-dim/25 bg-ink-soft px-5 pb-6 pt-3.5"
+                style={lockLevel ? { opacity: 1 - lockLevel * 0.08 } : undefined}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-[0.93rem] font-medium text-ivory">
+                    {c.title}
+                  </p>
+                  {lockLevel > 0 && (
+                    <span
+                      aria-hidden
+                      className="mt-0.5 shrink-0 text-[0.68rem] text-gold-dim/80"
+                    >
+                      🔒
+                    </span>
+                  )}
+                </div>
+                <p
+                  className={`mt-1 text-[0.82rem] font-light leading-[1.85] text-ivory-dim ${
+                    lockLevel >= 2 ? "blur-[1.5px]" : ""
+                  }`}
+                >
+                  {c.summary}
+                </p>
+                <p
+                  aria-hidden
+                  className="mt-1.5 select-none text-[0.78rem] font-light leading-[1.85] text-ivory-dim/60"
+                  style={{ filter: `blur(${4 + lockLevel * 1.5}px)` }}
+                >
+                  {BLUR_LINES[i % BLUR_LINES.length]}
+                </p>
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-ink-soft to-transparent"
+                />
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -382,7 +399,9 @@ export default function PreviewExperience({
           href={payHref}
           className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
         >
-          {CTA_BUTTON} · {RITUAL_PRICE_KRW.toLocaleString()}원
+          {name
+            ? `${name}님의 전체 이야기 이어서 보기 · ${RITUAL_PRICE_KRW.toLocaleString()}원`
+            : `${CTA_BUTTON} · ${RITUAL_PRICE_KRW.toLocaleString()}원`}
         </Link>
         <div className="mx-auto mt-4 flex max-w-md flex-col gap-1">
           {CTA_HELPERS.map((h, i) => (

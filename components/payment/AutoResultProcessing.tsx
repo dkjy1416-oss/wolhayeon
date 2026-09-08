@@ -48,6 +48,7 @@ export default function AutoResultProcessing({
   const startedAt = useRef<number>(Date.now());
   const active = useRef(true);
   const inflight = useRef(false);
+  const failRetries = useRef(0);
 
   /* 문구 순환 */
   useEffect(() => {
@@ -71,17 +72,30 @@ export default function AutoResultProcessing({
       const json = await res.json().catch(() => null);
 
       if (json?.status === "ready" && typeof json.resultPath === "string") {
+        failRetries.current = 0;
         // 자동 처리 완료 후에만 세션 정리 → 결과 페이지로
         clearApplication();
         active.current = false;
         router.replace(json.resultPath);
         return;
       }
-      if (json?.status === "processing" || res.status === 504 || res.status === 502 && json === null) {
+      if (
+        json?.status === "processing" ||
+        res.status === 504 ||
+        (res.status === 502 && json === null)
+      ) {
+        failRetries.current = 0;
         scheduleNext();
         return;
       }
-      /* delayed / not_paid / server_error 등 */
+
+      /* 결제 후 transient failure는 사용자를 즉시 막지 않고 최대 3회 자동 복구.
+         not_paid만 재시도하지 않는다. */
+      if (json?.status !== "not_paid" && failRetries.current < 3) {
+        failRetries.current += 1;
+        setTimeout(callProcess, 6000);
+        return;
+      }
       setPhase("delayed");
     } catch {
       /* 네트워크/타임아웃 — 서버는 계속 처리 중일 수 있으므로 재확인 */
@@ -132,6 +146,7 @@ export default function AutoResultProcessing({
           onClick={() => {
             startedAt.current = Date.now();
             active.current = true;
+            failRetries.current = 0;
             setPhase("working");
             callProcess();
           }}
@@ -146,67 +161,45 @@ export default function AutoResultProcessing({
     );
   }
 
-  const hasIntro = !!introLines && introLines.length === 3;
   const name = applicantName?.trim();
 
   return (
-    <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col items-center px-6 pb-16 pt-14 text-center">
-      <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
-      <p className="mt-5 text-[0.72rem] tracking-[0.25em] text-thread/90">
-        결제가 완료되었습니다
-      </p>
+    <main className="relative mx-auto h-[100svh] w-full max-w-md overflow-hidden bg-black">
+      {/* 결제 후에만 노출되는 대기1~5 영상.
+          native controls 없이 05→01→02→03→04가 자동으로 이어진다. */}
+      <WaitingContent videos={waitingVideos} immersive />
 
-      <p
-        key={msgIdx}
-        className="font-display mt-7 min-h-[3.2rem] whitespace-pre-line text-[1.02rem] leading-[1.9] text-ivory"
-      >
-        {name
-          ? `${name}님의 이야기를 이어서 읽고 있어요.`
-          : MESSAGES[msgIdx]}
-      </p>
-      {name && (
-        <p className="mt-1 text-[0.78rem] font-light text-ivory-dim">
-          {MESSAGES[msgIdx]}
-        </p>
-      )}
-
-      {/* 결제 전에 이미 본 개인화 3문장 (새 AI 호출 없음) */}
-      {hasIntro && (
-        <div className="mt-7 w-full rounded-2xl border border-gold/25 bg-ink-soft px-6 py-6 text-left">
-          <p className="text-center text-[0.65rem] tracking-[0.3em] text-gold/80">
-            월화가 먼저 읽은 마음
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 px-6 pt-[max(1.2rem,env(safe-area-inset-top))] text-center">
+        <p className="text-[0.65rem] tracking-[0.34em] text-gold/90">月下緣</p>
+        <div className="mt-4 inline-block rounded-full border border-white/15 bg-black/35 px-4 py-2 backdrop-blur">
+          <p className="text-[0.68rem] tracking-[0.14em] text-thread/95">
+            결제가 완료되었습니다
           </p>
-          <div className="mt-4 flex flex-col gap-3">
-            {introLines!.map((line, i) => (
-              <p
-                key={i}
-                className="text-[0.88rem] font-light leading-[1.95] text-ivory"
-              >
-                {line}
-              </p>
-            ))}
-          </div>
         </div>
-      )}
-
-      <p className="mt-8 text-[0.72rem] tracking-wide text-ivory-dim/80">
-        결과를 준비하는 동안 월화가 짧게 전하는 이야기를 들어보세요
-      </p>
-      <div className="mt-3 w-full">
-        <WaitingContent videos={waitingVideos} />
       </div>
 
-      <p className="mt-8 text-[0.78rem] font-light leading-[1.9] text-ivory-dim">
-        결과가 완성되면 이 화면에서 바로 열어드릴게요.
-        <br />
-        이 화면을 그대로 두시면 자동으로 이어집니다.
-      </p>
-      <div className="mt-7 w-full rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-4">
-        <p className="text-[0.68rem] tracking-wide text-ivory-dim">주문번호</p>
-        <p className="font-display mt-1 text-base tracking-wider text-gold">
-          {orderNumber}
+      <div className="pointer-events-none absolute inset-x-0 top-[17%] z-30 px-7 text-center">
+        <p className="font-display text-[1.15rem] font-medium leading-[1.8] text-ivory">
+          {name
+            ? `${name}님의 전체 이야기를 이어서 읽고 있어요.`
+            : "월화가 전체 이야기를 이어서 읽고 있어요."}
+        </p>
+        <p
+          key={msgIdx}
+          className="mt-2 whitespace-pre-line text-[0.76rem] font-light leading-[1.8] text-ivory/75"
+        >
+          {MESSAGES[msgIdx]}
+        </p>
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-[max(6.8rem,calc(env(safe-area-inset-bottom)+5rem))] z-30 px-7 text-center">
+        <p className="text-[0.72rem] font-light leading-[1.8] text-ivory/75">
+          결과가 완성되면 영상이 끝나기를 기다리지 않고
+          <br />
+          자동으로 전체 결과가 열립니다.
         </p>
       </div>
     </main>
   );
+
 }
