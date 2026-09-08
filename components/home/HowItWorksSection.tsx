@@ -60,12 +60,15 @@ export default function HowItWorksSection({
       </div>
 
       {/* 편지와 붉은 실 — 월하연의 상징 */}
-      <Reveal className="mt-12 px-3">
+      <Reveal className="mt-12">
         <HomeImage
           src={ritualLetter}
           alt="촛불 아래 붉은 실로 묶인 편지"
           aspect="aspect-[4/5]"
           sizes="(max-width: 520px) 100vw, 520px"
+          bleed
+          sceneEyebrow="붉은 실의 리추얼"
+          sceneTitle={"다시 만나기 전에\n먼저 봐야 할 것"}
         />
       </Reveal>
     </section>

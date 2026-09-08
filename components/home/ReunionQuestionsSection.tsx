@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Reveal from "@/components/home/Reveal";
 
 /**
@@ -36,11 +35,10 @@ export default function ReunionQuestionsSection() {
 
       <Reveal>
         <p className="mt-12 text-center text-[0.95rem] font-light leading-[2.05] text-ivory">
-          재회는 ‘될까 말까’ 한 문장으로
-          <br />끝나지 않아요.
+          월화는 재회를 약속하지 않습니다.
         </p>
         <p className="mt-4 text-center text-[0.9rem] font-light leading-[2.05] text-ivory-dim">
-          월화는
+          대신
           <br />두 사람 사이에 남아 있는 흐름,
           <br />
           반복됐던 관계의 패턴,
@@ -49,14 +47,6 @@ export default function ReunionQuestionsSection() {
           <br />
           함께 봅니다.
         </p>
-        <div className="mt-8 text-center">
-          <Link
-            href="/apply"
-            className="inline-flex h-12 items-center justify-center rounded-full border border-gold-dim/40 px-8 text-[0.88rem] text-ivory transition-colors hover:border-gold/60"
-          >
-            내 경우도 먼저 읽어보기
-          </Link>
-        </div>
       </Reveal>
     </section>
   );

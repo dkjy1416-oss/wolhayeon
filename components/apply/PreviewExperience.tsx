@@ -3,11 +3,10 @@
 /**
  * 결제 전 무료 미리보기 화면 (읽기 몰입판).
  * 흐름: 읽는 중(loop 영상) → 같은 화면에서 fade 전환 → 개인화 preview → 처음으로 가격 노출.
- * - 정상 흐름은 preview ready → 무료 미리보기 → 그 다음에만 결제 CTA.
- * - preview가 늦어지면 결제를 먼저 보여주지 않는다. 대기영상 05→01→02→03→04를
- *   풀스크린 루프형으로 보여주며 preview 생성/재시도를 뒤에서 계속한다.
- * - preview가 준비되면 현재 영상이 끝나기를 기다리지 않고 즉시 무료 미리보기로 전환.
+ * - 개인화 preview가 ready일 때만 미리보기+결제 CTA 표시.
+ *   실패 시에는 loop 영상 + "다시 읽어보기"만 (결제 버튼 절대 없음).
  * - 특정 시간 약속 / 가짜 진행률 / 가짜 단계 없음.
+ * - 일시적 생성 실패(failed)는 짧게 자동 재시도 후에만 실패 화면으로.
  */
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -17,7 +16,6 @@ import {
 } from "@/lib/ritual-storage";
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
-import WaitingContent, { type WaitingVideoItem } from "@/components/payment/WaitingContent";
 
 interface PreviewCard {
   key: string;
@@ -45,45 +43,47 @@ const BLUR_LINES = [
   "붉은 실을 손에 감고 준비된 문장을 읽는 다섯 번의 호흡, 그 시간 동안 정리되는 것들과 내려놓게 되는 것들에 대하여",
 ];
 
-/** 읽는 중 / 실패 화면 공용 — 월화 reading loop 영상 */
-function ReadingVideo({
+/** full-bleed 몰입형 루프 배경 — 플레이어/카드처럼 보이지 않게.
+ *  상하단은 ink로 녹아들고, 텍스트 가독성용 하단 오버레이 포함 */
+function FullBleedReading({
   src,
   poster,
-  short = false,
+  minH = "min-h-[88svh]",
+  children,
 }: {
   src: string | null;
   poster: string | null;
-  short?: boolean;
+  minH?: string;
+  children: React.ReactNode;
 }) {
-  if (!src && !poster) return null;
   return (
-    <div
-      className={`relative mx-auto w-full max-w-[300px] overflow-hidden rounded-sm ${
-        short ? "aspect-[16/10]" : "aspect-[9/16] max-w-[260px]"
-      }`}
-    >
-      {src ? (
-        <video
-          className={`h-full w-full object-cover ${short ? "object-[50%_18%]" : ""}`}
-          src={src}
-          poster={poster ?? undefined}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-        />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={poster!}
-          alt=""
-          className="h-full w-full object-cover"
-          aria-hidden
-        />
-      )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-ink/15" />
-    </div>
+    <section className={`relative ${minH} overflow-hidden`}>
+      <div className="absolute inset-0" aria-hidden>
+        {src ? (
+          <video
+            className="h-full w-full object-cover object-[50%_26%]"
+            src={src}
+            poster={poster ?? undefined}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+          />
+        ) : poster ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={poster} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-b from-[#141019] via-ink-soft to-ink" />
+        )}
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-ink via-ink/55 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-ink via-ink/85 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(13,13,15,0.5)_100%)]" />
+      </div>
+      <div className={`relative flex ${minH} flex-col justify-end px-6 pb-12`}>
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -91,12 +91,10 @@ export default function PreviewExperience({
   orderNumber,
   readingVideo,
   readingPoster,
-  waitingVideos = [],
 }: {
   orderNumber: string;
   readingVideo: string | null;
   readingPoster: string | null;
-  waitingVideos?: WaitingVideoItem[];
 }) {
   const [phase, setPhase] = useState<"loading" | "ready" | "delayed">(
     "loading"
@@ -107,7 +105,6 @@ export default function PreviewExperience({
   const genFails = useRef(0); // 생성 실패(failed) 자동 재시도 횟수
   const started = useRef(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const softWaitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     /* 같은 브라우저 세션의 신청 데이터에서 표시용 이름만 */
@@ -117,16 +114,6 @@ export default function PreviewExperience({
       /* 이름 없이 진행 */
     }
   }, []);
-
-  const startSoftWaitTimer = () => {
-    if (softWaitTimer.current) clearTimeout(softWaitTimer.current);
-    softWaitTimer.current = setTimeout(() => {
-      softWaitTimer.current = null;
-      /* 무료 preview 때문에 결제 전 사용자를 오래 묶어두지 않는다.
-         API 요청은 취소하지 않고 계속 진행시키며, 화면만 non-blocking fallback으로 전환한다. */
-      setPhase((current) => (current === "loading" ? "delayed" : current));
-    }, 3500);
-  };
 
   const scheduleRetry = (delayMs: number) => {
     if (retryTimer.current) clearTimeout(retryTimer.current);
@@ -149,10 +136,6 @@ export default function PreviewExperience({
       });
       const json = await res.json().catch(() => null);
       if (json?.status === "ready" && json.preview) {
-        if (softWaitTimer.current) {
-          clearTimeout(softWaitTimer.current);
-          softWaitTimer.current = null;
-        }
         setPreview(json.preview as Preview);
         setPhase("ready");
         return;
@@ -162,10 +145,9 @@ export default function PreviewExperience({
           scheduleRetry(2500);
           return;
         }
-        /* 오래 걸리면 안내 화면은 보여주되 자동 재시도는 계속한다.
-           stale claim(70초) 복구 뒤 다음 요청이 다시 생성할 수 있도록
-           약 80초 이상 폴링 여유를 둔다. 사용자가 버튼을 누르지 않아도
-           ready가 오면 자동으로 preview 화면으로 넘어간다. */
+        /* 안내 화면으로 바뀌어도 자동 폴링을 계속한다.
+           서버 stale claim(70초)을 넘길 수 있도록 충분히 이어가고,
+           ready가 오면 사용자가 버튼을 누르지 않아도 자동으로 미리보기로 전환한다. */
         if (tries.current < 32) {
           setPhase("delayed");
           scheduleRetry(2500);
@@ -174,14 +156,14 @@ export default function PreviewExperience({
         setPhase("delayed");
         return;
       }
-      /* 일시적 생성 실패/서버 타임아웃은 선점이 해제되거나 곧 stale 처리될 수 있음.
-         API는 HTTP 오류일 때 error 필드를 쓰므로 status/error 둘 다 본다. */
+
       const transientFailure =
         json?.status === "failed" ||
         json?.error === "failed" ||
         json?.status === "server_error" ||
         json?.error === "server_error" ||
         [500, 502, 503, 504].includes(res.status);
+
       if (transientFailure && genFails.current < 2) {
         genFails.current += 1;
         scheduleRetry(3000);
@@ -190,56 +172,42 @@ export default function PreviewExperience({
       setPhase("delayed");
     } catch {
       if (tries.current < 4) scheduleRetry(2500);
-      else setPhase("delayed");
+      else {
+        setPhase("delayed");
+        if (tries.current < 32) scheduleRetry(2500);
+      }
     }
   };
 
   useEffect(() => {
     if (started.current) return; // StrictMode/재마운트 중복 호출 방지
     started.current = true;
-    startSoftWaitTimer();
     fetchPreview();
     return () => {
       if (retryTimer.current) {
         clearTimeout(retryTimer.current);
         retryTimer.current = null;
       }
-      if (softWaitTimer.current) {
-        clearTimeout(softWaitTimer.current);
-        softWaitTimer.current = null;
-      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNumber]);
 
-  const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
-
-  /* ---------- preview 생성이 조금 늦는 경우 ----------
-       여기는 결제 유도 화면이 아니라 "무료 미리보기를 준비하는 몰입 구간".
-       결제는 preview가 실제로 공개된 뒤에만 등장한다. ---------- */
+  /* ---------- 실패: full-bleed 유지 + 재시도만 (개인화 실패 시 결제 버튼 금지) ---------- */
   if (phase === "delayed") {
     return (
-      <div className="relative h-[100svh] w-full overflow-hidden bg-black">
-        <WaitingContent videos={waitingVideos} immersive />
-
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-6 pt-[max(1.4rem,env(safe-area-inset-top))] text-center">
-          <p className="text-[0.68rem] tracking-[0.36em] text-gold/90">月下緣</p>
-          <div className="mt-6 inline-block rounded-full border border-white/15 bg-black/30 px-4 py-2 backdrop-blur">
-            <p className="text-[0.72rem] text-ivory/90">
-              월화가 {name ? `${name}님의` : "당신의"} 이야기를 읽고 있어요
-            </p>
-          </div>
-        </div>
-
-        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-20 px-7 text-center">
-          <p className="text-[0.78rem] font-light leading-[1.8] text-ivory/80">
-            무료 미리보기가 준비되면
+      <div className="fade-in">
+        <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[86svh]">
+          <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
+          <p className="font-display mt-5 text-[1.15rem] leading-[1.85] text-ivory">
+            월화가 이야기를 읽는 과정이
             <br />
-            이 화면에서 바로 이어집니다.
+            조금 늦어지고 있어요.
           </p>
-        </div>
-
-        {tries.current >= 32 ? (
+          <p className="mt-3 text-[0.85rem] font-light leading-[1.95] text-ivory-dim">
+            입력하신 내용은 그대로 남아 있어요.
+            <br />
+            잠시 후 다시 읽어볼게요.
+          </p>
           <button
             type="button"
             onClick={() => {
@@ -249,123 +217,107 @@ export default function PreviewExperience({
               }
               tries.current = 0;
               genFails.current = 0;
+              setPhase("loading");
               fetchPreview();
             }}
-            className="absolute bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/25 bg-black/45 px-5 py-2.5 text-[0.72rem] text-ivory backdrop-blur"
+            className="mt-7 inline-flex h-13 w-full items-center justify-center rounded-full border border-gold-dim/40 text-sm text-ivory active:opacity-85"
           >
-            미리보기 다시 준비하기
+            다시 읽어보기
           </button>
-        ) : null}
+        </FullBleedReading>
       </div>
     );
   }
 
-  /* ---------- 처음 3.5초: reading-loop를 풀스크린으로 짧게 보여주는 전환 ---------- */
+  /* ---------- 읽는 중: full-bleed 몰입 전환 (응답 오면 즉시 전환) ---------- */
   if (phase === "loading") {
     return (
-      <div className="relative h-[100svh] w-full overflow-hidden bg-black">
-        {readingVideo ? (
-          <video
-            className="absolute inset-0 h-full w-full object-cover"
-            src={readingVideo}
-            poster={readingPoster ?? undefined}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-          />
-        ) : readingPoster ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={readingPoster}
-            alt=""
-            aria-hidden
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : null}
-
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/80"
-        />
-
-        <div className="absolute inset-x-0 top-0 z-10 px-6 pt-[max(1.4rem,env(safe-area-inset-top))] text-center">
-          <p className="text-[0.68rem] tracking-[0.36em] text-gold/90">月下緣</p>
-        </div>
-
-        <div className="absolute inset-x-0 bottom-[max(3rem,env(safe-area-inset-bottom))] z-10 px-7 text-center">
-          <p className="font-display text-[1.25rem] font-medium leading-[1.7] text-ivory">
+      <div className="fade-in">
+        <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[92svh]">
+          <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
+          <p className="font-display mt-5 text-[1.15rem] leading-[1.9] text-ivory">
             월화가 {name ? `${name}님의` : "당신의"} 이야기를
             <br />
-            먼저 읽고 있어요.
+            조용히 읽고 있어요.
           </p>
-          <p className="mt-3 text-[0.78rem] font-light leading-[1.8] text-ivory/70">
-            결제 전에, 지금 이 자리에서
-            <br />
-            개인화 미리보기를 먼저 보여드릴게요.
+          <p className="mt-3 text-[0.82rem] font-light leading-relaxed text-ivory-dim">
+            먼저 전할 말을 고르고 있어요.
           </p>
-        </div>
+        </FullBleedReading>
       </div>
     );
   }
 
-  /* ---------- ready: 무료 개인화 미리보기 공개 ----------
-       이 구간이 결제를 결정하는 핵심 구간.
-       실제 사연에 대한 구체적인 "맞다"는 감각을 주되 전체 해석은 열지 않는다. ---------- */
+  /* ---------- ready: 같은 화면에서 fade로 preview 공개 ---------- */
   if (!preview) return null;
   const cards = preview.preview_cards;
   const leadText = preview.cta_lead_text;
+  const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
+
+  const ctaLabel = name
+    ? `${name}님의 전체 리추얼 확인하기`
+    : "내 전체 결과 이어서 보기";
 
   return (
-    <div className="fade-in min-h-[100svh] bg-ink pb-16">
-      <div className="px-6 pt-[max(1.5rem,env(safe-area-inset-top))] text-center">
-        <p className="text-[0.68rem] tracking-[0.36em] text-gold/90">月下緣</p>
-        <p className="mt-7 text-[0.7rem] tracking-[0.2em] text-thread/90">
+    <div className="fade-in pb-16">
+      {/* ---------- full-bleed: 이름 제목 + 월화의 개인화 문장 3줄 ---------- */}
+      <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[88svh]">
+        <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
+        <p className="mt-4 text-[0.64rem] tracking-[0.28em] text-gold/75">
           무료 개인화 미리보기
         </p>
-        <h1 className="font-display mt-3 text-[1.45rem] font-semibold leading-[1.6] text-ivory">
-          월화가 먼저 읽은
-          <br />
-          두 사람 사이의 흐름
-        </h1>
-      </div>
-
-      {/* 1. "내 얘기 맞네"를 만드는 핵심 3문장 */}
-      <section className="px-6 pt-7">
-        <div className="mx-auto max-w-md border-y border-gold-dim/25 py-7">
-          <div className="flex flex-col gap-4">
-            {preview.intro_lines.map((line, i) => (
-              <p
-                key={i}
-                className={`font-light leading-[2.05] ${
-                  i === 0
-                    ? "font-display text-[1.05rem] font-medium text-ivory"
-                    : "text-[0.92rem] text-ivory/90"
-                }`}
-              >
-                {line}
-              </p>
-            ))}
-          </div>
-          <p className="mt-6 text-right text-[0.75rem] text-gold/80">— 월화 月華</p>
+        <p className="mt-2 text-[0.68rem] tracking-[0.22em] text-thread/90">
+          {name ? `${name}님에게 먼저 도착한 흐름` : "먼저 도착한 흐름"}
+        </p>
+        <p className="font-display mt-2 text-[1.35rem] font-semibold leading-snug text-ivory">
+          월화가 먼저 전하는 말
+        </p>
+        <div className="mt-5 flex flex-col gap-3.5">
+          {preview.intro_lines.map((line, i) => (
+            <p
+              key={i}
+              className="text-[0.95rem] font-light leading-[2.05] text-ivory"
+            >
+              {line}
+            </p>
+          ))}
         </div>
+        <p className="mt-4 text-right text-[0.78rem] text-gold/80">— 월화 月華</p>
+      </FullBleedReading>
+
+      {/* ---------- 핵심 전환 CTA (미리보기 직후 즉시) ---------- */}
+      <section className="px-6 pt-8">
+        <p className="text-center text-[0.88rem] font-light leading-[1.95] text-ivory">
+          {name ? `${name}님에게 지금 가장 궁금한 답은` : "지금 가장 궁금한 답은"}
+          <br />아직 다음 이야기 안에 남아 있어요.
+        </p>
+        <Link
+          href={payHref}
+          className="cta-glow mt-6 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.97rem] font-medium text-ivory transition-opacity active:opacity-85"
+        >
+          {ctaLabel}
+        </Link>
+        <p className="mt-3 text-center text-[0.75rem] font-light leading-[1.9] text-ivory-dim">
+          지금 보신 미리보기 뒤에, 관계의 흐름 · 반복된 패턴
+          <br />
+          행동 가이드 · 개인 리추얼이 이어집니다.
+        </p>
+        <p className="mt-1.5 text-center text-[0.7rem] text-ivory-dim/70">
+          1회 결제 {RITUAL_PRICE_KRW.toLocaleString()}원 · 정기결제 없음
+        </p>
       </section>
 
-      {/* 2. 첫 편지 일부를 실제로 무료 공개 */}
-      <section className="mt-9 px-6">
-        <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-gold/25 bg-gradient-to-b from-[#17100f] to-ink-soft">
+      {/* ---------- 첫 편지: 실제 서두 노출 + 페이드 ---------- */}
+      <section className="mt-10 px-6">
+        <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-gold/25 bg-ink-soft">
           <div className="px-6 pt-7">
-            <p className="text-[0.66rem] tracking-[0.25em] text-gold/75">
-              FIRST LETTER
-            </p>
-            <p className="font-display mt-2 text-[1.12rem] font-semibold text-ivory">
+            <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">01</p>
+            <p className="font-display mt-1 text-[1.05rem] font-semibold text-ivory">
               월화의 첫 편지
             </p>
           </div>
-
-          <div className="relative px-6 pb-7 pt-5">
-            <div className="flex flex-col gap-3.5">
+          <div className="relative px-6 pb-6 pt-4">
+            <div className="flex flex-col gap-3">
               {preview.preview_letter_excerpt.map((line, i) => (
                 <p
                   key={i}
@@ -375,104 +327,70 @@ export default function PreviewExperience({
                 </p>
               ))}
             </div>
-
+            {/* 이어지는 부분: 자리표시 문장 흐림 + 그라데이션 페이드 */}
             <p
               aria-hidden
-              className="mt-4 select-none text-[0.9rem] font-light leading-[2.05] text-ivory-dim blur-[5px]"
+              className="mt-3 select-none text-[0.92rem] font-light leading-[2.05] text-ivory-dim blur-[5px]"
             >
               {BLUR_LINES[0]}
             </p>
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-ink-soft via-ink-soft/85 to-transparent"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-ink-soft via-ink-soft/80 to-transparent"
             />
           </div>
-
-          <div className="border-t border-gold-dim/20 px-6 py-4 text-center">
-            <p className="text-[0.72rem] leading-[1.7] text-gold/85">
-              여기서부터는 아직 열지 않은 이야기예요.
-            </p>
+          <div className="border-t border-gold-dim/20 px-6 py-3.5 text-center">
+            <p className="text-[0.72rem] text-gold/80">이 편지는 전체 결과에서 이어집니다</p>
           </div>
         </div>
       </section>
 
-      {/* 3. 결제하면 무엇을 얻는지: 답은 숨기고 "내 사연에 맞는 질문"만 보여줌 */}
-      <section className="mt-10 px-6">
-        <p className="text-center text-[0.68rem] tracking-[0.26em] text-thread/90">
-          전체 결과에서 이어서 읽는 것
+      {/* ---------- 전체 결과 teaser: 3~5개만 컴팩트하게 (읽을거리 아님) ---------- */}
+      <section className="mt-6 px-6">
+        <p className="text-center text-[0.65rem] tracking-[0.3em] text-thread/90">
+          전체 결과에서 이어지는 이야기
         </p>
-        <p className="mx-auto mt-3 max-w-sm text-center text-[0.78rem] font-light leading-[1.85] text-ivory-dim">
-          일반적인 연애 조언이 아니라,
-          <br />
-          방금 들려준 이야기 안에서 이어집니다.
-        </p>
-
-        <div className="mx-auto mt-5 flex max-w-md flex-col gap-2.5">
-          {cards.slice(0, 5).map((c, i) => (
+        <div className="mx-auto mt-4 flex max-w-md flex-col gap-2.5">
+          {cards.slice(0, 5).map((c) => (
             <div
               key={c.key}
-              className="relative overflow-hidden rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4"
+              className="rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-3.5"
             >
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 text-[0.72rem] text-gold/70">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[0.94rem] font-medium text-ivory">{c.title}</p>
-                  <p className="mt-1.5 text-[0.81rem] font-light leading-[1.8] text-ivory-dim">
-                    {c.summary}
-                  </p>
-                </div>
-                <span aria-hidden className="text-[0.78rem] text-gold/55">잠금</span>
-              </div>
+              <p className="text-[0.93rem] font-medium text-ivory">{c.title}</p>
+              <p className="mt-1 text-[0.82rem] font-light leading-[1.85] text-ivory-dim">
+                {c.summary}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* 4. 결제 전환: 무료 미리보기를 충분히 본 뒤 처음 가격 등장 */}
-      <section className="mt-11 px-6 text-center">
-        <div className="mx-auto max-w-md rounded-2xl border border-thread/30 bg-gradient-to-b from-[#1d0d12] to-[#0d0b0c] px-6 py-7">
-          <p className="text-[0.68rem] tracking-[0.25em] text-thread/90">
-            무료 미리보기는 여기까지
+      {/* ---------- 가격은 여기서 처음 등장 ---------- */}
+      <section className="mt-12 px-6 text-center">
+        <div className="mx-auto max-w-md rounded-2xl border border-thread/30 bg-gradient-to-b from-[#160d10] to-ink-soft px-6 py-7">
+          <p className="text-[0.65rem] tracking-[0.3em] text-thread/90">
+            여기까지가 월화가 먼저 전한 이야기예요
           </p>
-          <p className="font-display mt-4 text-[1.15rem] font-semibold leading-[1.75] text-ivory">
-            이제 가장 궁금한 부분부터
-            <br />
-            끝까지 이어서 읽을 수 있어요.
-          </p>
-          <p className="mt-4 whitespace-pre-line text-[0.86rem] font-light leading-[1.95] text-ivory-dim">
+          <p className="mt-4 whitespace-pre-line text-[0.9rem] font-light leading-[2] text-ivory">
             {leadText}
           </p>
-
-          <div className="mt-6 border-t border-gold-dim/20 pt-5">
-            <p className="font-display text-[1.65rem] font-semibold text-gold">
-              {RITUAL_PRICE_KRW.toLocaleString()}원
-            </p>
-            <p className="mt-1.5 text-[0.72rem] text-ivory-dim/70">
-              1회 결제 · 추가 결제 없음
-            </p>
-          </div>
-
-          <Link
-            href={payHref}
-            className="cta-glow mt-6 inline-flex h-15 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep px-4 text-[0.96rem] font-semibold text-ivory transition-opacity active:opacity-85"
-          >
-            지금 내 전체 이야기 이어보기
-          </Link>
-
-          <div className="mt-4 flex flex-col gap-1.5">
-            <p className="text-[0.72rem] text-ivory-dim/75">
-              관계 흐름 · 반복된 패턴 · 지금 할 수 있는 행동
-            </p>
-            <p className="text-[0.72rem] text-ivory-dim/75">
-              개인 리추얼 · 24시간/7일/21일 가이드 포함
-            </p>
-          </div>
-          <DevPaymentNotice />
         </div>
+        <Link
+          href={payHref}
+          className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
+        >
+          {CTA_BUTTON} · {RITUAL_PRICE_KRW.toLocaleString()}원
+        </Link>
+        <div className="mx-auto mt-4 flex max-w-md flex-col gap-1">
+          {CTA_HELPERS.map((h, i) => (
+            <p key={i} className="text-[0.72rem] text-ivory-dim/70">
+              {h}
+            </p>
+          ))}
+        </div>
+        {/* 테스트 결제 모드 안내 (라이브 키 전환 시 컴포넌트 내부에서 끔) */}
+        <DevPaymentNotice />
       </section>
     </div>
   );
 }
-

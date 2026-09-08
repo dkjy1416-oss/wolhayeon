@@ -1,6 +1,10 @@
 import Reveal from "@/components/home/Reveal";
 
-/** SECTION 04 — reading loop: "월화가 실제로 내 이야기를 읽는 것 같은 감각" */
+/**
+ * 루프 영상 감정 섹션 — 영상은 "배경"이고 그 위에 카피가 얹히는 full-bleed 구성.
+ * <video> 플레이어/카드처럼 보이지 않게: 컨트롤 없음, 테두리·라운드 없음,
+ * 상하단은 ink로 길게 녹아들고, 중앙엔 가벼운 vignette.
+ */
 export default function WolhwaReadingSection({
   video,
   poster,
@@ -9,54 +13,57 @@ export default function WolhwaReadingSection({
   poster: string | null;
 }) {
   return (
-    <section className="px-6 py-20">
-      <Reveal>
-        <h2 className="font-display text-center text-[1.4rem] font-semibold leading-[1.7] text-ivory">
-          당신의 이야기를
-          <br />
-          월화가 조용히 읽습니다.
-        </h2>
-      </Reveal>
+    <section className="relative min-h-[88svh] overflow-hidden">
+      {/* 배경 미디어 (full-bleed) */}
+      <div className="absolute inset-0" aria-hidden>
+        {video ? (
+          <video
+            className="h-full w-full object-cover object-[50%_30%]"
+            src={video}
+            poster={poster ?? undefined}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+          />
+        ) : poster ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={poster} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-b from-ink via-[#131017] to-ink" />
+        )}
+        {/* 상하단 녹아들기 + 은은한 vignette */}
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-ink via-ink/60 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgba(13,13,15,0.55)_100%)]" />
+      </div>
 
-      {video && (
-        <Reveal className="mx-auto mt-10 max-w-[320px]">
-          <div className="relative aspect-[9/16] overflow-hidden rounded-sm">
-            <video
-              className="h-full w-full object-cover"
-              src={video}
-              poster={poster ?? undefined}
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-ink/10" />
-          </div>
+      {/* 카피 오버레이 */}
+      <div className="relative flex min-h-[88svh] flex-col justify-end px-6 pb-16">
+        <Reveal>
+          <p className="text-[0.66rem] tracking-[0.32em] text-gold/80">
+            月華의 시선
+          </p>
+          <p className="font-display mt-4 text-[1.3rem] font-semibold leading-[1.8] text-ivory">
+            당신의 이야기를 들은 뒤,
+            <br />
+            월화는 이렇게 읽습니다.
+          </p>
         </Reveal>
-      )}
-
-      <Reveal>
-        <p className="mt-10 text-center text-[0.92rem] font-light leading-[2.1] text-ivory-dim">
-          관계가 시작된 순간부터
-          <br />
-          마지막 대화,
-          <br />
-          지금 가장 힘든 마음,
-          <br />
-          그리고 다시 만나고 싶은 이유까지.
-        </p>
-        <p className="mt-5 text-center text-[0.92rem] font-light leading-[2.05] text-ivory">
-          같은 이별처럼 보여도
-          <br />
-          사람마다 남아 있는 마음은 다릅니다.
-        </p>
-        <p className="font-display mt-8 text-center text-[0.95rem] font-medium text-gold">
-          그래서 누구에게나
-          <br />
-          같은 결과를 보여주지 않습니다.
-        </p>
-      </Reveal>
+        <Reveal delay={120}>
+          <p className="mt-6 text-[0.92rem] font-light leading-[2.05] text-ivory-dim">
+            관계의 흐름은 감정보다
+            <br />
+            먼저 드러나는 순간이 있습니다.
+          </p>
+          <p className="mt-4 text-[0.92rem] font-light leading-[2.05] text-ivory">
+            지금 필요한 건 조급한 연락인지,
+            <br />
+            천천한 거리두기인지 먼저 살펴봅니다.
+          </p>
+        </Reveal>
+      </div>
     </section>
   );
 }

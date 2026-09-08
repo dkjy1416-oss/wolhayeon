@@ -28,12 +28,8 @@ function SectionCta() {
         <p className="font-display text-[1.05rem] font-medium text-ivory">
           내 경우는 어떻게 보일까?
         </p>
-        <p className="mt-3 text-[0.82rem] font-light leading-[1.95] text-ivory-dim">
-          결제 전에
-          <br />
-          월화가 내 이야기를 먼저 읽은
-          <br />
-          개인화 미리보기를 보여드려요.
+        <p className="mt-3 text-[0.78rem] font-light leading-[1.9] text-ivory-dim">
+          결제 전, 개인화 미리보기부터 보여드려요
         </p>
         <Link
           href="/apply"
@@ -75,7 +71,7 @@ export default function ReviewsSection({
             return (
               <div
                 key={r.id}
-                className="w-[88%] shrink-0 snap-center border border-gold-dim/30 bg-gradient-to-b from-[#141013] to-ink px-6 py-7"
+                className="relative w-[88%] shrink-0 snap-center border border-gold-dim/25 bg-gradient-to-b from-[#15100f] via-[#121012] to-ink px-6 py-7 shadow-[inset_0_1px_0_rgba(212,180,131,0.12)]"
               >
                 {badge && (
                   <span className="mb-3 inline-block rounded-full border border-thread/40 px-3 py-1 text-[0.62rem] tracking-wide text-thread">
@@ -116,10 +112,15 @@ export default function ReviewsSection({
         <div className="px-6">
           <Reveal>
             <h2 className="font-display text-center text-[1.4rem] font-semibold leading-snug text-ivory">
-              비슷한 마음을 지나온 이야기
+              다시 이어진 이야기들
             </h2>
-            <p className="mt-4 text-center text-[0.78rem] font-light leading-[1.9] text-ivory-dim/85">
-              아래 내용은 서비스 흐름을 보여주기 위한 예시 후기입니다.
+            <p className="mt-4 text-center text-[0.82rem] font-light leading-[1.95] text-ivory-dim">
+              연락을 서두르기보다,
+              <br />
+              먼저 흐름을 읽고 움직인 이야기.
+            </p>
+            <p className="mt-3 text-center text-[0.68rem] font-light text-ivory-dim/60">
+              실제 이용 후기는 준비 중이며, 아래는 예시로 구성한 이야기입니다.
             </p>
           </Reveal>
         </div>
@@ -129,17 +130,19 @@ export default function ReviewsSection({
             return (
               <div
                 key={r.id}
-                className="w-[88%] shrink-0 snap-center border border-gold-dim/30 bg-gradient-to-b from-[#141013] to-ink px-6 py-7"
+                className="relative w-[88%] shrink-0 snap-center border border-gold-dim/25 bg-gradient-to-b from-[#15100f] via-[#121012] to-ink px-6 py-7 shadow-[inset_0_1px_0_rgba(212,180,131,0.12)]"
               >
-                <div className="flex flex-wrap gap-2">
-                  <span className="inline-block rounded-full border border-gold-dim/50 bg-ink px-3 py-1 text-[0.62rem] tracking-wide text-gold/90">
-                    예시 후기
-                  </span>
-                  {secondary && (
-                    <span className="inline-block rounded-full border border-thread/40 px-3 py-1 text-[0.62rem] tracking-wide text-thread">
+                <div className="flex items-center justify-between">
+                  {secondary ? (
+                    <span className="inline-block border-b border-thread/50 pb-0.5 text-[0.66rem] tracking-[0.18em] text-thread">
                       {secondary}
                     </span>
+                  ) : (
+                    <span />
                   )}
+                  <span className="text-[0.6rem] tracking-wide text-ivory-dim/50">
+                    예시
+                  </span>
                 </div>
                 <p className="font-display mt-3 text-2xl leading-none text-gold/60">
                   “
@@ -194,6 +197,8 @@ export default function ReviewsSection({
           alt="붉은 밤, 휴대폰을 바라보는 여인"
           aspect="aspect-[4/5]"
           sizes="(max-width: 520px) 100vw, 520px"
+          bleed
+          sceneTitle={"지금 연락해도 되는지,\n기다려야 하는지"}
         />
       </Reveal>
 

@@ -50,12 +50,15 @@ export default function ResultPreviewSection({
       </div>
 
       {/* 결과를 갖고 싶게 만드는 대표 비주얼 */}
-      <Reveal className="mt-10 px-3">
+      <Reveal className="mt-10">
         <HomeImage
           src={resultCards}
           alt="붉은 실 위에 펼쳐진 월화의 결과 카드"
           aspect="aspect-[2/3]"
           sizes="(max-width: 520px) 100vw, 520px"
+          bleed
+          sceneEyebrow="당신만의 결과"
+          sceneTitle={"관계에서 반복된 흐름부터\n지금 할 수 있는 일까지"}
         />
       </Reveal>
 

@@ -25,8 +25,8 @@ export default function Home() {
         <main>
           <HeroSection video={media.heroVideo} poster={media.heroPoster} />
           <ReunionQuestionsSection />
-          <WolhwaInsightSection gaze={media.wolhwaGaze} />
           <ReviewsSection emotionPhone={media.emotionPhone} />
+          <WolhwaInsightSection gaze={media.wolhwaGaze} />
           <WolhwaReadingSection
             video={media.readingLoop}
             poster={media.readingPoster}

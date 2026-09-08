@@ -9,16 +9,16 @@ export default function WolhwaInsightSection({
 }) {
   return (
     <section className="bg-ink-soft/40 pb-20 pt-16">
-      <Reveal className="px-3">
+      <Reveal>
         <HomeImage
           src={gaze}
           alt="사용자를 바라보는 월화"
           aspect="aspect-[4/5]"
           sizes="(max-width: 520px) 100vw, 520px"
+          bleed
+          sceneEyebrow="月華 · 월하연의 안내자"
+          sceneTitle={"재회보다 먼저\n확인해야 하는 마음"}
         />
-        <p className="mt-3 text-center text-[0.66rem] tracking-[0.3em] text-gold/70">
-          月華 · 월하연의 안내자
-        </p>
       </Reveal>
 
       <div className="px-6">
@@ -58,11 +58,11 @@ export default function WolhwaInsightSection({
           </Reveal>
           <Reveal delay={200}>
             <p className="font-display text-center text-[1.02rem] font-medium leading-[2] text-gold">
-              “월화는 다시 이어질 가능성만 묻기보다
+              “월화는 재회를 약속하기보다
               <br />
-              지금 두 사람 사이에
+              지금 당신 마음이
               <br />
-              무엇이 남아 있는지부터 봅니다.”
+              어디에 머물러 있는지부터 봅니다.”
             </p>
           </Reveal>
         </div>

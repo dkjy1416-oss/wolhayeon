@@ -48,26 +48,21 @@ export default function HeroSection({
       <div className="relative flex min-h-[100svh] flex-col justify-end px-6 pb-14 pt-24">
         <Reveal>
           <p className="text-[0.78rem] font-light leading-[1.8] tracking-wide text-gold/90">
-            헤어진 뒤,
-            <br />
-            제일 헷갈리는 순간.
+            끝난 건지, 아직 남아 있는 건지.
           </p>
         </Reveal>
         <Reveal delay={100}>
           <h1 className="font-display mt-5 text-[2.15rem] font-semibold leading-[1.42] text-ivory">
-            그 사람에게
+            연락해야 할까.
             <br />
-            다시 연락해도 될까.
+            기다려야 할까.
           </h1>
         </Reveal>
         <Reveal delay={200}>
           <p className="mt-6 text-[0.95rem] font-light leading-[2.05] text-ivory-dim">
-            지금 움직여야 하는지,
-            <br />
-            조금 더 기다려야 하는지.
-            <br />
             <span className="text-ivory">
-              월화가 먼저 두 사람의 흐름부터 읽어드려요.
+              월화는 먼저,
+              <br />두 사람 사이의 흐름부터 읽습니다.
             </span>
           </p>
         </Reveal>
@@ -76,10 +71,10 @@ export default function HeroSection({
             href="/apply"
             className="cta-glow mt-9 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.98rem] font-medium text-ivory transition-opacity active:opacity-85"
           >
-            내 이야기 먼저 읽어보기
+            내 이야기 먼저 들려주기
           </Link>
           <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/80">
-            결제 전 개인화 미리보기 제공
+            결제 전, 개인화 미리보기부터 보여드려요
           </p>
         </Reveal>
       </div>
