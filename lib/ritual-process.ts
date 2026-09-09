@@ -33,7 +33,7 @@ export async function processPaidOrder(
     const supabase = getSupabaseAdmin();
     const o = await supabase
       .from("ritual_orders")
-      .select("payment_status, generation_status, review_status, delivery_status")
+      .select("payment_status, generation_status, review_status, delivery_status, updated_at")
       .eq("order_number", orderNumber)
       .maybeSingle();
     if (o.error || !o.data) return { status: "not_paid" };
@@ -45,7 +45,33 @@ export async function processPaidOrder(
     /* 1) 생성 단계 */
     if (order.review_status !== "approved") {
       if (order.generation_status === "generating") {
-        return { status: "processing" };
+        /* process route의 최대 실행시간(300초)을 넘긴 요청이 중단되면
+           generation_status가 generating으로 남을 수 있다.
+           updated_at 기준 5분 30초 이상 변화가 없을 때만 stale로 판단해
+           failed로 되돌리고 다음 요청에서 안전하게 재선점한다. */
+        const updatedAtMs = Date.parse(order.updated_at);
+        const stale =
+          Number.isFinite(updatedAtMs) &&
+          Date.now() - updatedAtMs > 330_000;
+
+        if (!stale) return { status: "processing" };
+
+        const staleCutoff = new Date(Date.now() - 330_000).toISOString();
+        const reset = await supabase
+          .from("ritual_orders")
+          .update({ generation_status: "failed" })
+          .eq("order_number", orderNumber)
+          .eq("generation_status", "generating")
+          .lt("updated_at", staleCutoff)
+          .select("generation_status")
+          .maybeSingle();
+
+        if (reset.error || !reset.data) {
+          return { status: "processing" };
+        }
+
+        order.generation_status = "failed";
+        console.error("[process] stale_generation_recovered");
       }
       if (
         order.generation_status === "waiting" ||

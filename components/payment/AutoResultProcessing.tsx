@@ -45,6 +45,7 @@ export default function AutoResultProcessing({
   const router = useRouter();
   const [phase, setPhase] = useState<"working" | "delayed">("working");
   const [msgIdx, setMsgIdx] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const startedAt = useRef<number>(Date.now());
   const active = useRef(true);
   const inflight = useRef(false);
@@ -57,6 +58,18 @@ export default function AutoResultProcessing({
       () => setMsgIdx((i) => (i + 1) % MESSAGES.length),
       4200
     );
+    return () => clearInterval(id);
+  }, [phase]);
+
+  /* 실제 경과 시간만 표시한다. 가짜 진행률/퍼센트는 사용하지 않는다. */
+  useEffect(() => {
+    if (phase !== "working") return;
+    const tick = () =>
+      setElapsedSeconds(
+        Math.max(0, Math.floor((Date.now() - startedAt.current) / 1000))
+      );
+    tick();
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [phase]);
 
@@ -145,6 +158,7 @@ export default function AutoResultProcessing({
           type="button"
           onClick={() => {
             startedAt.current = Date.now();
+            setElapsedSeconds(0);
             active.current = true;
             failRetries.current = 0;
             setPhase("working");
@@ -162,6 +176,13 @@ export default function AutoResultProcessing({
   }
 
   const name = applicantName?.trim();
+  const elapsedMin = Math.floor(elapsedSeconds / 60);
+  const elapsedSec = elapsedSeconds % 60;
+  const elapsedLabel =
+    elapsedMin > 0
+      ? `${elapsedMin}분 ${String(elapsedSec).padStart(2, "0")}초`
+      : `${elapsedSec}초`;
+  const longWait = elapsedSeconds >= 300;
 
   return (
     <main className="relative mx-auto h-[100svh] w-full max-w-md overflow-hidden bg-black">
@@ -178,25 +199,49 @@ export default function AutoResultProcessing({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 top-[17%] z-30 px-7 text-center">
+      <div className="pointer-events-none absolute inset-x-0 top-[15%] z-30 px-7 text-center">
         <p className="font-display text-[1.15rem] font-medium leading-[1.8] text-ivory">
           {name
             ? `${name}님의 전체 이야기를 이어서 읽고 있어요.`
             : "월화가 전체 이야기를 이어서 읽고 있어요."}
         </p>
+
+        <div className="mx-auto mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/35 px-4 py-2 backdrop-blur">
+          <span className="text-[0.72rem] font-medium text-gold/95">
+            예상 소요 약 2~5분
+          </span>
+          <span className="text-white/30">·</span>
+          <span className="text-[0.72rem] text-ivory/80">
+            현재 {elapsedLabel}
+          </span>
+        </div>
+
         <p
           key={msgIdx}
-          className="mt-2 whitespace-pre-line text-[0.76rem] font-light leading-[1.8] text-ivory/75"
+          className="mt-3 whitespace-pre-line text-[0.76rem] font-light leading-[1.8] text-ivory/75"
         >
-          {MESSAGES[msgIdx]}
+          {longWait
+            ? "평소보다 조금 오래 걸리고 있어요.\n생성 상태를 자동으로 다시 확인하고 있습니다."
+            : MESSAGES[msgIdx]}
+        </p>
+
+        <p className="mt-2 text-[0.68rem] font-light leading-[1.7] text-ivory/55">
+          전체 결과는 14개 파트와 21일 가이드까지 한 번에 준비해
+          <br />
+          무료 미리보기보다 시간이 더 필요합니다.
         </p>
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-[max(6.8rem,calc(env(safe-area-inset-bottom)+5rem))] z-30 px-7 text-center">
-        <p className="text-[0.72rem] font-light leading-[1.8] text-ivory/75">
+        <p className="text-[0.72rem] font-light leading-[1.8] text-ivory/80">
           결과가 완성되면 영상이 끝나기를 기다리지 않고
           <br />
           자동으로 전체 결과가 열립니다.
+        </p>
+        <p className="mt-2 text-[0.66rem] leading-[1.7] text-ivory/50">
+          결제는 이미 정상 완료되었으며 다시 청구되지 않습니다.
+          <br />
+          결과 완성 후 신청 이메일로도 안내됩니다.
         </p>
       </div>
     </main>

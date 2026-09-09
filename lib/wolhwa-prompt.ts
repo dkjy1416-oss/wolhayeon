@@ -357,9 +357,14 @@ part_08~part_13, bonus_journal_questions 등 다른 key는 절대 포함하지 �
 (실행 가이드는 같은 컨텍스트로 별도 흐름에서 함께 작성되고 있습니다 —
 이 사실을 고객 문장에 언급하지는 마세요)`;
 
-const PLAN_ONLY_RULE = `이 요청에서는 위 7개 key만 생성합니다.
-part_01~part_07, part_14 등 다른 key는 절대 포함하지 마세요.
-(편지와 해석 파트는 같은 컨텍스트로 별도 흐름에서 함께 작성되고 있습니다 —
+const ACTION_ONLY_RULE = `이 요청에서는 part_08~part_12와 bonus_journal_questions만 생성합니다.
+part_01~part_07, part_13, part_14 등 다른 key는 절대 포함하지 마세요.
+(편지·해석 파트와 21일 여정은 같은 신청 맥락으로 별도 흐름에서 함께 작성되고 있습니다 —
+이 사실을 고객 문장에 언급하지는 마세요)`;
+
+const JOURNEY_ONLY_RULE = `이 요청에서는 part_13_21day_plan 하나만 생성합니다.
+다른 key는 절대 포함하지 마세요.
+(다른 결과 파트는 같은 신청 맥락으로 별도 흐름에서 함께 작성되고 있습니다 —
 이 사실을 고객 문장에 언급하지는 마세요)`;
 
 /** GROUP A — 관계/감정 핵심 (part_01~07, part_14) */
@@ -411,8 +416,8 @@ JSON만 출력하세요.`);
   return sections.join("\n\n");
 }
 
-/** GROUP B — 실행/리추얼 가이드 (part_08~13, bonus) */
-export function buildPlanUserPrompt(
+/** GROUP B — 실행/리추얼 가이드 (part_08~12, bonus) */
+export function buildActionUserPrompt(
   order: RitualOrderRow,
   introLines?: string[] | null
 ): string {
@@ -425,7 +430,6 @@ export function buildPlanUserPrompt(
   "part_10_personal_words": { "lines": ["문자열"] },
   "part_11_24h_guide": { "items": ["문자열"] },
   "part_12_7day_guide": { "items": ["문자열"] },
-  "part_13_21day_plan": { "days": [ { "day": 1, "title": "", "action": "", "reflection": "" } ] },
   "bonus_journal_questions": { "title": "", "intro": "", "questions": ["문자열"] }
 }
 
@@ -433,44 +437,56 @@ export function buildPlanUserPrompt(
 - part_08: 준비물 (붉은 실, 종이, 펜, 물 중심 — 구매 유도 금지)
 - part_09: 약 5분의 리추얼 진행 순서 (4~7단계, 시작과 끝의 작은 여닫는 의식 포함)
 - part_10: 리추얼 중 소리 내어 읽을 개인 문장 3~6줄 (사연 반영)
-- part_11: 리추얼 이후 24시간 가이드 — "오늘 하루"의 즉각적인 행동
-  안전장치만 담습니다. 감정이 출렁이는 순간 바로 붙잡을 수 있는,
-  오늘 밤까지만 유효한 구체적 행동들입니다.
-- part_12: 7일 행동 가이드 — 일일 행동이 아니라, 앞으로 일주일 동안
-  유지할 관계·감정 관리의 "원칙"들입니다. (예: 연락에 대한 나만의 기준,
-  마음이 흔들릴 때의 약속 같은 지침 형태)
-- part_13: 21일 마음 회복 플랜 — days 배열에 DAY 1부터 DAY 21까지
-  정확히 21개를 순서대로 만듭니다. 1~7일은 감정을 바라보기, 8~14일은
-  일상 회복, 15~21일은 관계를 다른 거리에서 보기의 흐름을 따르되
-  각 날의 행동은 이 신청자의 사연과 상황(연락 상태 포함)에 맞춥니다.
-  하루 5~15분이면 충분한 쉬운 행동만 제안하고, 어렵거나 비용이 들거나
-  시간이 많이 드는 행동은 금지합니다. 행동을 매일 반복 복사하지 않습니다.
+- part_11: 리추얼 이후 24시간 가이드 — 오늘 하루의 즉각적인 행동 안전장치만 담습니다.
+- part_12: 7일 행동 가이드 — 앞으로 일주일 동안 유지할 관계·감정 관리의 원칙을 씁니다.
+- bonus: '월화의 마음 기록장' — title, 짧은 intro, 개인화된 기록 항목 7~10개.
 
-[21일 분량 지침 — 간결하게]
-- title: 짧은 제목 한 줄
-- action: 1~2문장
-- reflection: 1문장
-하루마다 긴 에세이를 만들지 않습니다.
+[분량 지침]
+- 각 항목은 짧고 구체적으로 씁니다.
+- 같은 행동을 part_11과 part_12에서 반복하지 않습니다.
+- 긴 에세이보다 바로 실행할 수 있는 문장을 우선합니다.
 
-[세 가이드의 역할 분리 — 중요]
-part_11(오늘 하루의 즉각 안전장치), part_12(일주일의 원칙),
-part_13(21일 일일 프로그램)은 역할이 완전히 다릅니다.
-같은 행동(예: SNS 확인 대신 산책, 호흡하기, 감정 기록하기)을
-세 영역에서 반복하지 마세요. 하나의 행동은 세 파트 중
-가장 어울리는 한 곳에만 배치합니다.
-
-- bonus: '월화의 마음 기록장' — 단순 질문 목록이 아니라 매일 펼쳐
-  기록할 수 있는 작은 기록장입니다. title(기록장의 이름),
-  intro(월화가 건네는 짧은 여는 글), questions(기록 항목 7~10개)로
-  구성합니다. questions에는 질문형과 기록형을 섞습니다. 예:
-  "오늘 가장 많이 떠오른 생각", "오늘 마음이 흔들린 순간",
-  "내가 통제할 수 있었던 행동", "상대에게 듣고 싶은 말",
-  "사실 내가 나에게 해주고 싶은 말", "오늘의 마음 온도 (0~10)",
-  "내일 하나만 지킬 것" — 이 예시를 그대로 베끼지 말고
-  ${order.applicant_name}님의 사연에 맞게 변형해 만드세요.
-
-${PLAN_ONLY_RULE}
+${ACTION_ONLY_RULE}
 
 JSON만 출력하세요.`);
-  return sections.join("\n\n");
+  return sections.join("\\n\\n");
+}
+
+/** GROUP C — 21일 마음 회복 여정 (part_13 only) */
+export function buildJourneyUserPrompt(
+  order: RitualOrderRow,
+  introLines?: string[] | null
+): string {
+  const sections = buildContextSections(order, introLines);
+
+  sections.push(`[출력할 JSON 구조 — key 이름과 구조를 정확히 지키세요]
+{
+  "part_13_21day_plan": {
+    "days": [
+      { "day": 1, "title": "", "action": "", "reflection": "" }
+    ]
+  }
+}
+
+part_13_21day_plan:
+- DAY 1부터 DAY 21까지 정확히 21개를 순서대로 만듭니다.
+- 1~7일: 감정을 바라보기
+- 8~14일: 일상 회복
+- 15~21일: 관계를 다른 거리에서 바라보기
+- 각 날의 행동은 ${order.applicant_name}님의 실제 사연과 연락 상태에 맞춥니다.
+- 하루 5~15분 안에 할 수 있는 쉬운 행동만 제안합니다.
+- 비용이 들거나 상대방을 압박·추적·통제하는 행동은 금지합니다.
+- 같은 행동을 여러 날 반복 복사하지 않습니다.
+
+[분량 지침 — 빠르고 밀도 있게]
+- title: 아주 짧은 제목 한 줄
+- action: 1문장, 필요할 때만 2문장
+- reflection: 1문장
+- 하루마다 긴 에세이를 쓰지 않습니다.
+- 21일 전체가 연결되는 흐름은 유지하되 군더더기를 줄입니다.
+
+${JOURNEY_ONLY_RULE}
+
+JSON만 출력하세요.`);
+  return sections.join("\\n\\n");
 }

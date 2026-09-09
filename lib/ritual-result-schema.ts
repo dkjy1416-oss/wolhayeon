@@ -68,15 +68,20 @@ export const RitualCoreStructSchema = RitualResultStructSchema.pick({
   part_14_final_letter: true,
 });
 
-/** GROUP B — 실행/리추얼 가이드 (준비물·순서·문장·가이드·21일·기록장) */
-export const RitualPlanStructSchema = RitualResultStructSchema.pick({
+/** GROUP B — 실행/리추얼 가이드 (준비물·순서·문장·24h·7일·기록장) */
+export const RitualActionStructSchema = RitualResultStructSchema.pick({
   part_08_preparation: true,
   part_09_ritual_steps: true,
   part_10_personal_words: true,
   part_11_24h_guide: true,
   part_12_7day_guide: true,
-  part_13_21day_plan: true,
   bonus_journal_questions: true,
+});
+
+/** GROUP C — 21일 마음 회복 여정만 별도 생성.
+ *  가장 긴 21일 배열을 다른 실행 가이드와 분리해 병렬 처리 시간을 줄인다. */
+export const RitualJourneyStructSchema = RitualResultStructSchema.pick({
+  part_13_21day_plan: true,
 });
 
 /* ---------- 2) 품질 검증용 (DB 저장 전) ---------- */

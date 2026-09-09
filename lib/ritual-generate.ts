@@ -20,12 +20,14 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import {
   WOLHWA_SYSTEM_PROMPT,
   buildCoreUserPrompt,
-  buildPlanUserPrompt,
+  buildActionUserPrompt,
+  buildJourneyUserPrompt,
 } from "@/lib/wolhwa-prompt";
 import {
   parseRitualResultObject,
   RitualCoreStructSchema,
-  RitualPlanStructSchema,
+  RitualActionStructSchema,
+  RitualJourneyStructSchema,
   RitualResultSchema,
 } from "@/lib/ritual-result-schema";
 import { PreviewSchema } from "@/lib/ritual-preview-schema";
@@ -46,7 +48,8 @@ export function getModelId(): string {
    기존 전체 결과가 한 호출 약 10~14k 토큰이었고 각 그룹은 그 절반 수준이라
    9000이면 JSON 절단 없이 충분한 여유 (stop_reason=max_tokens 시 실패 처리). */
 const CORE_MAX_TOKENS = 9000;
-const PLAN_MAX_TOKENS = 9000;
+const ACTION_MAX_TOKENS = 6000;
+const JOURNEY_MAX_TOKENS = 6000;
 
 export type GenerateOutcome =
   | { status: "success"; orderNumber: string; resultVersion: number }
@@ -129,15 +132,19 @@ export async function generateRitualForOrder(
       return { status: "generation_failed", code: "config_missing" };
     }
 
-    /* 2-b) GROUP A(관계/감정 핵심) + GROUP B(실행 가이드)를 병렬 호출.
-       두 호출 모두 동일한 컨텍스트·안전 규칙을 받고, 자기 그룹 파트만 생성. */
+    /* 2-b) GROUP A(관계/감정 핵심) + GROUP B(실행 가이드) +
+       GROUP C(21일 여정)를 3-way 병렬 호출.
+       가장 긴 21일 배열을 분리해 전체 대기시간을 줄인다. */
     const genStartedAt = Date.now();
     const client = new Anthropic({ apiKey });
 
     const callGroup = async (
       label: "core" | "plan",
       prompt: string,
-      schema: typeof RitualCoreStructSchema | typeof RitualPlanStructSchema,
+      schema:
+        | typeof RitualCoreStructSchema
+        | typeof RitualActionStructSchema
+        | typeof RitualJourneyStructSchema,
       maxTokens: number
     ): Promise<string> => {
       const t0 = Date.now();
@@ -164,9 +171,10 @@ export async function generateRitualForOrder(
     };
 
     let coreText = "";
-    let planText = "";
+    let actionText = "";
+    let journeyText = "";
     try {
-      [coreText, planText] = await Promise.all([
+      [coreText, actionText, journeyText] = await Promise.all([
         callGroup(
           "core",
           buildCoreUserPrompt(order, letterOpening, introLines),
@@ -174,10 +182,16 @@ export async function generateRitualForOrder(
           CORE_MAX_TOKENS
         ),
         callGroup(
-          "plan",
-          buildPlanUserPrompt(order, introLines),
-          RitualPlanStructSchema,
-          PLAN_MAX_TOKENS
+          "action",
+          buildActionUserPrompt(order, introLines),
+          RitualActionStructSchema,
+          ACTION_MAX_TOKENS
+        ),
+        callGroup(
+          "journey",
+          buildJourneyUserPrompt(order, introLines),
+          RitualJourneyStructSchema,
+          JOURNEY_MAX_TOKENS
         ),
       ]);
     } catch (e) {
@@ -196,17 +210,20 @@ export async function generateRitualForOrder(
     /* 3) 두 그룹 병합 후 전체 구조 검증 — 실패 시 부분 저장 없이 failed */
     const mergeStartedAt = Date.now();
     let coreJson: unknown;
-    let planJson: unknown;
+    let actionJson: unknown;
+    let journeyJson: unknown;
     try {
       coreJson = JSON.parse(coreText.trim());
-      planJson = JSON.parse(planText.trim());
+      actionJson = JSON.parse(actionText.trim());
+      journeyJson = JSON.parse(journeyText.trim());
     } catch {
       await markFailed("json_parse_error");
       return { status: "generation_failed", code: "invalid_result" };
     }
     const merged = {
       ...(coreJson as Record<string, unknown>),
-      ...(planJson as Record<string, unknown>),
+      ...(actionJson as Record<string, unknown>),
+      ...(journeyJson as Record<string, unknown>),
     };
     const parsed = parseRitualResultObject(merged);
     if (!parsed.ok) {
