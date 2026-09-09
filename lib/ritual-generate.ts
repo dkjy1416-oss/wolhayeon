@@ -139,7 +139,7 @@ export async function generateRitualForOrder(
     const client = new Anthropic({ apiKey });
 
     const callGroup = async (
-      label: "core" | "plan",
+      label: "core" | "action" | "journey",
       prompt: string,
       schema:
         | typeof RitualCoreStructSchema
