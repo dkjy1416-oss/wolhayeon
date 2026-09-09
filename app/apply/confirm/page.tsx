@@ -81,6 +81,25 @@ export default function ConfirmPage() {
       });
       const json = await res.json().catch(() => null);
       if (res.ok && json?.ok && typeof json.order_number === "string") {
+        /* 주문 저장 요청에서 이미 만들어진 무료 preview를 다음 화면이
+           즉시 쓸 수 있게 세션 캐시에 넘긴다. 실패해도 기존 API fallback 유지. */
+        try {
+          if (json.preview) {
+            sessionStorage.setItem(
+              `wolhayeon_preview_prefetch:${json.order_number}`,
+              JSON.stringify({
+                preview: json.preview,
+                applicantName:
+                  typeof json.applicant_name === "string"
+                    ? json.applicant_name
+                    : data?.applicant_name ?? "",
+              })
+            );
+          }
+        } catch {
+          /* sessionStorage가 막힌 브라우저에서는 기존 서버 조회로 진행 */
+        }
+
         const token =
           typeof json.preview_token === "string" ? json.preview_token : "";
         const tokenQuery = token

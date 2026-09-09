@@ -19,6 +19,8 @@ import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sanitizeAndValidateApplication } from "@/lib/ritual-validation";
 import { createPreviewToken } from "@/lib/preview-auth";
+import { buildInstantPreview } from "@/lib/ritual-preview";
+import type { RitualOrderRow } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
@@ -65,12 +67,27 @@ export async function POST(request: Request) {
     );
   }
 
-  /* 4) DB insert — 정제된 신청 필드 + submission_id만.
+  /* 무료 미리보기는 같은 신청 데이터로 즉시 만들어 둔다.
+     사용자가 확인 버튼을 누른 뒤 preview 페이지에서 두 번째 서버 요청을
+     기다리지 않도록 주문 생성 응답에 함께 실어 보낸다.
+     생성 실패가 주문 저장 자체를 막지는 않는다. */
+  let prefetchedPreview = null;
+  try {
+    prefetchedPreview = buildInstantPreview(data as RitualOrderRow);
+  } catch {
+    prefetchedPreview = null;
+  }
+
+  /* 4) DB insert — 정제된 신청 필드 + submission_id + 준비된 preview.
         가격/상태/주문번호는 DB 기본값. */
   try {
     const supabase = getSupabaseAdmin();
     const payload: Record<string, unknown> = { ...data };
     if (submissionId) payload.submission_id = submissionId;
+    if (prefetchedPreview) {
+      payload.preview_content = prefetchedPreview;
+      payload.preview_generated_at = new Date().toISOString();
+    }
 
     let res = await supabase
       .from("ritual_orders")
@@ -92,6 +109,8 @@ export async function POST(request: Request) {
           ok: true,
           order_number: existing.data.order_number,
           preview_token: previewToken,
+          preview: prefetchedPreview,
+          applicant_name: data.applicant_name,
           duplicate: true,
         });
       }
@@ -126,6 +145,8 @@ export async function POST(request: Request) {
       ok: true,
       order_number: res.data.order_number,
       preview_token: previewToken,
+      preview: prefetchedPreview,
+      applicant_name: data.applicant_name,
     });
   } catch (e) {
     // env 누락 등 초기화 실패 — 상세 내용은 사용자에게 노출하지 않음

@@ -103,6 +103,7 @@ export default function PreviewExperience({
   );
   const [preview, setPreview] = useState<Preview | null>(null);
   const [name, setName] = useState<string>("");
+  const [showLoading, setShowLoading] = useState(false);
   const tries = useRef(0); // pending 폴링 횟수
   const genFails = useRef(0); // 생성 실패(failed) 자동 재시도 횟수
   const started = useRef(false);
@@ -139,6 +140,9 @@ export default function PreviewExperience({
       });
       const json = await res.json().catch(() => null);
       if (json?.status === "ready" && json.preview) {
+        if (typeof json.applicantName === "string" && json.applicantName.trim()) {
+          setName(json.applicantName.trim());
+        }
         setPreview(json.preview as Preview);
         setPhase("ready");
         return;
@@ -185,8 +189,45 @@ export default function PreviewExperience({
   useEffect(() => {
     if (started.current) return; // StrictMode/재마운트 중복 호출 방지
     started.current = true;
+
+    /* 직전 확인 화면에서 주문 저장과 동시에 만들어 둔 preview가 있으면
+       두 번째 네트워크 왕복 없이 바로 공개한다. */
+    try {
+      const key = `wolhayeon_preview_prefetch:${orderNumber}`;
+      const raw = sessionStorage.getItem(key);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (
+          cached?.preview &&
+          Array.isArray(cached.preview.intro_lines) &&
+          cached.preview.intro_lines.length === 3 &&
+          Array.isArray(cached.preview.preview_letter_excerpt) &&
+          Array.isArray(cached.preview.preview_cards)
+        ) {
+          if (
+            typeof cached.applicantName === "string" &&
+            cached.applicantName.trim()
+          ) {
+            setName(cached.applicantName.trim());
+          }
+          setPreview(cached.preview as Preview);
+          setPhase("ready");
+          sessionStorage.removeItem(key);
+          return;
+        }
+      }
+    } catch {
+      /* cache가 없거나 손상되면 기존 서버 조회로 안전하게 fallback */
+    }
+
     fetchPreview();
+
+    /* 정상적인 빠른 응답에서는 로딩 문구 자체가 보이지 않게 하고,
+       350ms 이상 걸릴 때만 영상 로딩 화면을 표시한다. */
+    const loadingTimer = setTimeout(() => setShowLoading(true), 350);
+
     return () => {
+      clearTimeout(loadingTimer);
       if (retryTimer.current) {
         clearTimeout(retryTimer.current);
         retryTimer.current = null;
@@ -234,6 +275,9 @@ export default function PreviewExperience({
 
   /* ---------- 읽는 중: full-bleed 몰입 전환 (응답 오면 즉시 전환) ---------- */
   if (phase === "loading") {
+    if (!showLoading) {
+      return <div className="min-h-[100svh] bg-ink" />;
+    }
     return (
       <div className="fade-in">
         <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[92svh]">
