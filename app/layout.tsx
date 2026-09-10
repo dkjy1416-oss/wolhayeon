@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Serif_KR, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
+import CsChatWidget from "@/components/cs/CsChatWidget";
 
 const notoSerifKr = Noto_Serif_KR({
   subsets: ["latin"],
@@ -37,6 +38,7 @@ export default function RootLayout({
         className={`${notoSerifKr.variable} ${notoSansKr.variable} antialiased`}
       >
         {children}
+        <CsChatWidget />
       </body>
     </html>
   );

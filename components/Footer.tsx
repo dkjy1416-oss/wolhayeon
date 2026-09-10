@@ -3,7 +3,7 @@ import Link from "next/link";
 const links = [
   { label: "이용안내", href: "#" },
   { label: "개인정보처리방침", href: "#" },
-  { label: "환불정책", href: "#" },
+  { label: "환불정책", href: "/refund" },
 ];
 
 export default function Footer() {

@@ -29,6 +29,12 @@ export interface RitualOrderRow extends RitualApplication {
   payment_key: string | null;
   payment_method: string | null;
   paid_at: string | null;
+  submission_id?: string | null;
+  refunded_at?: string | null;
+  refund_reason?: string | null;
+  result_first_opened_at?: string | null;
+  result_last_opened_at?: string | null;
+  result_open_count?: number | null;
   generation_status: GenerationStatus;
   review_status: ReviewStatus;
   delivery_status: DeliveryStatus;

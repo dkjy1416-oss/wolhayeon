@@ -10,6 +10,7 @@ import GuideSection from "@/components/result/GuideSection";
 import TwentyOneDayJourney from "@/components/result/TwentyOneDayJourney";
 import JournalSection from "@/components/result/JournalSection";
 import ResultFooter from "@/components/result/ResultFooter";
+import ResultOpenTracker from "@/components/result/ResultOpenTracker";
 
 /** 항상 동적 서버 조회 — 정적 생성/공용 캐시 금지 */
 export const dynamic = "force-dynamic";
@@ -96,6 +97,7 @@ export default async function ResultPage({
 
   return (
     <main id="top" className="min-h-[100svh] bg-ink">
+      <ResultOpenTracker token={token} />
       <ResultHero name={name} />
 
       {/* 01 · 14와 같은 번호는 표시용 우리말 제목 — 개발 key는 절대 노출하지 않음 */}

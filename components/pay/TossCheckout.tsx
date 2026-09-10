@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   loadTossPayments,
   ANONYMOUS,
@@ -90,6 +91,14 @@ export default function TossCheckout({
       <div className="overflow-hidden rounded-2xl bg-white">
         <div id="toss-payment-methods" />
         <div id="toss-agreement" />
+      </div>
+
+      <div className="mt-5 rounded-xl border border-gold-dim/25 bg-ink-soft px-4 py-3 text-center">
+        <p className="text-[0.72rem] font-light leading-[1.8] text-ivory-dim">
+          결제 후 개인 맞춤 결과 생성이 시작됩니다. 전체 결과 열람 후에는
+          맞춤형 디지털 콘텐츠의 특성상 청약철회가 제한될 수 있습니다.
+        </p>
+        <Link href="/refund" target="_blank" className="mt-1.5 inline-block text-[0.72rem] text-gold underline underline-offset-4">환불정책 확인하기</Link>
       </div>
 
       <button
