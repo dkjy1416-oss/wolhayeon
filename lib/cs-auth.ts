@@ -15,7 +15,8 @@ import {
   randomInt,
 } from "crypto";
 
-const DOMAIN = "wolhayeon-cs-session-v1";
+const DOMAIN = "wolhayeon-cs-session-v1"; // OTP 통과 후 (실행 권한)
+const LITE_DOMAIN = "wolhayeon-cs-lite-v1"; // 이름+출생연도 조회 (읽기 전용)
 const TTL_MS = 30 * 60 * 1000;
 
 function getSecret(): string | null {
@@ -54,6 +55,37 @@ export function verifyCsToken(
   const exp = Number(token.slice(0, dot));
   if (!Number.isFinite(exp) || Date.now() > exp) return false;
   return safeEqual(token.slice(dot + 1), sign(orderNumber, exp, secret));
+}
+
+/* ---------------- 라이트(조회 전용) 토큰 ----------------
+ * 이름+출생연도(+필요시 이메일) 일치만으로 발급.
+ * 허용: 상태 라벨 조회 / 등록된 이메일로 재발송 / 생성 재시도(상태만 반환).
+ * 금지: 결과 원문 링크, 환불, 이메일 변경 — full 토큰(OTP) 전용. */
+
+function signLite(orderNumber: string, exp: number, secret: string): string {
+  return createHmac("sha256", secret)
+    .update(`${LITE_DOMAIN}|${orderNumber}|${exp}`)
+    .digest("hex");
+}
+
+export function createLiteToken(orderNumber: string): string | null {
+  const secret = getSecret();
+  if (!secret) return null;
+  const exp = Date.now() + TTL_MS;
+  return `${exp}.${signLite(orderNumber, exp, secret)}`;
+}
+
+export function verifyLiteToken(
+  orderNumber: string,
+  token: string | null | undefined
+): boolean {
+  const secret = getSecret();
+  if (!secret || !token) return false;
+  const dot = token.indexOf(".");
+  if (dot <= 0) return false;
+  const exp = Number(token.slice(0, dot));
+  if (!Number.isFinite(exp) || Date.now() > exp) return false;
+  return safeEqual(token.slice(dot + 1), signLite(orderNumber, exp, secret));
 }
 
 /* ---------------- OTP ---------------- */

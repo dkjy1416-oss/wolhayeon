@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
-import { startOrderVerification } from "@/lib/cs-actions";
+import { lightLookup } from "@/lib/cs-actions";
 
 export const runtime = "nodejs";
 
-/** 주문번호 없이 이름+출생연도+이메일로 주문 확인 시작 (enumeration 방지 응답) */
+/**
+ * 라이트 조회: 이름+출생연도(애매하면 이메일 추가)로 읽기 전용 세션 발급.
+ * 민감정보는 반환하지 않음 (상태 라벨은 /api/cs/status에서 레벨별 제공).
+ */
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     name?: string;
@@ -12,21 +15,22 @@ export async function POST(req: Request) {
   } | null;
   const name = body?.name?.trim() ?? "";
   const birthYear = Number(body?.birthYear);
-  const email = body?.email?.trim() ?? "";
   if (
     name.length < 1 ||
     !Number.isInteger(birthYear) ||
     birthYear < 1900 ||
-    birthYear > 2100 ||
-    !email.includes("@")
+    birthYear > 2100
   ) {
-    return NextResponse.json({ status: "sent_if_match" });
+    return NextResponse.json({ status: "not_found" });
   }
   try {
-    const r = await startOrderVerification({ name, birthYear, email });
+    const r = await lightLookup({
+      name,
+      birthYear,
+      email: body?.email?.trim() || undefined,
+    });
     return NextResponse.json(r);
   } catch {
-    /* 서버 오류도 동일 응답 — 존재 여부/오류 원인 미노출 */
-    return NextResponse.json({ status: "sent_if_match" });
+    return NextResponse.json({ status: "not_found" });
   }
 }

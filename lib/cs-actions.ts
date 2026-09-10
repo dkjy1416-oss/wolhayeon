@@ -14,6 +14,8 @@ import type { RitualOrderRow } from "@/lib/supabase/types";
 import {
   createCsToken,
   verifyCsToken,
+  createLiteToken,
+  verifyLiteToken,
   generateOtp,
   hashOtp,
   verifyOtpHash,
@@ -121,23 +123,53 @@ async function sendOtpEmail(to: string, otp: string): Promise<boolean> {
   }
 }
 
-/* ---------------- 1) 주문 찾기 → OTP 발송 ---------------- */
+/* ---------------- 1-a) 라이트 조회 (이름+출생연도 → 읽기 전용 세션) ---------------- */
 
-export async function startOrderVerification(input: {
+export async function lightLookup(input: {
   name: string;
   birthYear: number;
-  email: string;
-}): Promise<{ status: "sent_if_match" }> {
-  const order = await findOrderByIdentity(
-    input.name,
-    input.birthYear,
-    input.email
-  );
-  /* enumeration 방지: 일치 여부와 무관하게 동일 응답 */
-  if (!order) return { status: "sent_if_match" };
-
+  email?: string;
+}): Promise<
+  | { status: "found"; orderNumber: string; liteToken: string }
+  | { status: "need_email" }
+  | { status: "not_found" }
+> {
   const supabase = getSupabaseAdmin();
-  /* 재발송 쿨다운 */
+  const { data } = await supabase
+    .from("ritual_orders")
+    .select("*")
+    .eq("applicant_name", input.name.trim())
+    .eq("applicant_birth_year", input.birthYear)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  let rows = (data ?? []) as RitualOrderRow[];
+  if (rows.length === 0) return { status: "not_found" };
+  if (input.email) {
+    rows = rows.filter(
+      (r) => normEmail(r.email ?? "") === normEmail(input.email!)
+    );
+    if (rows.length === 0) return { status: "not_found" };
+  } else {
+    /* 이름+출생연도만으로 서로 다른 이메일의 신청이 여럿이면 이메일로 좁힘 */
+    const emails = new Set(rows.map((r) => normEmail(r.email ?? "")));
+    if (emails.size > 1) return { status: "need_email" };
+  }
+  /* 같은 사람의 여러 주문이면 가장 최근(결제 우선) 주문 기준 */
+  const order =
+    rows.find((r) => r.payment_status === "paid" || r.payment_status === "refunded") ??
+    rows[0];
+  const liteToken = createLiteToken(order.order_number);
+  if (!liteToken) return { status: "not_found" };
+  await logAction(order.id, "LIGHT_LOOKUP", "found");
+  return { status: "found", orderNumber: order.order_number, liteToken };
+}
+
+/* ---------------- 1-b) 민감 액션용 OTP (라이트 세션에서 요청) ---------------- */
+
+export async function requestOtpForOrder(
+  order: RitualOrderRow
+): Promise<{ status: "sent" | "cooldown" | "failed" }> {
+  const supabase = getSupabaseAdmin();
   const { data: recent } = await supabase
     .from("cs_verifications")
     .select("created_at")
@@ -150,9 +182,8 @@ export async function startOrderVerification(input: {
     recent?.created_at &&
     Date.now() - Date.parse(recent.created_at) < OTP_RESEND_COOLDOWN_MS
   ) {
-    return { status: "sent_if_match" };
+    return { status: "cooldown" };
   }
-
   const otp = generateOtp();
   const { data: row } = await supabase
     .from("cs_verifications")
@@ -165,37 +196,32 @@ export async function startOrderVerification(input: {
     })
     .select("id")
     .single();
-  if (!row?.id) return { status: "sent_if_match" };
+  if (!row?.id) return { status: "failed" };
   const hash = hashOtp(row.id, otp);
-  if (!hash) return { status: "sent_if_match" };
+  if (!hash) return { status: "failed" };
   const hashSave = await supabase
     .from("cs_verifications")
     .update({ otp_hash: hash })
     .eq("id", row.id);
-  if (hashSave.error) return { status: "sent_if_match" };
+  if (hashSave.error) return { status: "failed" };
   const sent = await sendOtpEmail(order.email ?? "", otp);
-  if (!sent) await createIncident(order.id, "otp_email_failed", "order_access");
-  await logAction(order.id, "ORDER_LOOKUP", sent ? "otp_sent" : "otp_send_failed");
-  return { status: "sent_if_match" };
+  if (!sent) {
+    await createIncident(order.id, "otp_email_failed", "order_access");
+    return { status: "failed" };
+  }
+  await logAction(order.id, "OTP_REQUEST", "sent");
+  return { status: "sent" };
 }
 
 /* ---------------- 2) OTP 확인 → CS 세션 ---------------- */
 
-export async function confirmOrderVerification(input: {
-  name: string;
-  birthYear: number;
-  email: string;
-  otp: string;
-}): Promise<
-  | { status: "verified"; csToken: string; orderNumber: string }
+export async function confirmOtpForOrder(
+  order: RitualOrderRow,
+  otp: string
+): Promise<
+  | { status: "verified"; csToken: string }
   | { status: "invalid" | "expired" | "locked" }
 > {
-  const order = await findOrderByIdentity(
-    input.name,
-    input.birthYear,
-    input.email
-  );
-  if (!order) return { status: "invalid" };
   const supabase = getSupabaseAdmin();
   const { data: v } = await supabase
     .from("cs_verifications")
@@ -209,7 +235,7 @@ export async function confirmOrderVerification(input: {
   if (!v) return { status: "invalid" };
   if (v.attempts >= OTP_MAX_ATTEMPTS) return { status: "locked" };
   if (Date.parse(v.expires_at) < Date.now()) return { status: "expired" };
-  if (!verifyOtpHash(v.id, input.otp.trim(), v.otp_hash)) {
+  if (!verifyOtpHash(v.id, otp.trim(), v.otp_hash)) {
     await supabase
       .from("cs_verifications")
       .update({ attempts: v.attempts + 1 })
@@ -224,11 +250,12 @@ export async function confirmOrderVerification(input: {
     .eq("id", v.id);
   const csToken = createCsToken(order.order_number);
   if (!csToken) return { status: "invalid" };
-  return { status: "verified", csToken, orderNumber: order.order_number };
+  return { status: "verified", csToken };
 }
 
 /* ---------------- 3) 인증 세션 공용 로더 ---------------- */
 
+/** full(OTP) 토큰 전용 — 환불/이메일 변경/결과 원문 등 실행 권한 */
 export async function loadCsOrder(
   orderNumber: string,
   csToken: string | null | undefined
@@ -238,16 +265,37 @@ export async function loadCsOrder(
   return getOrderByNumber(orderNumber);
 }
 
+/** 라이트 또는 full — 조회성(상태 라벨/등록 이메일 재발송/재생성 트리거) */
+export async function loadCsOrderLite(
+  orderNumber: string,
+  token: string | null | undefined
+): Promise<{ order: RitualOrderRow; level: "lite" | "full" } | null> {
+  if (!/^WH-\d{8}-[A-Z0-9]{5}$/.test(orderNumber)) return null;
+  const level = verifyCsToken(orderNumber, token)
+    ? "full"
+    : verifyLiteToken(orderNumber, token)
+      ? "lite"
+      : null;
+  if (!level) return null;
+  const order = await getOrderByNumber(orderNumber);
+  return order ? { order, level } : null;
+}
+
 /* ---------------- 4) 안전 상태 요약 ---------------- */
 
 export interface CsStatus {
   payment: "paid" | "pending" | "failed" | "refunded";
   generation: "ready" | "generating" | "failed" | "waiting";
   delivery: "sent" | "waiting" | "failed" | "sending";
+  hasResult: boolean;
+  /** full 세션에서만 채워짐 — 결과 원문 접근은 OTP 인증 전용 */
   resultPath: string | null;
 }
 
-export async function getCsStatus(order: RitualOrderRow): Promise<CsStatus> {
+export async function getCsStatus(
+  order: RitualOrderRow,
+  level: "lite" | "full" = "full"
+): Promise<CsStatus> {
   const supabase = getSupabaseAdmin();
   let resultPath: string | null = null;
   if (
@@ -277,7 +325,8 @@ export async function getCsStatus(order: RitualOrderRow): Promise<CsStatus> {
     payment: (order.payment_status as CsStatus["payment"]) ?? "pending",
     generation,
     delivery: (order.delivery_status as CsStatus["delivery"]) ?? "waiting",
-    resultPath,
+    hasResult: !!resultPath,
+    resultPath: level === "full" ? resultPath : null,
   };
 }
 
@@ -339,7 +388,13 @@ export async function startEmailChange(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (recent?.created_at && Date.now() - Date.parse(recent.created_at) < OTP_RESEND_COOLDOWN_MS) return { ok: false, code: "cooldown" };
+  if (
+    recent?.created_at &&
+    Date.now() - Date.parse(recent.created_at) < OTP_RESEND_COOLDOWN_MS
+  ) {
+    return { ok: false, code: "cooldown" };
+  }
+
   const otp = generateOtp();
   const { data: row } = await supabase
     .from("cs_verifications")
@@ -406,7 +461,7 @@ export async function confirmEmailChange(
 /* ---------------- 6) 환불 ---------------- */
 
 async function isDuplicatePayment(_order: RitualOrderRow): Promise<boolean> {
-  // 서로 다른 주문은 이름/이메일/시간만으로 자동 중복판정하지 않는다.
+  // 별도 결제 식별 근거 없이 이름/이메일/시간만으로 중복결제를 자동판정하지 않는다.
   return false;
 }
 
@@ -421,7 +476,12 @@ export async function actionExecuteRefund(
   order: RitualOrderRow
 ): Promise<{ ok: boolean; reason_code: string; message: string }> {
   if (process.env.CS_AUTO_REFUND_ENABLED?.trim() !== "true") {
-    return { ok: false, reason_code: "POLICY_NOT_ACTIVATED", message: "환불 가능 여부는 확인할 수 있지만, 자동 결제 취소 기능은 아직 최종 정책 확인 전이라 잠겨 있어요." };
+    return {
+      ok: false,
+      reason_code: "POLICY_NOT_ACTIVATED",
+      message:
+        "환불 가능 여부는 확인할 수 있지만, 자동 결제 취소 기능은 아직 최종 정책 확인 전이라 잠겨 있어요.",
+    };
   }
   const dup = await isDuplicatePayment(order);
   const evaln = evaluateRefund(order, { isDuplicatePayment: dup });
@@ -438,7 +498,7 @@ export async function actionExecuteRefund(
       ok: false,
       reason_code: "SYSTEM",
       message:
-        "자동 환불 처리가 완료되지 않았어요. 기록은 남겨두었고, 잠시 후 다시 확인하면 현재 상태를 다시 조회해드릴게요.",
+        "자동 환불 처리 중 확인이 필요한 부분이 있어 자동 복구 요청을 등록했어요. 처리되면 이메일로 알려드릴게요.",
     };
   }
   const idem = `cs-refund-${order.order_number}`;
@@ -467,7 +527,7 @@ export async function actionExecuteRefund(
       ok: false,
       reason_code: "SYSTEM",
       message:
-        "결제 취소 요청이 바로 완료되지 않았어요. 중복 취소되지 않도록 기록은 남겨두었고, 잠시 후 다시 확인하면 결제 상태를 다시 조회해드릴게요.",
+        "결제 취소 요청이 바로 처리되지 않아 자동 복구 요청을 등록했어요. 시스템이 계속 상태를 확인하고, 완료되면 이메일로 알려드릴게요.",
     };
   }
   await getSupabaseAdmin()

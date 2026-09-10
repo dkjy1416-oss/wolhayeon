@@ -25,6 +25,8 @@ interface CsStatusView {
   payment: string;
   generation: string;
   delivery: string;
+  hasResult: boolean;
+  level: "lite" | "full";
   resultPath: string | null;
 }
 
@@ -33,14 +35,13 @@ const QUICK_MENU: Array<{ label: string; needAuth: boolean; faq?: string }> = [
   { label: "결과 이메일이 안 왔어요", needAuth: true },
   { label: "주문을 찾고 싶어요", needAuth: true },
   { label: "결과 생성이 너무 오래 걸려요", needAuth: true },
-  { label: "결제/중복결제 문의", needAuth: true },
-  { label: "환불하고 싶어요", needAuth: true },
   { label: "이메일 주소를 잘못 입력했어요", needAuth: true },
+  { label: "결제/중복결제 문의", needAuth: true },
   { label: "결과 링크가 열리지 않아요", needAuth: true },
   {
     label: "신청 내용을 잘못 적었어요",
     needAuth: false,
-    faq: "신청 내용을 잘못 적으신 경우, 아직 결제 전이라면 신청 화면에서 '수정하기'로 바로 고치실 수 있어요. 이미 결제하셨다면 아래 '주문 확인하기'로 본인확인 후 상태를 먼저 확인해드릴게요.",
+    faq: "신청 내용을 잘못 적으신 경우, 아직 결제 전이라면 신청 화면에서 '수정하기'로 바로 고치실 수 있어요. 이미 결제하셨다면 아래 '주문 확인하기'로 상태를 먼저 확인해드릴게요.",
   },
   {
     label: "월하연 이용 방법",
@@ -48,6 +49,7 @@ const QUICK_MENU: Array<{ label: string; needAuth: boolean; faq?: string }> = [
     faq: "월하연은 신청서 작성 → 결제 전 무료 개인화 미리보기 → 16,900원 1회 결제 → 전체 결과(월화의 편지·관계 흐름·개인 리추얼·24시간/7일/21일 가이드) 순서로 진행돼요. 결과는 결제 후 보통 수 분 내에 자동으로 열리고 이메일로도 보내드려요.",
   },
   { label: "다른 문제가 있어요", needAuth: false, faq: "" },
+  { label: "환불하고 싶어요", needAuth: true },
 ];
 
 const PAY_LABEL: Record<string, string> = {
@@ -82,10 +84,14 @@ export default function CsChatWidget() {
   const [otp, setOtp] = useState("");
   const [newEmail, setNewEmail] = useState("");
   /* 세션 */
+  const [liteToken, setLiteToken] = useState<string | null>(null);
   const [csToken, setCsToken] = useState<string | null>(null);
+  /** OTP 인증 후 실행하려던 민감 액션 */
+  const [pendingSensitive, setPendingSensitive] = useState<
+    null | "refund_check" | "refund" | "email_change" | "open_result"
+  >(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [status, setStatus] = useState<CsStatusView | null>(null);
-  const [refundEligible, setRefundEligible] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -107,12 +113,15 @@ export default function CsChatWidget() {
 
   /* ---------------- 인증/상태 ---------------- */
 
-  const refreshStatus = async (tok = csToken, ord = orderNumber) => {
+  const refreshStatus = async (
+    tok: string | null = csToken ?? liteToken,
+    ord = orderNumber
+  ) => {
     if (!tok || !ord) return null;
     const res = await fetch("/api/cs/status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderNumber: ord, csToken: tok }),
+      body: JSON.stringify({ orderNumber: ord, token: tok }),
     });
     const j = await res.json().catch(() => null);
     if (j?.status === "ok") {
@@ -123,24 +132,84 @@ export default function CsChatWidget() {
     return null;
   };
 
+  const [needEmail, setNeedEmail] = useState(false);
+
   const startFind = async () => {
     if (busy) return;
     setBusy(true);
-    await fetch("/api/cs/order/find", {
+    const res = await fetch("/api/cs/order/find", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: fName,
         birthYear: Number(fBirth),
-        email: fEmail,
+        email: needEmail && fEmail ? fEmail : undefined,
       }),
-    }).catch(() => {});
+    });
+    const j = await res.json().catch(() => null);
     setBusy(false);
-    say(
-      "assistant",
-      "입력하신 정보와 일치하는 주문이 있으면, 신청하실 때 적어주신 이메일로 6자리 인증번호를 보냈어요. 10분 안에 입력해주세요."
-    );
-    setFlow("otp");
+    if (j?.status === "found" && j.liteToken) {
+      setLiteToken(j.liteToken);
+      setOrderNumber(j.orderNumber);
+      say("assistant", "신청 내역을 찾았어요. 상태를 바로 확인해볼게요.");
+      setFlow("verified");
+      await refreshStatus(j.liteToken, j.orderNumber);
+    } else if (j?.status === "need_email") {
+      setNeedEmail(true);
+      say(
+        "assistant",
+        "같은 정보의 신청이 여러 건 있어요. 신청하실 때 적으신 이메일도 함께 알려주세요."
+      );
+    } else {
+      say(
+        "assistant",
+        "입력하신 정보로는 신청 내역을 찾지 못했어요. 이름과 출생연도를 신청서에 적으신 그대로 다시 확인해주세요."
+      );
+    }
+  };
+
+  /* 민감 액션 진입 → OTP 요청 (등록된 이메일로만 발송) */
+  const startSensitive = async (
+    action: NonNullable<typeof pendingSensitive>
+  ) => {
+    if (!liteToken && !csToken) return;
+    if (csToken) {
+      /* 이미 강인증됨 → 바로 실행 */
+      runSensitive(action, csToken);
+      return;
+    }
+    setPendingSensitive(action);
+    setBusy(true);
+    const res = await fetch("/api/cs/verify/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderNumber, token: liteToken }),
+    });
+    const j = await res.json().catch(() => null);
+    setBusy(false);
+    if (j?.status === "sent" || j?.status === "cooldown") {
+      say(
+        "assistant",
+        "이 작업은 본인확인이 필요해요. 신청하실 때 등록하신 이메일로 6자리 인증번호를 보냈어요."
+      );
+      setFlow("otp");
+    } else {
+      say(
+        "assistant",
+        "인증번호 발송이 잠시 원활하지 않아요. 잠시 후 다시 시도해주세요."
+      );
+    }
+  };
+
+  const runSensitive = (
+    action: NonNullable<typeof pendingSensitive>,
+    fullToken?: string
+  ) => {
+    if (action === "refund_check") actCheckRefund(fullToken);
+    else if (action === "refund") actRefund(fullToken);
+    else if (action === "email_change") setFlow("email_new");
+    else if (action === "open_result")
+      refreshStatus(fullToken ?? csToken, orderNumber);
   };
 
   const confirmOtp = async () => {
@@ -149,50 +218,49 @@ export default function CsChatWidget() {
     const res = await fetch("/api/cs/verify/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: fName,
-        birthYear: Number(fBirth),
-        email: fEmail,
-        otp,
-      }),
+      body: JSON.stringify({ orderNumber, token: liteToken, otp }),
     });
     const j = await res.json().catch(() => null);
     setBusy(false);
     setOtp("");
     if (j?.status === "verified") {
       setCsToken(j.csToken);
-      setOrderNumber(j.orderNumber);
-      say("assistant", "본인확인이 완료됐어요. 주문 상태를 바로 확인해볼게요.");
+      say("assistant", "본인확인이 완료됐어요.");
       setFlow("verified");
-      await refreshStatus(j.csToken, j.orderNumber);
+      await refreshStatus(j.csToken, orderNumber);
+      if (pendingSensitive) {
+        const a = pendingSensitive;
+        setPendingSensitive(null);
+        runSensitive(a, j.csToken);
+      }
     } else if (j?.status === "locked") {
       say(
         "assistant",
-        "인증번호를 여러 번 잘못 입력해 잠시 잠겼어요. 몇 분 뒤 처음부터 다시 시도해주세요."
+        "인증번호를 여러 번 잘못 입력해 잠시 잠겼어요. 몇 분 뒤 다시 시도해주세요."
       );
-      setFlow("find_form");
+      setFlow("verified");
     } else if (j?.status === "expired") {
-      say(
-        "assistant",
-        "인증번호 유효시간이 지났어요. 다시 받아볼게요."
-      );
-      setFlow("find_form");
+      say("assistant", "인증번호 유효시간이 지났어요. 다시 받아볼게요.");
+      setFlow("verified");
     } else {
       say("assistant", "인증번호가 맞지 않아요. 다시 확인해주세요.");
     }
   };
 
   /* ---------------- 액션 ---------------- */
+  /* ---------------- 액션 ---------------- */
 
   const doAction = async (
     path: string,
-    extra: Record<string, unknown> = {}
+    extra: Record<string, unknown> = {},
+    tokenOverride?: string
   ): Promise<Record<string, unknown> | null> => {
-    if (!csToken || !orderNumber) return null;
+    const tok = tokenOverride ?? csToken ?? liteToken;
+    if (!tok || !orderNumber) return null;
     const res = await fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderNumber, csToken, ...extra }),
+      body: JSON.stringify({ orderNumber, csToken: tok, token: tok, ...extra }),
     });
     return (await res.json().catch(() => null)) as Record<
       string,
@@ -210,32 +278,39 @@ export default function CsChatWidget() {
     else
       say(
         "assistant",
-        "메일 발송이 바로 완료되지 않았어요. 잠시 후 다시 시도하면 발송 상태를 다시 확인할게요."
+        "메일 발송이 바로 처리되지 않아 자동 복구 요청을 등록했어요. 완료되면 이메일로 알려드릴게요."
       );
   };
 
   const actRetryGeneration = async () => {
-    if (!orderNumber) return;
     setBusy(true);
     say("assistant", "결과 생성을 다시 확인하고 있어요. 다시 결제하실 필요는 없어요.");
-    const j = await doAction("/api/cs/action/retry-generation");
+    const r = await doAction("/api/cs/action/retry-generation");
     setBusy(false);
-    if (j?.status === "ready" && typeof j.resultPath === "string") {
-      setStatus((s) => (s ? { ...s, generation: "ready", resultPath: String(j.resultPath) } : s));
-      say("assistant", "전체 결과가 준비됐어요. 아래 버튼으로 바로 열어보세요.");
+    if (r?.hasResult) {
+      say(
+        "assistant",
+        csToken
+          ? "전체 결과가 준비됐어요. 아래 버튼으로 바로 열어보세요."
+          : "전체 결과가 준비됐어요. 등록하신 이메일로도 보내드렸고, 화면에서 바로 열람하시려면 본인확인(인증번호)을 진행해주세요."
+      );
+    } else if (r?.status === "not_paid") {
+      say("assistant", "이 신청에는 완료된 결제가 없어요. 결제 후 결과가 생성됩니다.");
     } else {
-      say("assistant", "현재 결과 상태를 다시 확인하고 있어요. 완료되면 결과 화면과 이메일로 이어집니다.");
+      say(
+        "assistant",
+        "지금 결과를 만들고 있어요. 완성되면 등록하신 이메일로 보내드리니 이 화면을 닫으셔도 괜찮아요."
+      );
     }
     await refreshStatus();
   };
 
-  const actCheckRefund = async () => {
+  const actCheckRefund = async (tokenOverride?: string) => {
     setBusy(true);
-    const r = await doAction("/api/cs/action/check-refund");
+    const r = await doAction("/api/cs/action/check-refund", {}, tokenOverride);
     setBusy(false);
     if (r?.message) {
       say("assistant", String(r.message));
-      setRefundEligible(Boolean(r.eligible));
       if (r.eligible) {
         say("assistant", "지금 바로 환불을 진행할까요? 아래 [환불 요청] 버튼을 눌러주세요.");
       } else {
@@ -247,14 +322,18 @@ export default function CsChatWidget() {
     }
   };
 
-  const actRefund = async () => {
-    if (!refundEligible) { await actCheckRefund(); return; }
-    if (!window.confirm("확인된 환불 가능 주문의 결제를 실제로 취소할까요? 취소 후에는 되돌릴 수 없습니다.")) return;
+  const actRefund = async (tokenOverride?: string) => {
+    if (
+      !window.confirm(
+        "환불 가능 주문이라면 결제 취소가 실제로 진행됩니다. 계속할까요?"
+      )
+    ) {
+      return;
+    }
     setBusy(true);
-    const r = await doAction("/api/cs/action/refund");
+    const r = await doAction("/api/cs/action/refund", {}, tokenOverride);
     setBusy(false);
     if (r?.message) say("assistant", String(r.message));
-    if (r?.ok) setRefundEligible(false);
     await refreshStatus();
   };
 
@@ -312,6 +391,7 @@ export default function CsChatWidget() {
         messages: [...bubbles, { role: "user", content: t }].slice(-12),
         orderNumber: orderNumber ?? undefined,
         csToken: csToken ?? undefined,
+        token: csToken ?? liteToken ?? undefined,
       }),
     });
     const j = await res.json().catch(() => null);
@@ -330,13 +410,13 @@ export default function CsChatWidget() {
       say("assistant", item.faq);
       return;
     }
-    if (item.needAuth && !csToken) {
+    if (item.needAuth && !csToken && !liteToken) {
       say(
         "assistant",
-        "괜찮아요. 주문번호 없이도 찾아볼 수 있어요.\n신청하실 때 적으신 이름·출생연도·이메일만 알려주세요."
+        "괜찮아요. 주문번호 없이도 찾아볼 수 있어요.\n신청하실 때 적으신 이름과 출생연도만 알려주세요."
       );
       setFlow("find_form");
-    } else if (item.needAuth && csToken) {
+    } else if (item.needAuth && (csToken || liteToken)) {
       setFlow("verified");
       refreshStatus();
     } else {
@@ -355,17 +435,22 @@ export default function CsChatWidget() {
 
   return (
     <>
-      {/* 플로팅 버튼 */}
+      {/* 우측 상단 작은 말풍선 아이콘 — 메인 CTA를 가리지 않음 */}
       {!open && (
         <button
           type="button"
           onClick={openChat}
-          className="fixed bottom-20 right-4 z-50 flex h-12 items-center gap-2 rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep px-5 text-[0.85rem] font-medium text-ivory shadow-[0_6px_28px_rgba(0,0,0,0.55)]"
+          aria-label="월화에게 물어보기"
+          className="fixed right-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-gold/35 bg-ink/80 text-gold shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur-sm active:opacity-85"
         >
-          <span aria-hidden className="text-gold">
-            ✦
-          </span>
-          월화에게 물어보기
+          <svg aria-hidden width="19" height="19" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 3C7 3 3 6.6 3 11c0 2.5 1.3 4.7 3.4 6.2-.1 1-.5 2.2-1.4 3.3 1.9-.2 3.4-.9 4.4-1.6.8.2 1.7.3 2.6.3 5 0 9-3.6 9-8.2S17 3 12 3z"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
       )}
 
@@ -459,11 +544,23 @@ export default function CsChatWidget() {
                 <div className="flex flex-col gap-2.5">
                   <input className={inputCls} placeholder="신청자 이름 (예: 수미)" value={fName} onChange={(e) => setFName(e.target.value)} />
                   <input className={inputCls} placeholder="출생연도 4자리 (예: 1994)" inputMode="numeric" value={fBirth} onChange={(e) => setFBirth(e.target.value.replace(/\D/g, "").slice(0, 4))} />
-                  <input className={inputCls} placeholder="신청할 때 적은 이메일" inputMode="email" value={fEmail} onChange={(e) => setFEmail(e.target.value)} />
+                  {needEmail && (
+                    <input className={inputCls} placeholder="신청할 때 적은 이메일" inputMode="email" value={fEmail} onChange={(e) => setFEmail(e.target.value)} />
+                  )}
                   <div className="mt-1 flex gap-2">
                     <button type="button" className={ghostBtn} onClick={() => setFlow("idle")}>뒤로</button>
-                    <button type="button" disabled={busy || !fName || fBirth.length !== 4 || !fEmail.includes("@")} onClick={startFind} className={`${btnCls} flex-1`}>
-                      인증번호 받기
+                    <button
+                      type="button"
+                      disabled={
+                        busy ||
+                        !fName ||
+                        fBirth.length !== 4 ||
+                        (needEmail && !fEmail.includes("@"))
+                      }
+                      onClick={startFind}
+                      className={`${btnCls} flex-1`}
+                    >
+                      신청 내역 확인
                     </button>
                   </div>
                 </div>
@@ -473,7 +570,7 @@ export default function CsChatWidget() {
                 <div className="flex flex-col gap-2.5">
                   <input className={`${inputCls} text-center tracking-[0.5em]`} placeholder="6자리 인증번호" inputMode="numeric" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} />
                   <div className="flex gap-2">
-                    <button type="button" className={ghostBtn} onClick={() => setFlow(flow === "otp" ? "find_form" : "verified")}>뒤로</button>
+                    <button type="button" className={ghostBtn} onClick={() => setFlow("verified")}>뒤로</button>
                     <button type="button" disabled={busy || otp.length !== 6} onClick={flow === "otp" ? confirmOtp : actEmailConfirm} className={`${btnCls} flex-1`}>
                       인증하기
                     </button>
@@ -496,33 +593,43 @@ export default function CsChatWidget() {
               {flow === "verified" && (
                 <div className="flex flex-col gap-2">
                   <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1">
-                    {status?.resultPath && (
-                      <a href={status.resultPath} className={`${btnCls} shrink-0`}>
-                        전체 결과 다시 열기
-                      </a>
-                    )}
-                    {status?.resultPath && (
-                      <button type="button" onClick={actResend} disabled={busy} className={`${ghostBtn} shrink-0`}>
-                        결과 이메일 다시 받기
+                    {/* ── 라이트 가능(조회/등록 이메일 재발송/재생성) ── */}
+                    {status?.hasResult && (
+                      <button type="button" onClick={actResend} disabled={busy} className={`${btnCls} shrink-0`}>
+                        등록된 이메일로 결과 다시 받기
                       </button>
                     )}
-                    {status?.payment === "paid" && status?.generation !== "ready" && (
+                    {status?.payment === "paid" && !status?.hasResult && (
                       <button type="button" onClick={actRetryGeneration} disabled={busy} className={`${btnCls} shrink-0`}>
                         결과 생성 다시 확인
                       </button>
                     )}
-                    <button type="button" onClick={actCheckRefund} disabled={busy} className={`${ghostBtn} shrink-0`}>
-                      환불 가능 여부 확인
+                    {/* ── 민감(OTP 필요) ── */}
+                    {status?.hasResult &&
+                      (csToken && status?.resultPath ? (
+                        <a href={status.resultPath} className={`${ghostBtn} shrink-0`}>
+                          결과 화면에서 열기
+                        </a>
+                      ) : (
+                        <button type="button" onClick={() => startSensitive("open_result")} disabled={busy} className={`${ghostBtn} shrink-0`}>
+                          결과 화면에서 열기 🔒
+                        </button>
+                      ))}
+                    <button type="button" onClick={() => (csToken ? actCheckRefund() : startSensitive("refund_check"))} disabled={busy} className={`${ghostBtn} shrink-0`}>
+                      환불 가능 여부 확인{csToken ? "" : " 🔒"}
                     </button>
-                    {refundEligible && (
-                      <button type="button" onClick={actRefund} disabled={busy} className={`${ghostBtn} shrink-0`}>
-                        환불 진행 확인
-                      </button>
-                    )}
-                    <button type="button" onClick={() => setFlow("email_new")} disabled={busy} className={`${ghostBtn} shrink-0`}>
-                      이메일 주소 변경
+                    <button type="button" onClick={() => (csToken ? actRefund() : startSensitive("refund"))} disabled={busy} className={`${ghostBtn} shrink-0`}>
+                      환불 요청{csToken ? "" : " 🔒"}
+                    </button>
+                    <button type="button" onClick={() => (csToken ? setFlow("email_new") : startSensitive("email_change"))} disabled={busy} className={`${ghostBtn} shrink-0`}>
+                      이메일 주소 변경{csToken ? "" : " 🔒"}
                     </button>
                   </div>
+                  {!csToken && (
+                    <p className="text-[0.65rem] font-light text-ivory-dim/60">
+                      🔒 표시는 등록된 이메일 인증번호 확인 후 이용할 수 있어요.
+                    </p>
+                  )}
                   <FreeInput input={input} setInput={setInput} onSend={sendFree} busy={busy} inputCls={inputCls} btnCls={btnCls} />
                 </div>
               )}

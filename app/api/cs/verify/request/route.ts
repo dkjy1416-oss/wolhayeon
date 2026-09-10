@@ -1,25 +1,21 @@
 import { NextResponse } from "next/server";
-import { loadCsOrderLite, confirmOtpForOrder } from "@/lib/cs-actions";
+import { loadCsOrderLite, requestOtpForOrder } from "@/lib/cs-actions";
 
 export const runtime = "nodejs";
 
-/** OTP 확인 → full(실행 권한) 토큰 발급 — 라이트 세션 위에서만 */
+/** 민감 액션용 OTP 발송 — 라이트 세션 필요, 등록된 이메일로만 발송 */
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     orderNumber?: string;
     token?: string;
-    otp?: string;
   } | null;
-  if (!/^\d{6}$/.test(body?.otp ?? "")) {
-    return NextResponse.json({ status: "invalid" });
-  }
   const ctx = await loadCsOrderLite(body?.orderNumber ?? "", body?.token);
   if (!ctx)
     return NextResponse.json({ status: "unauthorized" }, { status: 401 });
   try {
-    const r = await confirmOtpForOrder(ctx.order, body!.otp!);
+    const r = await requestOtpForOrder(ctx.order);
     return NextResponse.json(r);
   } catch {
-    return NextResponse.json({ status: "invalid" });
+    return NextResponse.json({ status: "failed" });
   }
 }

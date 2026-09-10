@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { loadCsOrder, getCsStatus } from "@/lib/cs-actions";
+import { loadCsOrderLite, getCsStatus } from "@/lib/cs-actions";
 import {
   REFUND_POLICY_SECTIONS,
   REFUND_WINDOW_DAYS,
@@ -62,6 +62,7 @@ export async function POST(req: Request) {
     messages?: Array<{ role: "user" | "assistant"; content: string }>;
     orderNumber?: string;
     csToken?: string;
+    token?: string;
   } | null;
   const raw = Array.isArray(body?.messages) ? body!.messages! : [];
   const messages = raw
@@ -78,19 +79,35 @@ export async function POST(req: Request) {
   }
 
   const lastText = messages[messages.length - 1].content;
-  if (!body?.orderNumber || !body?.csToken) {
-    if (/환불|취소/.test(lastText)) return NextResponse.json({ reply: "환불은 결과 열람 여부와 결제 상태에 따라 달라져요. 실제 주문의 환불 가능 여부는 본인확인 후 자동으로 확인해드릴게요." });
-    if (/이용|가격|미리보기|리추얼/.test(lastText)) return NextResponse.json({ reply: "월하연은 신청서 작성 → 무료 개인화 미리보기 → 16,900원 1회 결제 → 전체 결과 순서로 진행돼요." });
-    return NextResponse.json({ reply: "주문이나 결제 문제라면 먼저 본인확인을 해주세요. 주문번호가 없어도 이름·출생연도·신청 이메일로 찾을 수 있어요." });
+
+  /* 미인증 자유대화는 AI를 호출하지 않는다.
+     FAQ는 로컬 답변, 주문 문제는 라이트 조회 UI로 유도해 비용/남용을 막는다. */
+  if (!body?.orderNumber || !(body?.csToken ?? body?.token)) {
+    if (/환불|취소/.test(lastText)) {
+      return NextResponse.json({
+        reply:
+          "환불 가능 여부는 결제 상태와 전체 결과 열람 여부에 따라 달라져요. 주문 상태를 먼저 확인한 뒤, 실제 환불 확인·요청 단계에서만 이메일 인증을 진행해요.",
+      });
+    }
+    if (/이용|가격|미리보기|리추얼/.test(lastText)) {
+      return NextResponse.json({
+        reply:
+          "월하연은 신청서 작성 → 무료 개인화 미리보기 → 16,900원 1회 결제 → 전체 결과 순서로 진행돼요.",
+      });
+    }
+    return NextResponse.json({
+      reply:
+        "주문이나 결제 문제라면 주문번호가 없어도 괜찮아요. 이름과 출생연도로 먼저 상태를 찾아볼 수 있어요.",
+    });
   }
 
   /* 인증 세션이면 서버가 직접 안전 상태 조회 후 주입 */
   let statusBlock = "";
-  if (body?.orderNumber && body?.csToken) {
-    const order = await loadCsOrder(body.orderNumber, body.csToken);
-    if (!order) return NextResponse.json({ reply: "본인확인 세션이 만료됐어요. 주문 확인을 다시 진행해주세요." });
-    {
-      const s = await getCsStatus(order);
+  const anyToken = body?.csToken ?? body?.token;
+  if (body?.orderNumber && anyToken) {
+    const ctx = await loadCsOrderLite(body.orderNumber, anyToken);
+    if (ctx) {
+      const s = await getCsStatus(ctx.order, ctx.level);
       const pay =
         s.payment === "paid"
           ? "정상 완료"
@@ -107,7 +124,15 @@ export async function POST(req: Request) {
               : "생성 대기";
       const mail =
         s.delivery === "sent" ? "발송 완료" : "결과 완성 후 발송 예정";
-      statusBlock = `\n\n[확인된 주문 상태 — 이 내용만 사실로 언급 가능]\n결제: ${pay}\n결과: ${gen}\n이메일: ${mail}\n결과 링크: ${s.resultPath ? "발급 가능(화면의 버튼으로 열기)" : "아직 없음"}`;
+      statusBlock = `\n\n[확인된 주문 상태 — 이 내용만 사실로 언급 가능]\n결제: ${pay}\n결과: ${gen}\n이메일: ${mail}\n결과 열람: ${
+        ctx.level === "full"
+          ? s.resultPath
+            ? "화면의 버튼으로 바로 열 수 있음"
+            : "아직 준비 전"
+          : s.hasResult
+            ? "인증(인증번호) 후 화면에서 열람 가능"
+            : "아직 준비 전"
+      }`;
     }
   }
 
