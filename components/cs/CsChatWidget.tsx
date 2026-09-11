@@ -316,7 +316,7 @@ export default function CsChatWidget() {
     if (r?.message) {
       say("assistant", String(r.message));
       if (r.eligible) {
-        say("assistant", "지금 바로 환불을 진행할까요? 아래 [환불 요청] 버튼을 눌러주세요.");
+        say("assistant", "환불을 진행하시려면 채팅창에 ‘환불 진행’이라고 적어주세요. 그때만 별도 환불 절차를 열어드릴게요.");
       } else {
         say(
           "assistant",
@@ -387,6 +387,30 @@ export default function CsChatWidget() {
     if (!t || busy) return;
     say("user", t);
     setInput("");
+
+    /* 환불 기능은 일반 상태 화면에 노출하지 않는다.
+       사용자가 직접 환불/결제취소를 요청했을 때만 별도 흐름으로 진입한다. */
+    if (/환불|결제\s*취소|취소하고\s*싶/.test(t)) {
+      if (/환불\s*(진행|해줘|해주세요|요청)/.test(t) && csToken) {
+        actRefund(csToken);
+        return;
+      }
+      if (!liteToken && !csToken) {
+        say(
+          "assistant",
+          "환불 문의는 주문 상태를 먼저 확인한 뒤 도와드릴게요. 주문번호가 없어도 괜찮아요. 신청하실 때 적으신 이름과 출생연도만 알려주세요."
+        );
+        setFlow("find_form");
+        return;
+      }
+      say(
+        "assistant",
+        "환불 문의를 따로 확인해드릴게요. 환불 가능 여부 확인은 본인확인 후 진행돼요."
+      );
+      startSensitive("refund_check");
+      return;
+    }
+
     setBusy(true);
     const res = await fetch("/api/cs/chat", {
       method: "POST",
@@ -645,19 +669,13 @@ export default function CsChatWidget() {
                           결과 화면에서 열기 🔒
                         </button>
                       ))}
-                    <button type="button" onClick={() => (csToken ? actCheckRefund() : startSensitive("refund_check"))} disabled={busy} className={`${ghostBtn} shrink-0`}>
-                      환불 가능 여부 확인{csToken ? "" : " 🔒"}
-                    </button>
-                    <button type="button" onClick={() => (csToken ? actRefund() : startSensitive("refund"))} disabled={busy} className={`${ghostBtn} shrink-0`}>
-                      환불 요청{csToken ? "" : " 🔒"}
-                    </button>
                     <button type="button" onClick={() => (csToken ? setFlow("email_new") : startSensitive("email_change"))} disabled={busy} className={`${ghostBtn} shrink-0`}>
                       이메일 주소 변경{csToken ? "" : " 🔒"}
                     </button>
                   </div>
                   {!csToken && (
                     <p className="text-[0.65rem] font-light text-ivory-dim/60">
-                      🔒 표시는 등록된 이메일 인증번호 확인 후 이용할 수 있어요.
+                      🔒 표시는 결과 원문 열기나 이메일 변경처럼 본인확인이 필요한 기능이에요.
                     </p>
                   )}
                   <FreeInput input={input} setInput={setInput} onSend={sendFree} busy={busy} inputCls={inputCls} btnCls={btnCls} />
