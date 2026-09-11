@@ -16,6 +16,7 @@ type Bubble = { role: "user" | "assistant"; content: string };
 type Flow =
   | "idle"
   | "find_form"
+  | "pay_verify"
   | "otp"
   | "verified"
   | "email_new"
@@ -81,11 +82,12 @@ export default function CsChatWidget() {
   const [fBirth, setFBirth] = useState("");
   const [fEmail, setFEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [cardLast4, setCardLast4] = useState("");
   const [newEmail, setNewEmail] = useState("");
   /* 세션 */
   const [liteToken, setLiteToken] = useState<string | null>(null);
   const [csToken, setCsToken] = useState<string | null>(null);
-  /** OTP 인증 후 실행하려던 민감 액션 */
+  /** 본인확인 후 실행하려던 민감 액션 */
   const [pendingSensitive, setPendingSensitive] = useState<
     null | "refund_check" | "refund" | "email_change" | "open_result"
   >(null);
@@ -172,17 +174,31 @@ export default function CsChatWidget() {
     }
   };
 
-  /* 민감 액션 진입 → OTP 요청 (등록된 이메일로만 발송) */
+  /* 민감 액션 진입.
+     카드결제 고객은 카드 뒷4자리로 빠르게 확인할 수 있고,
+     기존 이메일 OTP도 안전한 fallback으로 그대로 유지한다. */
   const startSensitive = async (
     action: NonNullable<typeof pendingSensitive>
   ) => {
     if (!liteToken && !csToken) return;
+
     if (csToken) {
-      /* 이미 강인증됨 → 바로 실행 */
       runSensitive(action, csToken);
       return;
     }
+
     setPendingSensitive(action);
+    setCardLast4("");
+    say(
+      "assistant",
+      "본인확인이 필요해요. 카드로 결제하셨다면 카드 뒷 4자리로 확인할 수 있어요. 카드 확인이 어렵다면 등록된 이메일 인증번호로도 진행할 수 있어요."
+    );
+    setFlow("pay_verify");
+  };
+
+  const requestEmailOtp = async () => {
+    if (!liteToken || !orderNumber || busy) return;
+
     setBusy(true);
     const res = await fetch("/api/cs/verify/request", {
       method: "POST",
@@ -191,18 +207,73 @@ export default function CsChatWidget() {
     });
     const j = await res.json().catch(() => null);
     setBusy(false);
+
     if (j?.status === "sent" || j?.status === "cooldown") {
       say(
         "assistant",
-        "이 작업은 본인확인이 필요해요. 신청하실 때 등록하신 이메일로 6자리 인증번호를 보냈어요."
+        "신청하실 때 등록하신 이메일로 6자리 인증번호를 보냈어요."
       );
       setFlow("otp");
     } else {
       say(
         "assistant",
-        "인증번호 발송이 잠시 원활하지 않아요. 잠시 후 다시 시도해주세요."
+        "이메일 인증번호 발송이 잠시 원활하지 않아요. 카드로 결제하셨다면 카드 뒷 4자리 확인을 이용해주세요."
       );
     }
+  };
+
+  const confirmCardLast4 = async () => {
+    if (!liteToken || !orderNumber || busy || cardLast4.length !== 4) return;
+
+    setBusy(true);
+    const res = await fetch("/api/cs/verify/payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderNumber,
+        token: liteToken,
+        last4: cardLast4,
+      }),
+    });
+    const j = await res.json().catch(() => null);
+    setBusy(false);
+    setCardLast4("");
+
+    if (j?.status === "verified" && j.csToken) {
+      setCsToken(j.csToken);
+      say("assistant", "결제 정보 확인이 완료됐어요.");
+      setFlow("verified");
+      await refreshStatus(j.csToken, orderNumber);
+
+      if (pendingSensitive) {
+        const action = pendingSensitive;
+        setPendingSensitive(null);
+        runSensitive(action, j.csToken);
+      }
+      return;
+    }
+
+    if (j?.status === "locked") {
+      say(
+        "assistant",
+        "확인 정보가 여러 번 일치하지 않아 잠시 잠겼어요. 잠시 후 다시 시도해주세요."
+      );
+      setFlow("verified");
+      return;
+    }
+
+    if (j?.status === "unavailable") {
+      say(
+        "assistant",
+        "이 결제는 카드 뒷 4자리로 확인하기 어려워요. 등록된 이메일 인증번호로 확인해주세요."
+      );
+      return;
+    }
+
+    say(
+      "assistant",
+      "카드 뒷 4자리가 결제 정보와 일치하지 않아요. 다시 확인하거나 이메일 인증번호를 이용해주세요."
+    );
   };
 
   const runSensitive = (
@@ -617,6 +688,57 @@ export default function CsChatWidget() {
                       신청 내역 확인
                     </button>
                   </div>
+                </div>
+              )}
+
+              {flow === "pay_verify" && (
+                <div className="flex flex-col gap-2.5">
+                  <p className="text-[0.76rem] leading-6 text-ivory-dim">
+                    카드로 결제하셨다면 카드 뒷 4자리만 입력해주세요.
+                    카드번호 전체·CVC·비밀번호·유효기간은 입력하지 마세요.
+                  </p>
+                  <input
+                    className={`${inputCls} text-center tracking-[0.35em]`}
+                    placeholder="카드 뒷 4자리"
+                    inputMode="numeric"
+                    value={cardLast4}
+                    onChange={(e) =>
+                      setCardLast4(
+                        e.target.value.replace(/\D/g, "").slice(0, 4)
+                      )
+                    }
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className={ghostBtn}
+                      onClick={() => {
+                        setPendingSensitive(null);
+                        setFlow("verified");
+                      }}
+                    >
+                      뒤로
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy || cardLast4.length !== 4}
+                      onClick={confirmCardLast4}
+                      className={`${btnCls} flex-1`}
+                    >
+                      카드로 확인
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={requestEmailOtp}
+                    disabled={busy}
+                    className="mt-1 text-[0.74rem] text-gold/85 underline underline-offset-4 disabled:opacity-50"
+                  >
+                    카드 확인이 어렵다면 이메일 인증번호로 확인
+                  </button>
+                  <p className="text-[0.64rem] leading-5 text-ivory-dim/55">
+                    입력한 카드 뒷 4자리는 서버에서 결제 정보와 비교한 뒤 저장하지 않아요.
+                  </p>
                 </div>
               )}
 

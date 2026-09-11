@@ -23,11 +23,14 @@ import {
 import { evaluateRefund, refundReasonMessage } from "@/lib/refund-policy";
 import { cancelTossPayment } from "@/lib/toss-cancel";
 import { sendApprovedResultEmail } from "@/lib/result-email";
+import { fetchPaymentCardInfo, compareExactCardLast4 } from "@/lib/payment-factor";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const EMAIL_RESEND_COOLDOWN_MS = 2 * 60 * 1000;
+const PAYMENT_FACTOR_LOCK_WINDOW_MS = 10 * 60 * 1000;
+const PAYMENT_FACTOR_MAX_FAILS = 5;
 
 /* ---------------- 공통 ---------------- */
 
@@ -211,6 +214,72 @@ export async function requestOtpForOrder(
   }
   await logAction(order.id, "OTP_REQUEST", "sent");
   return { status: "sent" };
+}
+
+
+/* ---------------- 1-c) 카드 결제정보 확인 → CS 세션 ----------------
+ * 기존 이메일 OTP를 없애지 않는다.
+ * 이메일 오기입 고객 중 카드결제 고객이 스스로 복구할 수 있는 보조 경로다.
+ * 최근 10분 내 5회 실패 시 잠금.
+ */
+
+async function recentPaymentFactorFails(orderId: string): Promise<number> {
+  const since = new Date(
+    Date.now() - PAYMENT_FACTOR_LOCK_WINDOW_MS
+  ).toISOString();
+
+  const { count } = await getSupabaseAdmin()
+    .from("cs_actions")
+    .select("id", { count: "exact", head: true })
+    .eq("order_id", orderId)
+    .eq("action_type", "PAYMENT_VERIFY")
+    .eq("status", "fail")
+    .gte("created_at", since);
+
+  return count ?? 0;
+}
+
+export async function verifyCardLast4ForOrder(
+  order: RitualOrderRow,
+  last4: string
+): Promise<
+  | { status: "verified"; csToken: string }
+  | { status: "invalid" | "locked" | "unavailable" | "not_paid" }
+> {
+  if (order.payment_status !== "paid" && order.payment_status !== "refunded") {
+    return { status: "not_paid" };
+  }
+  if (!order.payment_key) return { status: "unavailable" };
+
+  if ((await recentPaymentFactorFails(order.id)) >= PAYMENT_FACTOR_MAX_FAILS) {
+    return { status: "locked" };
+  }
+
+  const info = await fetchPaymentCardInfo(order.payment_key);
+  if (!info) {
+    await createIncident(order.id, "payment_info_fetch_failed", "card_last4");
+    return { status: "unavailable" };
+  }
+
+  const result = compareExactCardLast4(info.cardNumberMasked, last4);
+
+  if (!result.ok) {
+    if (result.code === "unavailable") {
+      await logAction(order.id, "PAYMENT_VERIFY", "unavailable", "card_last4");
+      return { status: "unavailable" };
+    }
+
+    await logAction(order.id, "PAYMENT_VERIFY", "fail", "card_last4");
+    return (await recentPaymentFactorFails(order.id)) >= PAYMENT_FACTOR_MAX_FAILS
+      ? { status: "locked" }
+      : { status: "invalid" };
+  }
+
+  const csToken = createCsToken(order.order_number);
+  if (!csToken) return { status: "invalid" };
+
+  await logAction(order.id, "PAYMENT_VERIFY", "verified", "card_last4");
+  return { status: "verified", csToken };
 }
 
 /* ---------------- 2) OTP 확인 → CS 세션 ---------------- */
