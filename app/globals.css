@@ -120,6 +120,44 @@ body {
   }
 }
 
+
+/* 몰입형 신청 viewport — svh fallback 후 dvh로 키보드/모바일 주소창 변화 대응 */
+.imm-viewport {
+  min-height: 100svh;
+  min-height: 100dvh;
+}
+
+/* 몰입형 신청 — 문장/질문 전환 */
+.imm-msg {
+  animation: imm-fade-up 0.45s ease both;
+}
+.imm-q-in {
+  animation: imm-fade-up 0.3s ease both;
+}
+.imm-q-out {
+  animation: imm-fade-out 0.22s ease both;
+}
+@keyframes imm-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes imm-fade-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
 /* 가로 캐러셀 스크롤바 숨김 */
 .scrollbar-none {
   scrollbar-width: none;
@@ -142,6 +180,11 @@ body {
     transition: none;
   }
   .fade-in {
+    animation: none;
+  }
+  .imm-msg,
+  .imm-q-in,
+  .imm-q-out {
     animation: none;
   }
 }
