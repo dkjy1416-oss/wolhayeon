@@ -11,6 +11,7 @@
  * - 사람 상담원 연결 없음. 실패 시 자동 복구 안내.
  */
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 type Bubble = { role: "user" | "assistant"; content: string };
 type Flow =
@@ -74,6 +75,7 @@ const MAIL_LABEL: Record<string, string> = {
 };
 
 export default function CsChatWidget() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [flow, setFlow] = useState<Flow>("idle");
@@ -101,6 +103,12 @@ export default function CsChatWidget() {
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [status, setStatus] = useState<CsStatusView | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (pathname === "/apply" || pathname === "/apply/confirm") {
+      setOpen(false);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: 999999 });
@@ -564,6 +572,10 @@ export default function CsChatWidget() {
     "inline-flex h-11 items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep px-5 text-[0.85rem] font-medium text-ivory active:opacity-85 disabled:opacity-50";
   const ghostBtn =
     "inline-flex h-10 items-center justify-center rounded-full border border-gold-dim/35 px-4 text-[0.8rem] text-ivory active:opacity-80";
+
+  if (pathname === "/apply" || pathname === "/apply/confirm") {
+    return null;
+  }
 
   return (
     <>
