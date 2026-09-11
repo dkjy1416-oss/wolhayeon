@@ -27,6 +27,8 @@ interface CsStatusView {
   generation: string;
   delivery: string;
   hasResult: boolean;
+  canContinuePayment?: boolean;
+  continuePath?: string | null;
   level: "lite" | "full";
   resultPath: string | null;
 }
@@ -55,7 +57,7 @@ const QUICK_MENU: Array<{ label: string; needAuth: boolean; faq?: string }> = [
 const PAY_LABEL: Record<string, string> = {
   paid: "정상 완료",
   refunded: "환불 완료",
-  pending: "완료된 결제 없음",
+  pending: "결제 전 (신청 완료)",
   failed: "완료된 결제 없음",
 };
 const GEN_LABEL: Record<string, string> = {
@@ -89,7 +91,12 @@ export default function CsChatWidget() {
   const [csToken, setCsToken] = useState<string | null>(null);
   /** 본인확인 후 실행하려던 민감 액션 */
   const [pendingSensitive, setPendingSensitive] = useState<
-    null | "refund_check" | "refund" | "email_change" | "open_result"
+    null
+    | "refund_check"
+    | "refund"
+    | "email_change"
+    | "open_result"
+    | "continue_payment"
   >(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [status, setStatus] = useState<CsStatusView | null>(null);
@@ -159,7 +166,13 @@ export default function CsChatWidget() {
       setOrderNumber(j.orderNumber);
       say("assistant", "신청 내역을 찾았어요. 상태를 바로 확인해볼게요.");
       setFlow("verified");
-      await refreshStatus(j.liteToken, j.orderNumber);
+      const foundStatus = await refreshStatus(j.liteToken, j.orderNumber);
+      if (foundStatus?.canContinuePayment) {
+        say(
+          "assistant",
+          "이 신청은 완료됐지만 아직 결제 전이에요. 입력하신 이야기는 그대로 저장되어 있어요. 다른 기기에서 이어서 결제하려면 등록된 이메일로 한 번만 본인확인을 해주세요."
+        );
+      }
     } else if (j?.status === "need_email") {
       setNeedEmail(true);
       say(
@@ -194,6 +207,21 @@ export default function CsChatWidget() {
       "본인확인이 필요해요. 카드로 결제하셨다면 카드 뒷 4자리로 확인할 수 있어요. 카드 확인이 어렵다면 등록된 이메일 인증번호로도 진행할 수 있어요."
     );
     setFlow("pay_verify");
+  };
+
+  const startContinuePayment = async () => {
+    if (!liteToken && !csToken) return;
+
+    if (csToken) {
+      const fullStatus = await refreshStatus(csToken, orderNumber);
+      if (fullStatus?.continuePath) {
+        window.location.href = fullStatus.continuePath;
+      }
+      return;
+    }
+
+    setPendingSensitive("continue_payment");
+    await requestEmailOtp();
   };
 
   const requestEmailOtp = async () => {
@@ -285,6 +313,11 @@ export default function CsChatWidget() {
     else if (action === "email_change") setFlow("email_new");
     else if (action === "open_result")
       refreshStatus(fullToken ?? csToken, orderNumber);
+    else if (action === "continue_payment") {
+      refreshStatus(fullToken ?? csToken, orderNumber).then((st) => {
+        if (st?.continuePath) window.location.href = st.continuePath;
+      });
+    }
   };
 
   const confirmOtp = async () => {
@@ -768,37 +801,63 @@ export default function CsChatWidget() {
 
               {flow === "verified" && (
                 <div className="flex flex-col gap-2">
-                  <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1">
-                    {/* ── 라이트 가능(조회/등록 이메일 재발송/재생성) ── */}
-                    {status?.hasResult && (
-                      <button type="button" onClick={actResend} disabled={busy} className={`${btnCls} shrink-0`}>
-                        등록된 이메일로 결과 다시 받기
+                  {status?.canContinuePayment ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={startContinuePayment}
+                        disabled={busy}
+                        className={`${btnCls} w-full`}
+                      >
+                        이어서 결제하기{csToken ? "" : " 🔒"}
                       </button>
-                    )}
-                    {status?.payment === "paid" && !status?.hasResult && (
-                      <button type="button" onClick={actRetryGeneration} disabled={busy} className={`${btnCls} shrink-0`}>
-                        결과 생성 다시 확인
-                      </button>
-                    )}
-                    {/* ── 민감(OTP 필요) ── */}
-                    {status?.hasResult &&
-                      (csToken && status?.resultPath ? (
-                        <a href={status.resultPath} className={`${ghostBtn} shrink-0`}>
-                          결과 화면에서 열기
-                        </a>
-                      ) : (
-                        <button type="button" onClick={() => startSensitive("open_result")} disabled={busy} className={`${ghostBtn} shrink-0`}>
-                          결과 화면에서 열기 🔒
+                      <p className="text-[0.65rem] font-light leading-5 text-ivory-dim/60">
+                        결제 전 신청은 결과 발송·결과 열기·환불 항목을 표시하지 않아요.
+                        다른 기기에서 이어가려면 등록된 이메일 확인 후 미리보기와 결제로 연결됩니다.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1">
+                        {status?.hasResult && (
+                          <button type="button" onClick={actResend} disabled={busy} className={`${btnCls} shrink-0`}>
+                            등록된 이메일로 결과 다시 받기
+                          </button>
+                        )}
+                        {status?.payment === "paid" && !status?.hasResult && (
+                          <button type="button" onClick={actRetryGeneration} disabled={busy} className={`${btnCls} shrink-0`}>
+                            결과 생성 다시 확인
+                          </button>
+                        )}
+                        {status?.hasResult &&
+                          (csToken && status?.resultPath ? (
+                            <a href={status.resultPath} className={`${ghostBtn} shrink-0`}>
+                              결과 화면에서 열기
+                            </a>
+                          ) : (
+                            <button type="button" onClick={() => startSensitive("open_result")} disabled={busy} className={`${ghostBtn} shrink-0`}>
+                              결과 화면에서 열기 🔒
+                            </button>
+                          ))}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            csToken
+                              ? setFlow("email_new")
+                              : startSensitive("email_change")
+                          }
+                          disabled={busy}
+                          className={`${ghostBtn} shrink-0`}
+                        >
+                          이메일 주소 변경{csToken ? "" : " 🔒"}
                         </button>
-                      ))}
-                    <button type="button" onClick={() => (csToken ? setFlow("email_new") : startSensitive("email_change"))} disabled={busy} className={`${ghostBtn} shrink-0`}>
-                      이메일 주소 변경{csToken ? "" : " 🔒"}
-                    </button>
-                  </div>
-                  {!csToken && (
-                    <p className="text-[0.65rem] font-light text-ivory-dim/60">
-                      🔒 표시는 결과 원문 열기나 이메일 변경처럼 본인확인이 필요한 기능이에요.
-                    </p>
+                      </div>
+                      {!csToken && (
+                        <p className="text-[0.65rem] font-light text-ivory-dim/60">
+                          🔒 표시는 본인확인 후 이용할 수 있어요.
+                        </p>
+                      )}
+                    </>
                   )}
                   <FreeInput input={input} setInput={setInput} onSend={sendFree} busy={busy} inputCls={inputCls} btnCls={btnCls} />
                 </div>

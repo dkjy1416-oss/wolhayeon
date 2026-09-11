@@ -17,6 +17,7 @@ import {
 
 const DOMAIN = "wolhayeon-cs-session-v1"; // OTP 통과 후 (실행 권한)
 const LITE_DOMAIN = "wolhayeon-cs-lite-v1"; // 이름+출생연도 조회 (읽기 전용)
+const CONTINUE_DOMAIN = "wolhayeon-cs-continue-v1"; // 결제 전 미리보기/결제 이어가기 전용
 const TTL_MS = 30 * 60 * 1000;
 
 function getSecret(): string | null {
@@ -86,6 +87,41 @@ export function verifyLiteToken(
   const exp = Number(token.slice(0, dot));
   if (!Number.isFinite(exp) || Date.now() > exp) return false;
   return safeEqual(token.slice(dot + 1), signLite(orderNumber, exp, secret));
+}
+
+
+/* ---------------- 결제 전 이어가기 토큰 ----------------
+ * full CS 본인확인을 통과한 pending 주문에 대해서만 발급할 것.
+ * 허용 범위는 해당 주문의 결제 전 미리보기 접근뿐이며
+ * lite/full CS 토큰과 HMAC 도메인을 완전히 분리한다. */
+
+function signContinue(orderNumber: string, exp: number, secret: string): string {
+  return createHmac("sha256", secret)
+    .update(`${CONTINUE_DOMAIN}|${orderNumber}|${exp}`)
+    .digest("hex");
+}
+
+export function createContinueToken(orderNumber: string): string | null {
+  const secret = getSecret();
+  if (!secret) return null;
+  const exp = Date.now() + TTL_MS;
+  return `${exp}.${signContinue(orderNumber, exp, secret)}`;
+}
+
+export function verifyContinueToken(
+  orderNumber: string,
+  token: string | null | undefined
+): boolean {
+  const secret = getSecret();
+  if (!secret || !token) return false;
+  const dot = token.indexOf(".");
+  if (dot <= 0) return false;
+  const exp = Number(token.slice(0, dot));
+  if (!Number.isFinite(exp) || Date.now() > exp) return false;
+  return safeEqual(
+    token.slice(dot + 1),
+    signContinue(orderNumber, exp, secret)
+  );
 }
 
 /* ---------------- OTP ---------------- */

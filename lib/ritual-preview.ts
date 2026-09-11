@@ -237,7 +237,8 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
 export async function getOrCreatePreview(
   orderNumber: string,
   submissionId: string | null,
-  tokenAuthorized = false
+  tokenAuthorized = false,
+  continueAuthorized = false
 ): Promise<PreviewOutcome> {
   try {
     const supabase = getSupabaseAdmin();
@@ -257,10 +258,15 @@ export async function getOrCreatePreview(
 
     if (
       !tokenAuthorized &&
+      !continueAuthorized &&
       (!submissionId ||
         !order.submission_id ||
         order.submission_id !== submissionId)
     ) {
+      return { status: "not_found" };
+    }
+
+    if (continueAuthorized && order.payment_status !== "pending") {
       return { status: "not_found" };
     }
 

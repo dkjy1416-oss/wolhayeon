@@ -113,7 +113,9 @@ export async function POST(req: Request) {
           ? "정상 완료"
           : s.payment === "refunded"
             ? "환불 완료"
-            : "완료된 결제 없음";
+            : s.payment === "pending"
+              ? "결제 전(신청 완료·이야기 저장됨 — 화면의 이어서 결제하기 이용)"
+              : "완료된 결제 없음";
       const gen =
         s.generation === "ready"
           ? "생성 완료(열람 가능)"

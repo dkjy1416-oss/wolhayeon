@@ -16,6 +16,7 @@ import {
   verifyCsToken,
   createLiteToken,
   verifyLiteToken,
+  createContinueToken,
   generateOtp,
   hashOtp,
   verifyOtpHash,
@@ -357,7 +358,9 @@ export interface CsStatus {
   generation: "ready" | "generating" | "failed" | "waiting";
   delivery: "sent" | "waiting" | "failed" | "sending";
   hasResult: boolean;
-  /** full 세션에서만 채워짐 — 결과 원문 접근은 OTP 인증 전용 */
+  canContinuePayment: boolean;
+  continuePath: string | null;
+  /** full 세션에서만 채워짐 — 결과 원문 접근은 강한 본인확인 전용 */
   resultPath: string | null;
 }
 
@@ -390,11 +393,28 @@ export async function getCsStatus(
         : order.generation_status === "failed"
           ? "failed"
           : "waiting";
+  const canContinuePayment = order.payment_status === "pending";
+  let continuePath: string | null = null;
+
+  /* personalized preview 자체가 사연 정보를 담기 때문에
+     이름+출생연도만 확인한 lite 세션에는 URL을 절대 주지 않는다.
+     full CS 인증을 통과한 pending 주문에만 발급. */
+  if (canContinuePayment && level === "full") {
+    const ct = createContinueToken(order.order_number);
+    if (ct) {
+      continuePath =
+        `/apply/preview?order=${encodeURIComponent(order.order_number)}` +
+        `&ct=${encodeURIComponent(ct)}`;
+    }
+  }
+
   return {
     payment: (order.payment_status as CsStatus["payment"]) ?? "pending",
     generation,
     delivery: (order.delivery_status as CsStatus["delivery"]) ?? "waiting",
     hasResult: !!resultPath,
+    canContinuePayment,
+    continuePath,
     resultPath: level === "full" ? resultPath : null,
   };
 }

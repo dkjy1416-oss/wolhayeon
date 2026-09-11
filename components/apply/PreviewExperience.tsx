@@ -90,11 +90,13 @@ function FullBleedReading({
 export default function PreviewExperience({
   orderNumber,
   previewToken,
+  continueToken,
   readingVideo,
   readingPoster,
 }: {
   orderNumber: string;
   previewToken: string | null;
+  continueToken: string | null;
   readingVideo: string | null;
   readingPoster: string | null;
 }) {
@@ -136,6 +138,7 @@ export default function PreviewExperience({
           orderNumber,
           submissionId: getOrCreateSubmissionId(),
           previewToken,
+          continueToken,
         }),
       });
       const json = await res.json().catch(() => null);
