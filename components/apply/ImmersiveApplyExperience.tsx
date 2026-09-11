@@ -384,8 +384,8 @@ function PersistentVideoBackground({
     phase === "intro"
       ? "brightness(0.85)"
       : phase === "questions"
-        ? "brightness(0.55) blur(5px)"
-        : "brightness(0.6) blur(2px)";
+        ? "brightness(0.7) blur(1.75px)"
+        : "brightness(0.66) blur(1.5px)";
   return (
     <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
       {video ? (
@@ -414,8 +414,12 @@ function PersistentVideoBackground({
       {/* 상/하단 녹아들기 — 질문 단계에선 하단을 더 강하게 */}
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ink/85 via-ink/40 to-transparent" />
       <div
-        className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink via-ink/75 to-transparent transition-all duration-700 ${
-          phase === "intro" ? "h-[55%]" : "h-[70%]"
+        className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink to-transparent transition-all duration-700 ${
+          phase === "intro"
+            ? "h-[55%] via-ink/75"
+            : phase === "questions"
+              ? "h-[52%] via-ink/55"
+              : "h-[58%] via-ink/65"
         }`}
       />
     </div>
@@ -605,13 +609,13 @@ export default function ImmersiveApplyExperience({
               ←
             </button>
             <div className="flex-1">
-              <div className="h-px w-full bg-ivory/15">
+              <div className="h-px w-full bg-ivory/22">
                 <div
-                  className="h-px bg-gold/80 transition-all duration-500"
+                  className="h-px bg-gold/90 transition-all duration-500"
                   style={{ width: `${((safeStep + 1) / total) * 100}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-[0.62rem] tracking-[0.2em] text-ivory-dim/80">
+              <p className="mt-1.5 text-[0.62rem] tracking-[0.2em] text-ivory/68">
                 {progressLabel((safeStep + 1) / total)}
               </p>
             </div>
@@ -623,19 +627,19 @@ export default function ImmersiveApplyExperience({
           {/* 하단 glass 패널 (§12) */}
           <div
             ref={panelRef}
-            className="max-h-[62svh] overflow-y-auto rounded-t-[24px] border-t border-x border-gold/15 bg-[rgba(13,11,13,0.84)] px-6 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-7 backdrop-blur-md"
+            className="max-h-[58svh] overflow-y-auto rounded-t-[24px] border-t border-x border-gold/15 bg-[rgba(13,11,13,0.82)] px-6 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-5 backdrop-blur-sm"
           >
             <div key={cur.id} className={anim === "in" ? "imm-q-in" : "imm-q-out"}>
               <p className="font-display whitespace-pre-line text-[1.25rem] font-medium leading-[1.75] text-ivory">
                 {fill(cur.question)}
               </p>
               {cur.sub && (
-                <p className="mt-2.5 whitespace-pre-line text-[0.82rem] font-light leading-[1.9] text-ivory-dim">
+                <p className="mt-2 whitespace-pre-line text-[0.82rem] font-light leading-[1.8] text-ivory-dim">
                   {fill(cur.sub)}
                 </p>
               )}
 
-              <div className="mt-5">
+              <div className="mt-4">
                 <StepInput
                   step={cur}
                   app={app}
@@ -657,7 +661,7 @@ export default function ImmersiveApplyExperience({
               <button
                 type="button"
                 onClick={onNext}
-                className="mt-6 inline-flex h-[58px] w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-[#5b1720] to-[#341015] text-[0.95rem] font-medium text-ivory active:opacity-85"
+                className="mt-4.5 inline-flex h-[56px] w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-[#5b1720] to-[#341015] text-[0.95rem] font-medium text-ivory active:opacity-85"
               >
                 {safeStep >= total - 1
                   ? "이야기 마치기"
