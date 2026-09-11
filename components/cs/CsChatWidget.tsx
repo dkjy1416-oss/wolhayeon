@@ -49,7 +49,6 @@ const QUICK_MENU: Array<{ label: string; needAuth: boolean; faq?: string }> = [
     faq: "월하연은 신청서 작성 → 결제 전 무료 개인화 미리보기 → 16,900원 1회 결제 → 전체 결과(월화의 편지·관계 흐름·개인 리추얼·24시간/7일/21일 가이드) 순서로 진행돼요. 결과는 결제 후 보통 수 분 내에 자동으로 열리고 이메일로도 보내드려요.",
   },
   { label: "다른 문제가 있어요", needAuth: false, faq: "" },
-  { label: "환불하고 싶어요", needAuth: true },
 ];
 
 const PAY_LABEL: Record<string, string> = {
@@ -104,9 +103,14 @@ export default function CsChatWidget() {
   const openChat = () => {
     setOpen(true);
     if (bubbles.length === 0) {
+      say("assistant", "안녕하세요. 월하연 자동 고객센터예요.");
       say(
         "assistant",
-        "무엇이 궁금하신가요?\n결제, 결과 확인, 이메일, 환불 등\n월하연 이용 중 생긴 문제를 바로 확인해드릴게요."
+        "결제나 결과 확인, 이메일 문제처럼 이용 중 불편한 점을 24시간 자동으로 도와드릴게요."
+      );
+      say(
+        "assistant",
+        "주문번호를 모르셔도 괜찮아요. 필요하면 이름과 출생연도로 먼저 확인해드릴게요."
       );
     }
   };
@@ -420,7 +424,7 @@ export default function CsChatWidget() {
       setFlow("verified");
       refreshStatus();
     } else {
-      say("assistant", "어떤 문제인지 아래에 편하게 적어주세요. 제가 바로 확인해볼게요.");
+      say("assistant", "괜찮아요. 어떤 문제인지 아래에 편하게 적어주세요. 확인할 수 있는 부분부터 하나씩 바로 도와드릴게요.");
     }
   };
 
@@ -435,13 +439,13 @@ export default function CsChatWidget() {
 
   return (
     <>
-      {/* 우측 상단 작은 말풍선 아이콘 — 메인 CTA를 가리지 않음 */}
+      {/* 우측 하단 작은 말풍선 아이콘 — CTA를 가리지 않도록 화면 끝에 최소 크기로 배치 */}
       {!open && (
         <button
           type="button"
           onClick={openChat}
           aria-label="월화에게 물어보기"
-          className="fixed right-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-gold/35 bg-ink/80 text-gold shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur-sm active:opacity-85"
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] right-4 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-gold/35 bg-ink/88 text-gold shadow-[0_4px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm active:opacity-85"
         >
           <svg aria-hidden width="19" height="19" viewBox="0 0 24 24" fill="none">
             <path
@@ -466,6 +470,10 @@ export default function CsChatWidget() {
                 <p className="font-display text-[1.02rem] font-semibold text-ivory">
                   월화에게 물어보기
                 </p>
+                <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-gold-dim/25 bg-ink-soft px-3 py-1 text-[0.68rem] text-ivory-dim">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-gold animate-pulse" />
+                  24시간 자동 상담 중
+                </div>
               </div>
               <button
                 type="button"
@@ -479,6 +487,23 @@ export default function CsChatWidget() {
 
             {/* 대화 */}
             <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-5">
+              <div className="mb-4 rounded-2xl border border-gold-dim/25 bg-ink-soft px-4 py-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/20 bg-ink text-gold">
+                    <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 3C7 3 3 6.6 3 11c0 2.5 1.3 4.7 3.4 6.2-.1 1-.5 2.2-1.4 3.3 1.9-.2 3.4-.9 4.4-1.6.8.2 1.7.3 2.6.3 5 0 9-3.6 9-8.2S17 3 12 3z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[0.9rem] font-medium text-ivory">
+                      이용 중 불편한 점을 바로 도와드릴게요
+                    </p>
+                    <p className="mt-1 text-[0.76rem] leading-6 text-ivory-dim">
+                      주문번호를 모르셔도 괜찮아요. 결과 확인, 이메일 문제, 결제 관련 문의까지 순서대로 안내해드릴게요.
+                    </p>
+                  </div>
+                </div>
+              </div>
               <div className="flex flex-col gap-3">
                 {bubbles.map((b, i) => (
                   <div
@@ -526,8 +551,12 @@ export default function CsChatWidget() {
             {/* 하단 인터랙션 영역 */}
             <div className="border-t border-gold-dim/20 px-4 pb-6 pt-4">
               {flow === "idle" && (
-                <div className="scrollbar-none flex max-h-40 flex-wrap gap-2 overflow-y-auto">
-                  {QUICK_MENU.map((m) => (
+                <div>
+                  <p className="mb-3 text-[0.72rem] leading-6 text-ivory-dim">
+                    자주 묻는 문제를 아래에서 바로 선택하시거나, 직접 적어주시면 순서대로 확인해드릴게요.
+                  </p>
+                  <div className="scrollbar-none flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+                    {QUICK_MENU.map((m) => (
                     <button
                       key={m.label}
                       type="button"
@@ -537,6 +566,7 @@ export default function CsChatWidget() {
                       {m.label}
                     </button>
                   ))}
+                  </div>
                 </div>
               )}
 
@@ -666,7 +696,7 @@ function FreeInput({
     <div className="flex gap-2">
       <input
         className={inputCls}
-        placeholder="궁금한 점을 편하게 적어주세요"
+        placeholder="궁금한 점을 편하게 남겨주세요"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => {
