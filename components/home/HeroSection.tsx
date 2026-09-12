@@ -1,4 +1,4 @@
-import Link from "next/link";
+import TrackedCtaLink from "@/components/TrackedCtaLink";
 import Image from "next/image";
 import Reveal from "@/components/home/Reveal";
 
@@ -67,12 +67,14 @@ export default function HeroSection({
           </p>
         </Reveal>
         <Reveal delay={300}>
-          <Link
+          <TrackedCtaLink
+            event="home_cta_click"
+            placement="hero"
             href="/apply"
             className="cta-glow mt-9 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.98rem] font-medium text-ivory transition-opacity active:opacity-85"
           >
             내 이야기 먼저 들려주기
-          </Link>
+          </TrackedCtaLink>
           <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/80">
             결제 전, 개인화 미리보기부터 보여드려요
           </p>

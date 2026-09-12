@@ -52,6 +52,7 @@ import {
   type Option,
 } from "@/lib/ritual-types";
 import { loadApplication, saveApplication } from "@/lib/ritual-storage";
+import { trackEvent } from "@/lib/analytics";
 
 /* ---------------- 인트로 카피 (§7) ---------------- */
 const INTRO_MESSAGES = [
@@ -443,6 +444,7 @@ export default function ImmersiveApplyExperience({
   const [anim, setAnim] = useState<"in" | "out">("in");
   const [tried, setTried] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const completedTracked = useRef(false);
 
   /* 복원 (§35) — 답변은 기존 storage, step은 별도 키 */
   useEffect(() => {
@@ -526,6 +528,10 @@ export default function ImmersiveApplyExperience({
       return;
     }
     if (safeStep >= total - 1) {
+      if (!completedTracked.current) {
+        completedTracked.current = true;
+        trackEvent("apply_complete");
+      }
       /* §37 — 확인 화면 진입 transition */
       setAnim("out");
       setTimeout(() => {
@@ -583,6 +589,7 @@ export default function ImmersiveApplyExperience({
           <button
             type="button"
             onClick={() => {
+              trackEvent("apply_start");
               setStep(0);
               goTo("questions");
             }}

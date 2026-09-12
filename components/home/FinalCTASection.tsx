@@ -1,4 +1,4 @@
-import Link from "next/link";
+import TrackedCtaLink from "@/components/TrackedCtaLink";
 import Reveal from "@/components/home/Reveal";
 
 /** SECTION 10 — FINAL CTA (결제 압박 없이 신청 시작 유도) */
@@ -24,12 +24,14 @@ export default function FinalCTASection() {
           </p>
         </Reveal>
         <Reveal delay={150}>
-          <Link
+          <TrackedCtaLink
+            event="home_cta_click"
+            placement="final"
             href="/apply"
             className="cta-glow mt-10 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
           >
             월화에게 내 이야기 들려주기
-          </Link>
+          </TrackedCtaLink>
           <p className="mt-4 text-[0.75rem] font-light text-ivory-dim/80">
             결제 전 개인화 미리보기 제공
           </p>

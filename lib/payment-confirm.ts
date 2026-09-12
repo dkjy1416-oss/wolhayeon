@@ -22,6 +22,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { confirmTossPayment } from "@/lib/toss";
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
 import { verifyPaidOwnership } from "@/lib/payment-ownership";
+import { track } from "@vercel/analytics/server";
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
@@ -148,6 +149,12 @@ export async function confirmOrderPayment(params: {
     if (upd.error) {
       // 승인은 성공했으므로 사용자에게는 성공으로 안내, 내부에만 코드 기록
       console.error(`[pay:${requestId}] db_update_failed code=${upd.error.code}`);
+    }
+
+    try {
+      await track("payment_success");
+    } catch {
+      /* analytics 실패가 결제 성공 응답에 영향을 주면 안 됨 */
     }
 
     return { status: "success", orderNumber };

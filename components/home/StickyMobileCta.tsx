@@ -5,7 +5,7 @@
  * FINAL CTA/footer 부근에서는 자연스럽게 사라짐. 결제 문구 없음.
  */
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import TrackedCtaLink from "@/components/TrackedCtaLink";
 
 export default function StickyMobileCta() {
   const [show, setShow] = useState(false);
@@ -42,13 +42,15 @@ export default function StickyMobileCta() {
       }`}
       aria-hidden={!visible}
     >
-      <Link
+      <TrackedCtaLink
+        event="home_cta_click"
+        placement="sticky"
         href="/apply"
         tabIndex={visible ? 0 : -1}
         className="flex h-12 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-medium text-ivory shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
       >
         내 이야기 먼저 들려주기
-      </Link>
+      </TrackedCtaLink>
     </div>
   );
 }

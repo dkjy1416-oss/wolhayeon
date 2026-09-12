@@ -16,6 +16,7 @@ import {
 } from "@/lib/ritual-storage";
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
+import { trackEvent } from "@/lib/analytics";
 
 interface PreviewCard {
   key: string;
@@ -148,6 +149,15 @@ export default function PreviewExperience({
         }
         setPreview(json.preview as Preview);
         setPhase("ready");
+        try {
+          const key = `wh_ev_preview_${orderNumber}`;
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, "1");
+            trackEvent("preview_view");
+          }
+        } catch {
+          /* storage 사용 불가 시 중복보다 이벤트 누락을 선택 */
+        }
         return;
       }
       if (json?.status === "pending") {
@@ -444,6 +454,7 @@ export default function PreviewExperience({
         </div>
         <Link
           href={payHref}
+          onClick={() => trackEvent("payment_cta_click")}
           className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
         >
           {name
