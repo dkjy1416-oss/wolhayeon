@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import LegalPage, { LegalSection } from "@/components/legal/LegalPage";
+import { CONTENT_VIEW_SENTENCE } from "@/lib/content-access-policy";
 
 export const metadata: Metadata = { title: "이용안내 | 월하연 月下緣" };
 
 export default function GuidePage() {
   return (
-    <LegalPage title="이용안내" updated="2026년 9월 13일">
+    <LegalPage title="이용안내" updated="2026년 9월 17일">
       <LegalSection title="월하연은 어떤 서비스인가요">
         <p>
           월하연은 관계와 감정을 돌아보기 위한 <strong>개인화 디지털 콘텐츠 서비스</strong>입니다.
@@ -40,11 +41,14 @@ export default function GuidePage() {
           ⑤ <strong>결과 이메일</strong> — 생성이 완료되면 신청 시 등록한 이메일로도
           결과 링크를 보내드립니다.
         </p>
+        <p>
+          <strong>{CONTENT_VIEW_SENTENCE}</strong>
+        </p>
       </LegalSection>
 
       <LegalSection title="결과를 다시 확인하고 싶다면">
         <p>
-          결과 이메일의 링크로 다시 열 수 있습니다. 메일을 찾기 어렵거나 생성 상태가
+          결과 이메일의 링크로 결제일로부터 30일 동안 다시 열 수 있습니다. 메일을 찾기 어렵거나 생성 상태가
           궁금한 경우 화면의 월하연 고객센터에서 신청 내역을 조회하고 결과 재발송 또는
           생성 상태 확인을 이용할 수 있습니다.
         </p>

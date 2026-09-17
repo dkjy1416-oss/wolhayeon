@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
 import TossCheckout from "@/components/pay/TossCheckout";
@@ -143,6 +144,9 @@ export default async function CompletePage({
           </p>
           <p className="mt-2 text-center text-xs tracking-wide text-ivory-dim">
             1회 결제 · 정기결제 없음
+          </p>
+          <p className="mt-1.5 text-center text-xs text-ivory-dim">
+            {CONTENT_VIEW_LINE}
           </p>
 
           <div className="mt-7">

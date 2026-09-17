@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { RESULT_TOKEN_RE, canShowResult } from "@/lib/result-access";
+import { CONTENT_VIEW_LINE, formatViewWindow } from "@/lib/content-access-policy";
 import { RitualResultSchema } from "@/lib/ritual-result-schema";
 import ResultHero from "@/components/result/ResultHero";
 import LetterSection from "@/components/result/LetterSection";
@@ -53,6 +54,7 @@ export default async function ResultPage({
   }
 
   let name = "";
+  let viewWindow: string | null = null;
   let content: ReturnType<typeof RitualResultSchema.safeParse>["data"] | null =
     null;
 
@@ -69,7 +71,7 @@ export default async function ResultPage({
 
     const o = await supabase
       .from("ritual_orders")
-      .select("applicant_name, payment_status, generation_status, review_status")
+      .select("applicant_name, payment_status, generation_status, review_status, paid_at")
       .eq("id", r.data.order_id)
       .maybeSingle();
     if (o.error || !o.data) return <NotAvailable />;
@@ -87,6 +89,7 @@ export default async function ResultPage({
 
     name = o.data.applicant_name;
     content = parsed.data;
+    viewWindow = formatViewWindow(o.data.paid_at);
   } catch {
     console.error("[result] lookup_failed");
     return <NotAvailable />;
@@ -94,11 +97,17 @@ export default async function ResultPage({
 
   if (!content) return <NotAvailable />;
   const c = content;
+  const viewPeriodLine = viewWindow
+    ? `열람 가능 기간: ${viewWindow}`
+    : CONTENT_VIEW_LINE;
 
   return (
     <main id="top" className="min-h-[100svh] bg-ink">
       <ResultOpenTracker token={token} />
       <ResultHero name={name} />
+      <p className="px-6 text-center text-[0.7rem] font-light tracking-wide text-ivory-dim/70">
+        {viewPeriodLine}
+      </p>
 
       {/* 01 · 14와 같은 번호는 표시용 우리말 제목 — 개발 key는 절대 노출하지 않음 */}
       <div id="letters" className="scroll-mt-6">

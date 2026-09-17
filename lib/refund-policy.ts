@@ -14,6 +14,7 @@
  *   법정 기준보다 고객에게 불리한 임의 조건은 넣지 않았습니다.
  */
 import type { RitualOrderRow } from "@/lib/supabase/types";
+import { CONTENT_VIEW_SENTENCE } from "@/lib/content-access-policy";
 
 export const REFUND_WINDOW_DAYS = 7;
 
@@ -40,6 +41,10 @@ export const REFUND_POLICY_SECTIONS: Array<{ title: string; body: string }> = [
     body: `· 환불은 상담원 승인 없이, 위 기준에 따라 자동으로 판정·처리됩니다.
 · 환불이 승인되면 결제하신 수단으로 즉시 취소 요청되며, 월하연은 취소 요청을 즉시 처리하며, 카드사·결제수단 화면에 반영되는 시점은 각 결제수단의 처리 일정에 따라 달라질 수 있습니다.
 · 환불 관련 문의는 사이트의 "월화에게 물어보기"에서 본인확인 후 바로 확인·처리하실 수 있습니다.`,
+  },
+  {
+    title: "5. 콘텐츠 열람 기간",
+    body: CONTENT_VIEW_SENTENCE,
   },
 ];
 

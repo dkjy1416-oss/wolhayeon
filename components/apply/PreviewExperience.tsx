@@ -17,6 +17,7 @@ import {
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { trackEvent } from "@/lib/analytics";
+import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
 
 interface PreviewCard {
   key: string;
@@ -467,6 +468,7 @@ export default function PreviewExperience({
               {h}
             </p>
           ))}
+          <p className="text-[0.72rem] text-ivory-dim">{CONTENT_VIEW_LINE}</p>
         </div>
         {/* 테스트 결제 모드 안내 (라이브 키 전환 시 컴포넌트 내부에서 끔) */}
         <DevPaymentNotice />
