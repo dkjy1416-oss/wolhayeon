@@ -242,7 +242,7 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
 
 /* ---------- AI 미리보기 (실패 시 null → 즉석 템플릿 폴백) ---------- */
 
-const PREVIEW_AI_TIMEOUT_MS = 20_000; // preview route maxDuration 30초 내 여유
+const PREVIEW_AI_TIMEOUT_MS = 25_000; // preview route maxDuration 30초 내 여유
 const PREVIEW_AI_MAX_TOKENS = 1600;
 
 function getPreviewModelId(): string {
@@ -343,20 +343,25 @@ export async function getOrCreatePreview(
       }
     }
 
-    /* AI 미리보기 우선 — 실패/초과 시 즉석 템플릿으로 자동 대체 */
-    const preview = (await buildAiPreview(order)) ?? buildInstantPreview(order);
+    /* AI 미리보기 우선 — 실패/초과 시 즉석 템플릿으로 자동 대체.
+       템플릿 폴백은 저장하지 않는다: 저장하면 그 주문은 영원히 템플릿에
+       갇히므로, 폴백은 화면만 채우고 다음 방문에서 AI를 다시 시도한다. */
+    const ai = await buildAiPreview(order);
+    const preview = ai ?? buildInstantPreview(order);
 
-    const save = await supabase
-      .from("ritual_orders")
-      .update({
-        preview_content: preview,
-        preview_generated_at: new Date().toISOString(),
-      })
-      .eq("id", order.id);
+    if (ai) {
+      const save = await supabase
+        .from("ritual_orders")
+        .update({
+          preview_content: preview,
+          preview_generated_at: new Date().toISOString(),
+        })
+        .eq("id", order.id);
 
-    if (save.error) {
-      /* 저장 실패가 무료 화면을 막으면 안 된다. 현재 preview는 그대로 반환한다. */
-      console.error(`[preview] instant_save_failed code=${save.error.code}`);
+      if (save.error) {
+        /* 저장 실패가 무료 화면을 막으면 안 된다. 현재 preview는 그대로 반환한다. */
+        console.error(`[preview] ai_save_failed code=${save.error.code}`);
+      }
     }
 
     return {
