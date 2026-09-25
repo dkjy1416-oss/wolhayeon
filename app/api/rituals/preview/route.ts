@@ -10,7 +10,7 @@ import { verifyPreviewToken } from "@/lib/preview-auth";
 import { verifyContinueToken } from "@/lib/cs-auth";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 15;
+export const maxDuration = 30;
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 const UUID_RE =

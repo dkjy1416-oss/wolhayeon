@@ -148,7 +148,7 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
         `월화는 지금 재회 가능성보다 ${name}님이 안전한 거리와 경계를 지키면서 이 관계를 바라볼 수 있는지부터 먼저 보고 있어요.`
       )
     : sentence(
-        `월화는 지금 ${wish}를 다음 이야기에서 가장 먼저 이어서 짚어보려 해요.`
+        `월화는 ${wish}를 다음 이야기에서 가장 먼저 이어서 짚어보려 해요.`
       );
 
   const letter1 = sentence(
@@ -242,15 +242,12 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
 
 /* ---------- AI 미리보기 (실패 시 null → 즉석 템플릿 폴백) ---------- */
 
-const PREVIEW_AI_TIMEOUT_MS = 10_000; // preview route maxDuration 15초 내 여유
+const PREVIEW_AI_TIMEOUT_MS = 20_000; // preview route maxDuration 30초 내 여유
 const PREVIEW_AI_MAX_TOKENS = 1600;
 
 function getPreviewModelId(): string {
-  return (
-    process.env.PREVIEW_ANTHROPIC_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    "claude-sonnet-4-6"
-  );
+  /* 미리보기는 대기 UX가 있는 구간이지만 짧을수록 좋다 — 빠른 Haiku 기본 */
+  return process.env.PREVIEW_ANTHROPIC_MODEL?.trim() || "claude-haiku-4-5";
 }
 
 async function buildAiPreview(

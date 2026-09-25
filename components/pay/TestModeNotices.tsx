@@ -10,7 +10,7 @@
  *     - <GenerationPendingNotice /> : /payment/success 하단
  * ─────────────────────────────────────────────────────────────
  */
-const SHOW_TEST_NOTICES = true;
+const SHOW_TEST_NOTICES = false;
 
 /** 결제 버튼 아래: 테스트 환경 안내 */
 export function TestPaymentNotice() {

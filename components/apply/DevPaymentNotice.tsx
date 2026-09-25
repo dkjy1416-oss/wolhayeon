@@ -9,7 +9,7 @@
  *       `import DevPaymentNotice ...` 한 줄 + `<DevPaymentNotice />` 한 줄 삭제
  * ─────────────────────────────────────────────────────────────
  */
-const SHOW_DEV_NOTICE = true;
+const SHOW_DEV_NOTICE = false;
 
 export default function DevPaymentNotice() {
   if (!SHOW_DEV_NOTICE) return null;
