@@ -1,14 +1,20 @@
 /**
  * 결제 전 무료 미리보기 생성 (서버 전용).
  *
- * 무료 단계는 결제 전 전환 UX이므로 외부 생성 API 응답을 기다리지 않는다.
- * ritual_orders에 이미 저장된 실제 신청값을 조합해 즉시 개인화 preview를 만든다.
+ * v2: 실제 사연을 읽고 쓰는 AI 미리보기를 우선 시도하고,
+ * 시간 초과/오류/스키마 불일치 시에는 기존 즉석 템플릿(buildInstantPreview)으로
+ * 자동 대체한다. 무료 화면이 비는 일은 없다.
  * 전체 유료 결과 생성 구조는 변경하지 않는다.
  */
 import "server-only";
+import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import {
   PreviewSchema,
+  PreviewStructSchema,
+  PREVIEW_SYSTEM_PROMPT,
+  buildPreviewUserPrompt,
   type RitualPreview,
 } from "@/lib/ritual-preview-schema";
 import type { RitualOrderRow } from "@/lib/supabase/types";
@@ -234,6 +240,64 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
   return PreviewSchema.parse(preview);
 }
 
+/* ---------- AI 미리보기 (실패 시 null → 즉석 템플릿 폴백) ---------- */
+
+const PREVIEW_AI_TIMEOUT_MS = 10_000; // preview route maxDuration 15초 내 여유
+const PREVIEW_AI_MAX_TOKENS = 1600;
+
+function getPreviewModelId(): string {
+  return (
+    process.env.PREVIEW_ANTHROPIC_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "claude-sonnet-4-6"
+  );
+}
+
+async function buildAiPreview(
+  order: RitualOrderRow
+): Promise<RitualPreview | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const t0 = Date.now();
+  try {
+    const client = new Anthropic({ apiKey, maxRetries: 0 });
+    const message = await client.messages.create(
+      {
+        model: getPreviewModelId(),
+        max_tokens: PREVIEW_AI_MAX_TOKENS,
+        system: PREVIEW_SYSTEM_PROMPT,
+        messages: [
+          { role: "user", content: buildPreviewUserPrompt(order) },
+        ],
+        output_config: { format: zodOutputFormat(PreviewStructSchema) },
+      },
+      { timeout: PREVIEW_AI_TIMEOUT_MS }
+    );
+    if (message.stop_reason === "max_tokens") return null;
+    if (message.stop_reason === "refusal") return null;
+
+    const text = message.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+
+    const parsed = PreviewSchema.safeParse(JSON.parse(text));
+    if (!parsed.success) {
+      console.error(
+        `[preview] ai_schema_invalid ms=${Date.now() - t0}`
+      );
+      return null;
+    }
+    console.error(`[preview] ai_ok ms=${Date.now() - t0}`);
+    return parsed.data;
+  } catch {
+    /* 타임아웃·네트워크·JSON 오류 등 — 폴백 사용, 개인정보 로그 금지 */
+    console.error(`[preview] ai_failed ms=${Date.now() - t0}`);
+    return null;
+  }
+}
+
 export async function getOrCreatePreview(
   orderNumber: string,
   submissionId: string | null,
@@ -282,8 +346,8 @@ export async function getOrCreatePreview(
       }
     }
 
-    /* 외부 생성 API 호출 없이 실제 신청값으로 즉시 개인화 */
-    const preview = buildInstantPreview(order);
+    /* AI 미리보기 우선 — 실패/초과 시 즉석 템플릿으로 자동 대체 */
+    const preview = (await buildAiPreview(order)) ?? buildInstantPreview(order);
 
     const save = await supabase
       .from("ritual_orders")

@@ -19,8 +19,6 @@ import { randomUUID } from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sanitizeAndValidateApplication } from "@/lib/ritual-validation";
 import { createPreviewToken } from "@/lib/preview-auth";
-import { buildInstantPreview } from "@/lib/ritual-preview";
-import type { RitualOrderRow } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
@@ -67,27 +65,18 @@ export async function POST(request: Request) {
     );
   }
 
-  /* 무료 미리보기는 같은 신청 데이터로 즉시 만들어 둔다.
-     사용자가 확인 버튼을 누른 뒤 preview 페이지에서 두 번째 서버 요청을
-     기다리지 않도록 주문 생성 응답에 함께 실어 보낸다.
-     생성 실패가 주문 저장 자체를 막지는 않는다. */
-  let prefetchedPreview = null;
-  try {
-    prefetchedPreview = buildInstantPreview(data as RitualOrderRow);
-  } catch {
-    prefetchedPreview = null;
-  }
+  /* v2: 미리보기는 저장 시점에 템플릿으로 미리 만들지 않는다.
+     preview 페이지의 첫 요청에서 AI가 사연을 읽고 생성하며(폴백: 즉석 템플릿),
+     그 결과가 preview_content에 저장된다. → preview_generated_at이
+     "미리보기 실제 도달" 지표로도 정확해진다. */
+  const prefetchedPreview = null;
 
-  /* 4) DB insert — 정제된 신청 필드 + submission_id + 준비된 preview.
+  /* 4) DB insert — 정제된 신청 필드 + submission_id.
         가격/상태/주문번호는 DB 기본값. */
   try {
     const supabase = getSupabaseAdmin();
     const payload: Record<string, unknown> = { ...data };
     if (submissionId) payload.submission_id = submissionId;
-    if (prefetchedPreview) {
-      payload.preview_content = prefetchedPreview;
-      payload.preview_generated_at = new Date().toISOString();
-    }
 
     let res = await supabase
       .from("ritual_orders")

@@ -32,7 +32,7 @@ interface Preview {
 }
 
 /* CTA 버튼·보조 문구는 고정 (AI가 선택하지 않음) */
-const CTA_BUTTON = "내 이야기 전체 결과 열기";
+const CTA_BUTTON = "내 이야기의 다음 장 열기";
 const CTA_HELPERS = [
   "1회 결제 · 추가 결제 없음",
   "개인 리추얼 · 24시간/7일/21일 가이드 포함",
@@ -43,6 +43,9 @@ const BLUR_LINES = [
   "달빛이 스며드는 밤, 두 사람의 이야기는 조용히 이어지고 있었습니다. 그날의 말들과 마음의 온도, 그리고 아직 전하지 못한",
   "관계의 흐름 속에서 반복되던 순간들을 하나씩 짚어보면, 그 안에 남아 있던 진짜 마음의 방향이 천천히 드러나기 시작합니다.",
   "붉은 실을 손에 감고 준비된 문장을 읽는 다섯 번의 호흡, 그 시간 동안 정리되는 것들과 내려놓게 되는 것들에 대하여",
+  "그날 밤의 마지막 대화를 다시 펼쳐 보면, 말이 되지 못하고 남아 있던 마음이 어느 줄에 숨어 있었는지 보이기 시작하고",
+  "멀어진 순서를 거꾸로 되짚어 가다 보면, 두 사람이 각자 지키고 싶었던 것이 사실은 같은 자리에 있었다는 것도",
+  "기다림과 연락 사이에서 흔들리는 마음에게, 지금 필요한 건 답이 아니라 순서라는 것을 먼저 전하고 싶었습니다",
 ];
 
 /** full-bleed 몰입형 루프 배경 — 플레이어/카드처럼 보이지 않게.
@@ -452,6 +455,13 @@ export default function PreviewExperience({
           <p className="mt-4 whitespace-pre-line text-[0.9rem] font-light leading-[2] text-ivory">
             {leadText}
           </p>
+          <p className="mt-5 text-[0.85rem] font-light leading-[1.9] text-gold">
+            {name
+              ? `여기서 멈추면, ${name}님 이야기는 이 페이지에서 끝나요.`
+              : "여기서 멈추면, 이야기는 이 페이지에서 끝나요."}
+            <br />
+            다음 장부터는 오직 당신의 사연으로만 쓰여요.
+          </p>
         </div>
         <Link
           href={payHref}
@@ -459,7 +469,7 @@ export default function PreviewExperience({
           className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
         >
           {name
-            ? `${name}님의 전체 이야기 이어서 보기 · ${RITUAL_PRICE_KRW.toLocaleString()}원`
+            ? `${name}님의 다음 장 이어서 읽기 · ${RITUAL_PRICE_KRW.toLocaleString()}원`
             : `${CTA_BUTTON} · ${RITUAL_PRICE_KRW.toLocaleString()}원`}
         </Link>
         <div className="mx-auto mt-4 flex max-w-md flex-col gap-1">
