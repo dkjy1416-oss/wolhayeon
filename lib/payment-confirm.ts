@@ -18,6 +18,7 @@
  */
 import "server-only";
 import { randomUUID } from "crypto";
+import { Resend } from "resend";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { confirmTossPayment } from "@/lib/toss";
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
@@ -25,6 +26,45 @@ import { verifyPaidOwnership } from "@/lib/payment-ownership";
 import { track } from "@vercel/analytics/server";
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
+
+/** 결제 확정 시 운영자에게 알림 메일 (실패해도 결제 흐름에 영향 없음) */
+async function notifyOperatorPaid(info: {
+  orderNumber: string;
+  applicantName?: string | null;
+  amount: number;
+  method?: string | null;
+}): Promise<void> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    const from = process.env.RESEND_FROM_EMAIL?.trim();
+    const to =
+      process.env.OPERATOR_NOTIFY_EMAIL?.trim() || "dkjy1416@naver.com";
+    if (!apiKey || !from) return;
+
+    const name = (info.applicantName ?? "").trim() || "(이름 없음)";
+    const method = (info.method ?? "").trim() || "-";
+    const amount = info.amount.toLocaleString();
+    const subject = `💰 [월하연] 새 결제 ${amount}원 — ${name}님 (${info.orderNumber})`;
+    const text = [
+      `새 결제가 확정되었습니다.`,
+      ``,
+      `주문번호: ${info.orderNumber}`,
+      `신청자: ${name}`,
+      `금액: ${amount}원`,
+      `결제수단: ${method}`,
+      `시각: ${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}`,
+      ``,
+      `관리자: ${(process.env.SITE_URL ?? "").replace(/\/$/, "")}/admin/orders/${info.orderNumber}`,
+    ].join("\n");
+
+    await new Resend(apiKey).emails.send(
+      { from: `월하연 알림 <${from}>`, to, subject, text },
+      { idempotencyKey: `op-paid-v1-${info.orderNumber}` }
+    );
+  } catch {
+    /* 알림 실패는 무시 — 결제 성공 응답이 우선 */
+  }
+}
 
 export type PaymentConfirmOutcome =
   | { status: "success"; orderNumber: string }
@@ -62,7 +102,7 @@ export async function confirmOrderPayment(params: {
     /* 1) 주문 존재 확인 — 개인정보 컬럼은 조회하지 않음 */
     const found = await supabase
       .from("ritual_orders")
-      .select("id, payment_amount, payment_status, payment_key")
+      .select("id, payment_amount, payment_status, payment_key, applicant_name")
       .eq("order_number", orderNumber)
       .single();
     if (found.error || !found.data) return { status: "not_found" };
@@ -124,6 +164,12 @@ export async function confirmOrderPayment(params: {
           })
           .eq("id", row.id)
           .eq("payment_status", "pending");
+        await notifyOperatorPaid({
+          orderNumber,
+          applicantName: (row as { applicant_name?: string | null })
+            .applicant_name,
+          amount: row.payment_amount,
+        });
         return { status: "already_paid", orderNumber };
       }
       console.error(`[pay:${requestId}] confirm_failed code=${confirm.code}`);
@@ -150,6 +196,14 @@ export async function confirmOrderPayment(params: {
       // 승인은 성공했으므로 사용자에게는 성공으로 안내, 내부에만 코드 기록
       console.error(`[pay:${requestId}] db_update_failed code=${upd.error.code}`);
     }
+
+    await notifyOperatorPaid({
+      orderNumber,
+      applicantName: (row as { applicant_name?: string | null })
+        .applicant_name,
+      amount: row.payment_amount,
+      method: confirm.method ?? null,
+    });
 
     try {
       await track("payment_success");
