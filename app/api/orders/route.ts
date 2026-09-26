@@ -14,8 +14,9 @@
  *    함께 보냄. DB unique 제약으로 같은 세션의 두 번째 insert는
  *    실패하며, 그 경우 기존 주문의 주문번호를 그대로 반환.
  */
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { randomUUID } from "crypto";
+import { sendPreviewLinkEmail } from "@/lib/preview-link-email";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sanitizeAndValidateApplication } from "@/lib/ritual-validation";
 import { createPreviewToken } from "@/lib/preview-auth";
@@ -130,6 +131,19 @@ export async function POST(request: Request) {
     }
 
     const previewToken = createPreviewToken(res.data.order_number);
+
+    /* 응답을 보낸 뒤에 미리보기 복귀 링크 메일 발송 —
+       주문 생성 응답 속도·성공 여부에 영향을 주지 않는다.
+       (탭을 닫으면 돌아올 길이 없어 신청 직후 CS로 우회하던 문제 해결) */
+    const orderNumberForMail = res.data.order_number;
+    after(() =>
+      sendPreviewLinkEmail({
+        orderNumber: orderNumberForMail,
+        applicantName: data.applicant_name,
+        email: data.email,
+      })
+    );
+
     return NextResponse.json({
       ok: true,
       order_number: res.data.order_number,

@@ -134,6 +134,74 @@ export default async function AdminStatsPage() {
       ).length
     : 0;
 
+  /* ---- CS 이용 (테이블이 아직 없으면 각 항목만 조용히 생략) ---- */
+  const CS_TOPIC_LABELS: Record<string, string> = {
+    refund: "환불",
+    payment: "결제",
+    result: "결과",
+    email: "이메일",
+    service: "이용안내",
+    other: "기타",
+  };
+  let csChat:
+    | { total: number; today: number; topics: [string, number][] }
+    | null = null;
+  let csVerif = -1;
+  let csActions: [string, number][] | null = null;
+  let csIncidents = -1;
+  {
+    const [chatRes, verifRes, actRes, incRes] = await Promise.all([
+      supabase
+        .from("cs_chat_events")
+        .select("created_at, topic")
+        .gt("created_at", since)
+        .limit(5000),
+      supabase
+        .from("cs_verifications")
+        .select("created_at")
+        .gt("created_at", since)
+        .limit(3000),
+      supabase
+        .from("cs_actions")
+        .select("created_at, action_type")
+        .gt("created_at", since)
+        .limit(3000),
+      supabase
+        .from("cs_incidents")
+        .select("created_at")
+        .gt("created_at", since)
+        .limit(3000),
+    ]);
+    if (!chatRes.error) {
+      const rows = (chatRes.data ?? []) as {
+        created_at: string;
+        topic: string | null;
+      }[];
+      const topicCount = new Map<string, number>();
+      let todayN = 0;
+      for (const r of rows) {
+        if (kstDate(r.created_at) === todayKey) todayN += 1;
+        const t = r.topic ?? "other";
+        topicCount.set(t, (topicCount.get(t) ?? 0) + 1);
+      }
+      csChat = {
+        total: rows.length,
+        today: todayN,
+        topics: [...topicCount.entries()].sort((a, b) => b[1] - a[1]),
+      };
+    }
+    if (!verifRes.error) csVerif = (verifRes.data ?? []).length;
+    if (!actRes.error) {
+      const count = new Map<string, number>();
+      for (const r of (actRes.data ?? []) as { action_type: string | null }[]) {
+        const t = r.action_type ?? "기타";
+        count.set(t, (count.get(t) ?? 0) + 1);
+      }
+      csActions = [...count.entries()].sort((a, b) => b[1] - a[1]);
+    }
+    if (!incRes.error) csIncidents = (incRes.data ?? []).length;
+  }
+
   /* ---- 최근 결제 ---- */
   const recentPaid = real
     .filter((r) => r.paid_at)
@@ -236,6 +304,57 @@ export default async function AdminStatsPage() {
         <span>12시</span>
         <span>18시</span>
         <span>23시</span>
+      </div>
+
+      {/* CS 이용 */}
+      <h2 className="font-display mt-10 text-[1rem] font-semibold">
+        CS 이용 (최근 {DAYS}일)
+      </h2>
+      <div className="mt-3 rounded-xl border border-gold-dim/25 bg-ink-soft/50 px-5 py-4 text-[0.85rem] leading-[2]">
+        {csChat ? (
+          <>
+            챗봇 문의 <b>{csChat.total}</b>건
+            {csChat.today > 0 && (
+              <span className="text-gold"> (오늘 {csChat.today})</span>
+            )}
+            {csChat.topics.length > 0 && (
+              <span className="text-ivory-dim">
+                {" — "}
+                {csChat.topics
+                  .slice(0, 4)
+                  .map(
+                    ([t, n]) => `${CS_TOPIC_LABELS[t] ?? t} ${n}`
+                  )
+                  .join(" · ")}
+              </span>
+            )}
+            <br />
+          </>
+        ) : (
+          <>
+            <span className="text-ivory-dim">
+              챗봇 문의 집계는 cs_chat_events 테이블 생성 후 시작됩니다.
+            </span>
+            <br />
+          </>
+        )}
+        본인확인 시도 <b>{csVerif >= 0 ? csVerif : "–"}</b>건 · CS 처리{" "}
+        <b>{csActions ? csActions.reduce((s, [, n]) => s + n, 0) : "–"}</b>건
+        {csActions && csActions.length > 0 && (
+          <span className="text-ivory-dim">
+            {" ("}
+            {csActions
+              .slice(0, 4)
+              .map(([t, n]) => `${t} ${n}`)
+              .join(" · ")}
+            {")"}
+          </span>
+        )}{" "}
+        · 장애 접수{" "}
+        <b className={csIncidents > 0 ? "text-thread" : ""}>
+          {csIncidents >= 0 ? csIncidents : "–"}
+        </b>
+        건
       </div>
 
       {/* 최근 결제 */}

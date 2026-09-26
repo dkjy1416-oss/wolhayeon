@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { loadCsOrderLite, getCsStatus } from "@/lib/cs-actions";
 import {
   REFUND_POLICY_SECTIONS,
@@ -49,6 +50,27 @@ const CS_SYSTEM = `당신은 월하연(月下緣)의 안내자 월화(月華)의
 ${REFUND_POLICY_SECTIONS.map((s) => `${s.title}\n${s.body}`).join("\n")}
 (요지: 결과 미열람 + 결제 ${REFUND_WINDOW_DAYS}일 이내 전액 자동환불 / 중복결제·미제공은 기간 무관 환불 / 결과 열람 후엔 자동환불 제외)`;
 
+/** 이용 현황용 익명 카운트 — 대화 내용·개인정보는 절대 저장하지 않는다.
+ *  주제 분류(정규식)와 인증 여부만 남긴다. 실패해도 응대는 계속된다. */
+function csTopic(text: string): string {
+  if (/환불|취소/.test(text)) return "refund";
+  if (/결제|입금|카드|청구/.test(text)) return "payment";
+  if (/결과|편지|리추얼|열람|생성/.test(text)) return "result";
+  if (/이메일|메일|주소/.test(text)) return "email";
+  if (/미리보기|가격|이용|얼마/.test(text)) return "service";
+  return "other";
+}
+
+async function logCsChat(text: string, authenticated: boolean): Promise<void> {
+  try {
+    await getSupabaseAdmin()
+      .from("cs_chat_events")
+      .insert({ authenticated, topic: csTopic(text) });
+  } catch {
+    /* 테이블이 없거나 실패해도 CS 응대를 막지 않음 */
+  }
+}
+
 function getModel(): string {
   return (
     process.env.CS_ANTHROPIC_MODEL?.trim() ||
@@ -79,6 +101,7 @@ export async function POST(req: Request) {
   }
 
   const lastText = messages[messages.length - 1].content;
+  await logCsChat(lastText, Boolean(body?.orderNumber && (body?.csToken ?? body?.token)));
 
   /* 미인증 자유대화는 AI를 호출하지 않는다.
      FAQ는 로컬 답변, 주문 문제는 라이트 조회 UI로 유도해 비용/남용을 막는다. */
