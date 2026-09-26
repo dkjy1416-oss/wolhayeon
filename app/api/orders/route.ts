@@ -4,7 +4,7 @@
  * 보안 원칙
  *  - service_role key는 이 서버 코드에서만 사용 (RLS 우회).
  *  - 브라우저 body는 화이트리스트 정제 + 재검증 후에만 저장.
- *  - order_number / payment_amount(16,900) / 4가지 상태값은
+ *  - order_number / payment_amount(RITUAL_PRICE_KRW) / 4가지 상태값은
  *    클라이언트 값을 절대 받지 않고 DB 기본값이 결정.
  *  - 개인정보(이름·이메일·사연 등)는 어떤 로그에도 남기지 않음.
  *    로그는 requestId + 오류 code만.

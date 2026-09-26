@@ -698,6 +698,109 @@ export default function ImmersiveApplyExperience({
   );
 }
 
+/* ---------------- 이메일 도메인 오타 감지 (§리마인드 반송 분석 기반) ----------------
+ * 실제 반송 사례: @nver.com, @maver.com, @kako.com 등 전부 도메인 오타.
+ * 결과 이메일이 유일한 전달 수단이므로, 오타로 보이면 제안 칩을 보여준다.
+ * (강제 차단은 하지 않음 — 회사/학교 등 모르는 도메인일 수 있으므로 제안만) */
+const KNOWN_EMAIL_DOMAINS = [
+  "naver.com",
+  "gmail.com",
+  "kakao.com",
+  "daum.net",
+  "hanmail.net",
+  "nate.com",
+  "icloud.com",
+  "outlook.com",
+  "hotmail.com",
+  "yahoo.com",
+];
+
+/** 편집거리 1로는 못 잡는 흔한 오타(전위·2글자 이상) 명시 목록 */
+const EMAIL_DOMAIN_TYPO_MAP: Record<string, string> = {
+  "gmial.com": "gmail.com",
+  "gamil.com": "gmail.com",
+  "gmali.com": "gmail.com",
+  "gmaill.com": "gmail.com",
+  "gmail.co.kr": "gmail.com",
+  "never.com": "naver.com",
+  "navre.com": "naver.com",
+  "naver.co.kr": "naver.com",
+  "naver.ocm": "naver.com",
+  "kakoa.com": "kakao.com",
+  "kakao.co.kr": "kakao.com",
+  "hanmial.net": "hanmail.net",
+  "hanmail.com": "hanmail.net",
+  "hanmail.co.kr": "hanmail.net",
+  "daum.com": "daum.net",
+  "icloud.co.kr": "icloud.com",
+};
+
+/** Damerau-Levenshtein 거리 ≤ 1 (삽입·삭제·치환·인접 전위 1회) */
+function withinOneEdit(a: string, b: string): boolean {
+  if (a === b) return true;
+  const la = a.length;
+  const lb = b.length;
+  if (Math.abs(la - lb) > 1) return false;
+  if (la === lb) {
+    /* 치환 1회 또는 인접 전위 1회 */
+    let firstDiff = -1;
+    for (let i = 0; i < la; i++) {
+      if (a[i] !== b[i]) {
+        if (firstDiff === -1) {
+          firstDiff = i;
+        } else if (
+          firstDiff === i - 1 &&
+          a[i] === b[firstDiff] &&
+          a[firstDiff] === b[i]
+        ) {
+          /* 전위 — 나머지가 전부 같아야 함 */
+          return a.slice(i + 1) === b.slice(i + 1);
+        } else {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  /* 길이 차 1 → 삽입/삭제 1회 */
+  const [s, l] = la < lb ? [a, b] : [b, a];
+  let i = 0;
+  let j = 0;
+  let skipped = false;
+  while (i < s.length && j < l.length) {
+    if (s[i] === l[j]) {
+      i++;
+      j++;
+    } else {
+      if (skipped) return false;
+      skipped = true;
+      j++;
+    }
+  }
+  return true;
+}
+
+/** 오타로 보이면 교정된 전체 이메일을, 아니면 null을 반환 */
+function suggestEmailCorrection(email: string): string | null {
+  const trimmed = email.trim();
+  const at = trimmed.lastIndexOf("@");
+  if (at <= 0 || at === trimmed.length - 1) return null;
+  const local = trimmed.slice(0, at);
+  const domain = trimmed.slice(at + 1).toLowerCase();
+  if (domain.length < 4) return null;
+  if (KNOWN_EMAIL_DOMAINS.includes(domain)) return null;
+
+  const mapped = EMAIL_DOMAIN_TYPO_MAP[domain];
+  if (mapped) return `${local}@${mapped}`;
+
+  for (const known of KNOWN_EMAIL_DOMAINS) {
+    /* 아직 입력 중인 앞부분(naver.co 등)은 오타로 취급하지 않음 */
+    if (known.startsWith(domain)) return null;
+    if (withinOneEdit(domain, known)) return `${local}@${known}`;
+  }
+  return null;
+}
+
 /* ---------------- step별 입력 UI ---------------- */
 function StepInput({
   step,
@@ -745,16 +848,44 @@ function StepInput({
   }
 
   if (step.kind === "email") {
+    const emailValue = String(step.get(app) ?? "");
+    const suggestion = suggestEmailCorrection(emailValue);
     return (
-      <input
-        className={inputCls}
-        type="email"
-        inputMode="email"
-        autoComplete="email"
-        placeholder={step.placeholder}
-        value={String(step.get(app) ?? "")}
-        onChange={(e) => update(e.target.value)}
-      />
+      <div>
+        <input
+          className={inputCls}
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          placeholder={step.placeholder}
+          value={emailValue}
+          onChange={(e) => update(e.target.value)}
+        />
+        {suggestion && (
+          <button
+            type="button"
+            onClick={() => {
+              update(suggestion);
+              trackEvent("email_typo_fix_applied");
+            }}
+            className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-gold/35 bg-ink/70 px-4 py-2.5 text-left text-[0.8rem] text-ivory active:opacity-85"
+          >
+            <span className="shrink-0 text-ivory-dim">혹시</span>
+            <span className="min-w-0 truncate font-medium text-gold">
+              {suggestion}
+            </span>
+            <span className="shrink-0 text-ivory-dim">인가요?</span>
+            <span className="ml-1 shrink-0 rounded-full bg-gold/15 px-2.5 py-0.5 text-[0.72rem] text-gold">
+              적용
+            </span>
+          </button>
+        )}
+        {suggestion && (
+          <p className="mt-2 text-[0.7rem] leading-[1.7] text-ivory-dim/70">
+            결과 편지가 이 주소로 발송돼요. 오타면 결과를 받지 못해요.
+          </p>
+        )}
+      </div>
     );
   }
 

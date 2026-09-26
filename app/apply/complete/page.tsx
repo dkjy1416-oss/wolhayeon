@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
+import {
+  RITUAL_PRICE_KRW,
+  RITUAL_REGULAR_PRICE_KRW,
+} from "@/lib/ritual-types";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
 
@@ -87,7 +90,7 @@ export default async function CompletePage({
 
   /* 이미 결제 완료 → 결제창을 다시 띄우지 않음 */
   const alreadyPaid = row.payment_status === "paid";
-  /* pending인데 금액이 16,900원이 아니면 비정상 주문 → 결제 진행 금지 */
+  /* pending인데 금액이 현재 가격(RITUAL_PRICE_KRW)과 다르면 비정상 주문 → 결제 진행 금지 */
   const amountValid = row.payment_amount === RITUAL_PRICE_KRW;
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
@@ -138,7 +141,13 @@ export default async function CompletePage({
         </p>
       ) : (
         <>
-          <p className="font-display mt-9 text-center text-3xl font-semibold text-gold">
+          <p className="mt-9 text-center text-[0.8rem] text-ivory-dim">
+            <span className="line-through opacity-60">
+              {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+            </span>
+            <span className="ml-2 text-thread">런칭 특가</span>
+          </p>
+          <p className="font-display mt-1.5 text-center text-3xl font-semibold text-gold">
             {RITUAL_PRICE_KRW.toLocaleString()}
             <span className="ml-1 text-lg text-ivory-dim">원</span>
           </p>

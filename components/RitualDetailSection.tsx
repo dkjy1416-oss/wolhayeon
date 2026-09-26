@@ -1,12 +1,16 @@
 import Link from "next/link";
 import RitualAccordion from "./RitualAccordion";
+import {
+  RITUAL_PRICE_KRW,
+  RITUAL_REGULAR_PRICE_KRW,
+} from "@/lib/ritual-types";
 
 export default function RitualDetailSection() {
   return (
     <section id="ritual-detail" className="scroll-mt-14 px-6 py-24 sm:py-32">
       <div className="mx-auto max-w-md">
         <h2 className="font-display text-center text-[1.4rem] font-semibold leading-[1.6] text-ivory sm:text-3xl">
-          16,900원에
+          {RITUAL_PRICE_KRW.toLocaleString()}원에
           <br className="sm:hidden" /> 무엇을 받게 되나요?
         </h2>
         <p className="mt-6 text-center text-[0.92rem] font-light leading-[2] text-ivory-dim">
@@ -38,8 +42,15 @@ export default function RitualDetailSection() {
           <p className="font-display mt-9 text-base font-semibold text-ivory">
             붉은 인연의 실 리추얼
           </p>
-          <p className="font-display mt-3 text-3xl font-semibold text-gold">
-            16,900<span className="ml-1 text-lg text-ivory-dim">원</span>
+          <p className="mt-3 text-[0.82rem] text-ivory-dim">
+            <span className="line-through opacity-60">
+              {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+            </span>
+            <span className="ml-2 text-thread">런칭 특가</span>
+          </p>
+          <p className="font-display mt-1.5 text-3xl font-semibold text-gold">
+            {RITUAL_PRICE_KRW.toLocaleString()}
+            <span className="ml-1 text-lg text-ivory-dim">원</span>
           </p>
           <p className="mt-2 text-xs tracking-wide text-ivory-dim">
             1회 결제 · 정기결제 없음

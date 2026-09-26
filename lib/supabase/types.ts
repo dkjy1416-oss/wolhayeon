@@ -64,7 +64,7 @@ export interface RitualOrderRow extends RitualApplication {
  *   await supabaseAdmin.from("ritual_orders").insert(payload);
  */
 export type RitualOrderInsert = RitualApplication & {
-  payment_amount?: number; // 생략 시 DB 기본값 16900
+  payment_amount?: number; // 생략 시 DB 기본값(현재 12900 — RITUAL_PRICE_KRW와 일치해야 함)
 };
 
 /** ritual_results 테이블의 한 행 */

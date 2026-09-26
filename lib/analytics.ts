@@ -7,7 +7,8 @@ export type FunnelEvent =
   | "apply_start"
   | "apply_complete"
   | "preview_view"
-  | "payment_cta_click";
+  | "payment_cta_click"
+  | "email_typo_fix_applied";
 
 export function trackEvent(
   name: FunnelEvent,

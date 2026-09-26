@@ -8,8 +8,8 @@
  * 서버 검증 6단계
  *  1. orderId(주문번호)에 해당하는 주문이 실제 존재하는가
  *  2. 현재 payment_status가 pending인가 (이미 paid면 재승인 금지)
- *  3. DB payment_amount가 정확히 16,900원인가
- *  4. success URL의 amount가 16,900원인가
+ *  3. DB payment_amount가 정확히 RITUAL_PRICE_KRW(12,900원)인가
+ *  4. success URL의 amount가 RITUAL_PRICE_KRW인가
  *  5. 클라이언트가 보낸 금액이 아닌 DB 금액으로 토스에 승인 요청
  *  6. 같은 paymentKey 재전송/새로고침 → 멱등 처리 (paid면 그대로 성공)
  *
@@ -110,7 +110,7 @@ export async function confirmOrderPayment(params: {
 
     /* 2) 이미 paid → orderId만으로는 절대 통과시키지 않음.
           실제 결제 리다이렉트에만 있는 paymentKey + amount 가
-          DB payment_key / 금액(16,900)과 정확히 일치할 때만 already_paid.
+          DB payment_key / 금액(RITUAL_PRICE_KRW)과 정확히 일치할 때만 already_paid.
           (정상 success URL 새로고침은 일치하므로 계속 이어짐) */
     if (row.payment_status === "paid") {
       const owned = verifyPaidOwnership({
@@ -134,7 +134,7 @@ export async function confirmOrderPayment(params: {
       return { status: "invalid_request" };
     }
 
-    /* 3) DB 금액 = 16,900원 / 4) URL amount = 16,900원.
+    /* 3) DB 금액 = RITUAL_PRICE_KRW / 4) URL amount = RITUAL_PRICE_KRW.
        하나라도 다르면 변조 가능성 → 승인 자체를 하지 않음 */
     if (
       row.payment_amount !== RITUAL_PRICE_KRW ||

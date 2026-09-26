@@ -14,7 +14,10 @@ import {
   getOrCreateSubmissionId,
   loadApplication,
 } from "@/lib/ritual-storage";
-import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
+import {
+  RITUAL_PRICE_KRW,
+  RITUAL_REGULAR_PRICE_KRW,
+} from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { trackEvent } from "@/lib/analytics";
 import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
@@ -461,6 +464,14 @@ export default function PreviewExperience({
               : "여기서 멈추면, 이야기는 이 페이지에서 끝나요."}
             <br />
             다음 장부터는 오직 당신의 사연으로만 쓰여요.
+          </p>
+          <p className="mt-4 text-[0.78rem] text-ivory-dim">
+            <span className="line-through opacity-60">
+              {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+            </span>
+            <span className="ml-2 text-thread">
+              런칭 특가 {RITUAL_PRICE_KRW.toLocaleString()}원
+            </span>
           </p>
         </div>
         <Link

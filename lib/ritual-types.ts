@@ -304,8 +304,14 @@ export function isLikelyMinor(
   return false;
 }
 
-/** 상품 가격(원) — 서버 검증 기준값. 클라이언트 값은 절대 신뢰하지 않음 */
-export const RITUAL_PRICE_KRW = 16900;
+/** 상품 가격(원) — 서버 검증 기준값. 클라이언트 값은 절대 신뢰하지 않음.
+ *  ⚠ 이 값을 바꿀 때는 Supabase도 함께 변경해야 결제 검증이 통과합니다:
+ *    alter table ritual_orders alter column payment_amount set default <새 가격>;
+ *    update ritual_orders set payment_amount = <새 가격> where payment_status = 'pending'; */
+export const RITUAL_PRICE_KRW = 12900;
+
+/** 정가(원) — 런칭 특가 기간 동안 취소선으로 표시하는 원래 가격 */
+export const RITUAL_REGULAR_PRICE_KRW = 16900;
 
 /* ---------- 유틸 ---------- */
 

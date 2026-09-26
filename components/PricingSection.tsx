@@ -1,4 +1,8 @@
 import Link from "next/link";
+import {
+  RITUAL_PRICE_KRW,
+  RITUAL_REGULAR_PRICE_KRW,
+} from "@/lib/ritual-types";
 
 export default function PricingSection() {
   return (
@@ -9,8 +13,14 @@ export default function PricingSection() {
             붉은 인연의 실 리추얼
           </h2>
 
-          <p className="font-display mt-8 text-4xl font-semibold text-gold">
-            16,900
+          <p className="mt-8 text-[0.82rem] text-ivory-dim">
+            <span className="line-through opacity-60">
+              {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+            </span>
+            <span className="ml-2 text-thread">런칭 특가</span>
+          </p>
+          <p className="font-display mt-1.5 text-4xl font-semibold text-gold">
+            {RITUAL_PRICE_KRW.toLocaleString()}
             <span className="ml-1 text-xl text-ivory-dim">원</span>
           </p>
           <p className="mt-3 text-xs tracking-wide text-ivory-dim">
