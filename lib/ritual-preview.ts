@@ -29,7 +29,13 @@ import {
 import { HIGH_RISK_SAFETY_VALUES } from "@/lib/wolhwa-prompt";
 
 export type PreviewOutcome =
-  | { status: "ready"; preview: RitualPreview; applicantName: string }
+  | {
+      status: "ready";
+      preview: RitualPreview;
+      applicantName: string;
+      /** true = AI 개인화(또는 저장된 AI본), false = 즉석 템플릿 폴백 */
+      generated: boolean;
+    }
   | { status: "not_found" }
   | { status: "server_error" };
 
@@ -128,7 +134,7 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
     HIGH_RISK_SAFETY_VALUES.includes(v)
   );
 
-  const memory = clip(order.last_conversation_memory, 28);
+  const memory = clip(order.last_conversation_memory, 40);
   const desired = clip(order.desired_change, 30);
 
   const line1 = sentence(
@@ -137,7 +143,7 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
 
   const line2 = memory
     ? sentence(
-        `${partner}님과 ${contact} 마지막 대화에서 “${memory}”가 마음에 남아 있다는 점을 함께 봐야 해요.`
+        `${partner}님과 ${contact}, “${memory}”가 아직 마음에 남아 있다는 점을 함께 봐야 해요.`
       )
     : sentence(
         `${partner}님과 ${contact} 마지막 대화가 ${lastTalk}였다는 점을 보면, 지금은 연락의 타이밍보다 반복된 흐름을 먼저 보는 게 중요해 보여요.`
@@ -184,7 +190,7 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
   const repeatedSummary = sentence(
     desired
       ? `${name}님이 “${desired}”라고 바란 부분이 실제로 달라지려면 무엇부터 바뀌어야 하는지 짚습니다.`
-      : `${contact} 상태와 마지막 대화를 함께 놓고, 지금 반복되고 있는 접근과 거리두기 흐름을 짚습니다.`,
+      : `지금의 연락 상태와 마지막 대화를 함께 놓고, 지금 반복되고 있는 접근과 거리두기 흐름을 짚습니다.`,
     150
   );
 
@@ -242,8 +248,11 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
 
 /* ---------- AI 미리보기 (실패 시 null → 즉석 템플릿 폴백) ---------- */
 
-const PREVIEW_AI_TIMEOUT_MS = 25_000; // preview route maxDuration 30초 내 여유
-const PREVIEW_AI_MAX_TOKENS = 1600;
+/* 실측: 성공 시 보통 15~28초, 사연이 길면 25초를 넘기기도 한다 (9/26 실측
+   1차 시도 25초 초과 → 템플릿 폴백 노출). 미리보기는 결제 직전 핵심 화면이라
+   템플릿 노출을 최소화해야 하므로 여유를 크게 둔다 (route maxDuration 60초). */
+const PREVIEW_AI_TIMEOUT_MS = 40_000;
+const PREVIEW_AI_MAX_TOKENS = 2000;
 
 function getPreviewModelId(): string {
   /* 미리보기는 대기 UX가 있는 구간이지만 짧을수록 좋다 — 빠른 Haiku 기본 */
@@ -339,6 +348,7 @@ export async function getOrCreatePreview(
           status: "ready",
           preview: cached.data,
           applicantName: order.applicant_name,
+          generated: true,
         };
       }
     }
@@ -368,6 +378,7 @@ export async function getOrCreatePreview(
       status: "ready",
       preview,
       applicantName: order.applicant_name,
+      generated: ai !== null,
     };
   } catch (e) {
     console.error(

@@ -114,8 +114,10 @@ export default function PreviewExperience({
   const [preview, setPreview] = useState<Preview | null>(null);
   const [name, setName] = useState<string>("");
   const [showLoading, setShowLoading] = useState(false);
+  const [slowNote, setSlowNote] = useState(false); // 15초 이상 걸릴 때 안심 문구
   const tries = useRef(0); // pending 폴링 횟수
   const genFails = useRef(0); // 생성 실패(failed) 자동 재시도 횟수
+  const fallbackRetries = useRef(0); // 템플릿 폴백 수신 시 AI 재시도 횟수
   const started = useRef(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -151,6 +153,15 @@ export default function PreviewExperience({
       });
       const json = await res.json().catch(() => null);
       if (json?.status === "ready" && json.preview) {
+        /* 템플릿 폴백(generated === false)이면 화면에 바로 보여주지 않고
+           읽는 화면을 유지한 채 AI 생성을 한 번 더 기다린다.
+           - 폴백은 서버에 저장되지 않으므로 재요청 시 AI를 다시 시도한다.
+           - 한 번 더 실패하면 그때는 폴백이라도 보여준다 (화면이 비면 안 됨). */
+        if (json.generated === false && fallbackRetries.current < 1) {
+          fallbackRetries.current += 1;
+          scheduleRetry(1500);
+          return;
+        }
         if (typeof json.applicantName === "string" && json.applicantName.trim()) {
           setName(json.applicantName.trim());
         }
@@ -245,9 +256,12 @@ export default function PreviewExperience({
     /* 정상적인 빠른 응답에서는 로딩 문구 자체가 보이지 않게 하고,
        350ms 이상 걸릴 때만 영상 로딩 화면을 표시한다. */
     const loadingTimer = setTimeout(() => setShowLoading(true), 350);
+    /* AI 생성이 길어지는 경우(사연이 길수록) 15초부터 안심 문구 추가 */
+    const slowTimer = setTimeout(() => setSlowNote(true), 15_000);
 
     return () => {
       clearTimeout(loadingTimer);
+      clearTimeout(slowTimer);
       if (retryTimer.current) {
         clearTimeout(retryTimer.current);
         retryTimer.current = null;
@@ -312,6 +326,13 @@ export default function PreviewExperience({
             <br />
             무료 개인화 미리보기가 바로 이어집니다.
           </p>
+          {slowNote && (
+            <p className="fade-in mt-4 text-[0.78rem] font-light leading-[1.9] text-gold/80">
+              사연이 깊을수록,
+              <br />
+              월화가 조금 더 천천히 읽어요.
+            </p>
+          )}
         </FullBleedReading>
       </div>
     );

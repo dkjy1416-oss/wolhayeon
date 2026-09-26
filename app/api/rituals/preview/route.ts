@@ -10,7 +10,8 @@ import { verifyPreviewToken } from "@/lib/preview-auth";
 import { verifyContinueToken } from "@/lib/cs-auth";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+/* AI 미리보기 타임아웃(40초) + 응답 여유. Vercel 함수 실행 한도. */
+export const maxDuration = 60;
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 const UUID_RE =
@@ -64,6 +65,9 @@ export async function POST(request: Request) {
         status: "ready",
         preview: result.preview,
         applicantName: result.applicantName,
+        /* false = 템플릿 폴백 — 클라이언트가 읽는 화면을 유지하고
+           한 번 더 AI 생성을 시도할 수 있게 알려준다 */
+        generated: result.generated,
       });
     case "not_found":
       return NextResponse.json(
