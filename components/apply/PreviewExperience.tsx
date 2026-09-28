@@ -19,6 +19,7 @@ import {
   RITUAL_REGULAR_PRICE_KRW,
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
+import { PAYMENTS_OPEN } from "@/lib/payment-availability";
 import { trackEvent } from "@/lib/analytics";
 import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
 
@@ -495,23 +496,49 @@ export default function PreviewExperience({
             </span>
           </p>
         </div>
-        <Link
-          href={payHref}
-          onClick={() => trackEvent("payment_cta_click")}
-          className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
-        >
-          {name
-            ? `${name}님의 다음 장 이어서 읽기 · ${RITUAL_PRICE_KRW.toLocaleString()}원`
-            : `${CTA_BUTTON} · ${RITUAL_PRICE_KRW.toLocaleString()}원`}
-        </Link>
-        <div className="mx-auto mt-4 flex max-w-md flex-col gap-1">
-          {CTA_HELPERS.map((h, i) => (
-            <p key={i} className="text-[0.72rem] text-ivory-dim/70">
-              {h}
+        {PAYMENTS_OPEN ? (
+          <>
+            <Link
+              href={payHref}
+              onClick={() => trackEvent("payment_cta_click")}
+              className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
+            >
+              {name
+                ? `${name}님의 다음 장 이어서 읽기 · ${RITUAL_PRICE_KRW.toLocaleString()}원`
+                : `${CTA_BUTTON} · ${RITUAL_PRICE_KRW.toLocaleString()}원`}
+            </Link>
+            <div className="mx-auto mt-4 flex max-w-md flex-col gap-1">
+              {CTA_HELPERS.map((h, i) => (
+                <p key={i} className="text-[0.72rem] text-ivory-dim/70">
+                  {h}
+                </p>
+              ))}
+              <p className="text-[0.72rem] text-ivory-dim">{CONTENT_VIEW_LINE}</p>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* 결제 오픈 준비 중 — 카드사 심사 완료까지 결제를 닫아 둔 상태 */}
+            <div className="mx-auto mt-7 max-w-md rounded-2xl border border-gold-dim/35 bg-ink-soft/70 px-6 py-6 text-center">
+              <p className="text-[0.66rem] tracking-[0.3em] text-thread/90">
+                결제 오픈 준비 중
+              </p>
+              <p className="mt-3 text-[0.92rem] leading-[2] text-ivory">
+                {name ? `${name}님의 다음 장은 준비되어 있어요.` : "다음 장은 준비되어 있어요."}
+                <br />
+                카드·간편결제 심사가 끝나는 대로 열립니다.
+              </p>
+              <p className="mt-3 text-[0.8rem] font-light leading-[1.95] text-ivory-dim">
+                열리는 날, 입력하신 이메일로 가장 먼저 알려드릴게요.
+                <br />
+                런칭 특가 {RITUAL_PRICE_KRW.toLocaleString()}원은 그대로 지켜둡니다.
+              </p>
+            </div>
+            <p className="mx-auto mt-4 max-w-md text-[0.72rem] text-ivory-dim/70">
+              들려주신 이야기와 이 미리보기는 안전하게 보관돼요.
             </p>
-          ))}
-          <p className="text-[0.72rem] text-ivory-dim">{CONTENT_VIEW_LINE}</p>
-        </div>
+          </>
+        )}
         {/* 테스트 결제 모드 안내 (라이브 키 전환 시 컴포넌트 내부에서 끔) */}
         <DevPaymentNotice />
       </section>

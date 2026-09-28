@@ -5,6 +5,7 @@ import {
   RITUAL_PRICE_KRW,
   RITUAL_REGULAR_PRICE_KRW,
 } from "@/lib/ritual-types";
+import { PAYMENTS_OPEN } from "@/lib/payment-availability";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
 
@@ -125,6 +126,48 @@ export default async function CompletePage({
           <Link
             href="/"
             className="mt-9 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold-dim/40 text-[0.95rem] text-ivory transition-colors hover:border-gold/60"
+          >
+            홈으로 돌아가기
+          </Link>
+        </>
+      ) : !PAYMENTS_OPEN ? (
+        <>
+          <p className="mt-9 text-center text-[0.8rem] text-ivory-dim">
+            <span className="line-through opacity-60">
+              {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+            </span>
+            <span className="ml-2 text-thread">런칭 특가</span>
+          </p>
+          <p className="font-display mt-1.5 text-center text-3xl font-semibold text-gold">
+            {RITUAL_PRICE_KRW.toLocaleString()}
+            <span className="ml-1 text-lg text-ivory-dim">원</span>
+          </p>
+          <div className="mt-8 rounded-2xl border border-gold-dim/30 bg-ink-soft/60 px-6 py-7 text-center">
+            <p className="text-[0.68rem] tracking-[0.3em] text-thread/90">
+              결제 오픈 준비 중
+            </p>
+            <p className="mt-4 text-[0.92rem] leading-[2] text-ivory">
+              카드·간편결제 심사가
+              <br />
+              마무리되는 대로 결제가 열려요.
+            </p>
+            <p className="mt-3 text-[0.82rem] font-light leading-[2] text-ivory-dim">
+              열리는 날, 입력하신 이메일로
+              <br />
+              가장 먼저 알려드릴게요.
+              <br />
+              런칭 특가 가격은 그대로 지켜둡니다.
+            </p>
+          </div>
+          <p className="mt-5 text-center text-[0.78rem] leading-[1.9] text-ivory-dim/70">
+            들려주신 이야기와 미리보기는 안전하게 보관되어 있어요.
+          </p>
+          <p className="mt-4 text-center text-[0.68rem] text-ivory-dim/45">
+            주문번호 {orderNumber}
+          </p>
+          <Link
+            href="/"
+            className="mt-8 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold-dim/40 text-[0.95rem] text-ivory transition-colors hover:border-gold/60"
           >
             홈으로 돌아가기
           </Link>

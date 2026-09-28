@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { PAYMENTS_OPEN } from "@/lib/payment-availability";
 import { loadCsOrderLite, getCsStatus } from "@/lib/cs-actions";
 import {
   REFUND_POLICY_SECTIONS,
@@ -45,6 +46,14 @@ const CS_SYSTEM = `당신은 월하연(月下緣)의 안내자 월화(月華)의
   전체 결과(월화의 편지, 관계 흐름, 개인 리추얼, 24시간/7일/21일 가이드).
 - 결과는 결제 후 보통 수 분 내 자동 생성되어 화면과 이메일로 전달됩니다.
 - 엔터테인먼트·자기성찰 콘텐츠이며 재회를 보장하지 않습니다.
+${
+  PAYMENTS_OPEN
+    ? ""
+    : `- [중요·현재 상태] 지금은 결제가 잠시 "오픈 준비 중"입니다. 카드·간편결제
+  심사가 마무리되는 대로 열리며, 열리는 날 신청 시 입력한 이메일로 안내됩니다.
+  결제 관련 질문에는 이 사실을 먼저 안내하세요. 신청·무료 미리보기는 지금도
+  정상 이용 가능하고, 작성한 이야기와 미리보기는 안전하게 보관됩니다.`
+}
 
 [환불정책 요약 — /refund 공개 정책과 동일]
 ${REFUND_POLICY_SECTIONS.map((s) => `${s.title}\n${s.body}`).join("\n")}
@@ -106,6 +115,12 @@ export async function POST(req: Request) {
   /* 미인증 자유대화는 AI를 호출하지 않는다.
      FAQ는 로컬 답변, 주문 문제는 라이트 조회 UI로 유도해 비용/남용을 막는다. */
   if (!body?.orderNumber || !(body?.csToken ?? body?.token)) {
+    if (!PAYMENTS_OPEN && /결제|카드|입금|이체|페이/.test(lastText)) {
+      return NextResponse.json({
+        reply:
+          "지금은 결제가 잠시 오픈 준비 중이에요. 카드·간편결제 심사가 마무리되는 대로 열리고, 열리는 날 신청 시 입력하신 이메일로 가장 먼저 알려드려요. 들려주신 이야기와 미리보기는 안전하게 보관되어 있어요.",
+      });
+    }
     if (/환불|취소/.test(lastText)) {
       return NextResponse.json({
         reply:
