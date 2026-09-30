@@ -317,7 +317,7 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
 /* 실측: 성공 시 보통 15~28초, 사연이 길면 25초를 넘기기도 한다 (9/26 실측
    1차 시도 25초 초과 → 템플릿 폴백 노출). 미리보기는 결제 직전 핵심 화면이라
    템플릿 노출을 최소화해야 하므로 여유를 크게 둔다 (route maxDuration 60초). */
-const PREVIEW_AI_TIMEOUT_MS = 40_000;
+const PREVIEW_AI_TIMEOUT_MS = 50_000;
 const PREVIEW_AI_MAX_TOKENS = 3600;
 
 function getPreviewModelId(): string {

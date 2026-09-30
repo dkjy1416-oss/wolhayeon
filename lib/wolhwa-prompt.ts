@@ -40,7 +40,7 @@ const BLOCKED_CONTACT_VALUES = ["i_blocked", "blocked_by_partner", "both_blocked
 
 /** main_wish → 리추얼 방향 */
 const RITUAL_DIRECTION: Record<string, string> = {
-  reunion: "붙잡지 않고 바라보기",
+  reunion: "다시 이어질 준비 — 충동 대신 순서대로 움직이도록 마음을 정돈하기",
   natural_contact: "기다림과 충동 구분하기",
   slow_recovery: "감정과 대화 준비하기",
   understand_my_heart: "기대와 현실 구분하기",
