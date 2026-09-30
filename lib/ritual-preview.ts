@@ -322,8 +322,8 @@ const PREVIEW_AI_TIMEOUT_MS = 50_000;
 const PREVIEW_AI_MAX_TOKENS = 3600;
 
 function getPreviewModelId(): string {
-  /* 미리보기는 대기 UX가 있는 구간이지만 짧을수록 좋다 — 빠른 Haiku 기본 */
-  return process.env.PREVIEW_ANTHROPIC_MODEL?.trim() || "claude-haiku-4-5";
+  /* 무료 분석은 결제 전환의 핵심 — 문장 정확도를 위해 Sonnet 기본 (운영자 선택 9/30) */
+  return process.env.PREVIEW_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-6";
 }
 
 async function buildAiPreview(
