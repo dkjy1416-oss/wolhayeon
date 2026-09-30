@@ -289,7 +289,11 @@ export default async function CompletePage({
             1회 결제 · 정기결제 없음
           </p>
           <p className="mt-1.5 text-center text-xs text-ivory-dim">
-            {CONTENT_VIEW_LINE}
+            {product === "book"
+              ? "PDF 책 다운로드 가능 기간: 결제일로부터 60일"
+              : product === "bundle"
+              ? `${CONTENT_VIEW_LINE} · PDF 책 다운로드는 60일`
+              : CONTENT_VIEW_LINE}
           </p>
 
           <div className="mt-7">
