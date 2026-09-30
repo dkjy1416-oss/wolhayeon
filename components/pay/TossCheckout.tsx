@@ -30,6 +30,7 @@ export default function TossCheckout(props: {
   clientKey: string;
   orderNumber: string;
   amount: number;
+  orderName?: string;
 }) {
   return props.clientKey.includes("_gck_") ? (
     <TossWidgetCheckout {...props} />
@@ -65,10 +66,12 @@ function TossWindowCheckout({
   clientKey,
   orderNumber,
   amount,
+  orderName = ORDER_NAME,
 }: {
   clientKey: string;
   orderNumber: string;
   amount: number;
+  orderName?: string;
 }) {
   const paymentRef = useRef<ReturnType<
     Awaited<ReturnType<typeof loadTossPayments>>["payment"]
@@ -109,7 +112,7 @@ function TossWindowCheckout({
     const common = {
       amount: { currency: "KRW" as const, value: amount },
       orderId: orderNumber,
-      orderName: ORDER_NAME,
+      orderName,
       successUrl: `${window.location.origin}/payment/success`,
       failUrl: `${window.location.origin}/payment/fail`,
     };
@@ -226,10 +229,12 @@ function TossWidgetCheckout({
   clientKey,
   orderNumber,
   amount,
+  orderName = ORDER_NAME,
 }: {
   clientKey: string;
   orderNumber: string;
   amount: number;
+  orderName?: string;
 }) {
   const widgetsRef = useRef<TossPaymentsWidgets | null>(null);
   const [ready, setReady] = useState(false);
@@ -282,7 +287,7 @@ function TossWidgetCheckout({
     try {
       await widgets.requestPayment({
         orderId: orderNumber,
-        orderName: ORDER_NAME,
+        orderName,
         successUrl: `${window.location.origin}/payment/success`,
         failUrl: `${window.location.origin}/payment/fail`,
       });
