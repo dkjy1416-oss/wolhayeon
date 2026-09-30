@@ -15,6 +15,7 @@ const OPERATOR_EMAILS = new Set(["dkjy1416@naver.com", "tosstest@gmail.com"]);
 const DAYS = 14;
 
 interface Row {
+  order_number: string;
   created_at: string;
   paid_at: string | null;
   preview_generated_at: string | null;
@@ -49,7 +50,7 @@ export default async function AdminStatsPage() {
     const res = await supabase
       .from("ritual_orders")
       .select(
-        "created_at, paid_at, preview_generated_at, email, applicant_name, payment_amount, remind_sent_at"
+        "order_number, created_at, paid_at, preview_generated_at, email, applicant_name, payment_amount, remind_sent_at"
       )
       .gt("created_at", since)
       .order("created_at", { ascending: false })
@@ -59,7 +60,7 @@ export default async function AdminStatsPage() {
       const res2 = await supabase
         .from("ritual_orders")
         .select(
-          "created_at, paid_at, preview_generated_at, email, applicant_name, payment_amount"
+          "order_number, created_at, paid_at, preview_generated_at, email, applicant_name, payment_amount"
         )
         .gt("created_at", since)
         .order("created_at", { ascending: false })
@@ -202,6 +203,89 @@ export default async function AdminStatsPage() {
     if (!incRes.error) csIncidents = (incRes.data ?? []).length;
   }
 
+  /* ---- 결제 퍼널 (payment_events — 테이블 없으면 섹션만 생략) ---- */
+  const FUNNEL_STEPS: [string, string][] = [
+    ["preview_cta_click", "미리보기 결제 버튼 클릭"],
+    ["pay_page_view", "결제 페이지 진입"],
+    ["widget_ready", "결제수단 표시됨"],
+    ["pay_request", "'결제하기' 클릭 (결제창 호출)"],
+    ["pay_success", "결제 완료"],
+  ];
+  const FAIL_EVENTS = new Set([
+    "widget_error",
+    "pay_request_error",
+    "pay_fail",
+    "confirm_failed",
+    "amount_mismatch",
+  ]);
+  const FAIL_LABELS: Record<string, string> = {
+    widget_error: "결제수단 로드 실패",
+    pay_request_error: "결제창 중단",
+    pay_fail: "결제 실패",
+    confirm_failed: "승인 실패",
+    amount_mismatch: "금액 불일치",
+  };
+  let funnel: {
+    steps: { label: string; orders: number }[];
+    closedViews: number;
+    fails: { label: string; code: string; orders: number }[];
+  } | null = null;
+  {
+    const operatorOrders = new Set(
+      rows
+        .filter((r) => OPERATOR_EMAILS.has((r.email ?? "").toLowerCase()))
+        .map((r) => r.order_number)
+    );
+    const ev = await supabase
+      .from("payment_events")
+      .select("order_number, event, code")
+      .gt("created_at", since)
+      .limit(10000);
+    if (!ev.error) {
+      const list = (
+        (ev.data ?? []) as {
+          order_number: string;
+          event: string;
+          code: string | null;
+        }[]
+      ).filter((e) => !operatorOrders.has(e.order_number));
+      const uniq = (pred: (e: (typeof list)[number]) => boolean) =>
+        new Set(list.filter(pred).map((e) => e.order_number)).size;
+      const failMap = new Map<string, Set<string>>();
+      for (const e of list) {
+        if (!FAIL_EVENTS.has(e.event)) continue;
+        const key = `${e.event}|${e.code ?? "-"}`;
+        const set = failMap.get(key) ?? new Set<string>();
+        set.add(e.order_number);
+        failMap.set(key, set);
+      }
+      funnel = {
+        steps: FUNNEL_STEPS.map(([key, label]) => ({
+          label,
+          orders: uniq((e) =>
+            key === "pay_page_view"
+              ? e.event === key && e.code !== "closed"
+              : e.event === key
+          ),
+        })),
+        closedViews: uniq(
+          (e) => e.event === "pay_page_view" && e.code === "closed"
+        ),
+        fails: [...failMap.entries()]
+          .map(([k, set]) => {
+            const [event, code] = k.split("|");
+            return {
+              label: FAIL_LABELS[event] ?? event,
+              code,
+              orders: set.size,
+            };
+          })
+          .sort((a, b) => b.orders - a.orders)
+          .slice(0, 8),
+      };
+    }
+  }
+
   /* ---- 최근 결제 ---- */
   const recentPaid = real
     .filter((r) => r.paid_at)
@@ -305,6 +389,65 @@ export default async function AdminStatsPage() {
         <span>18시</span>
         <span>23시</span>
       </div>
+
+      {/* 결제 퍼널 */}
+      <h2 className="font-display mt-10 text-[1rem] font-semibold">
+        결제 퍼널 (최근 {DAYS}일 · 주문 기준)
+      </h2>
+      {funnel ? (
+        <div className="mt-3 rounded-xl border border-gold-dim/25 bg-ink-soft/50 px-5 py-4 text-[0.85rem] leading-[2]">
+          {funnel.steps.map((s, i, arr) => {
+            const prev = i > 0 ? arr[i - 1].orders : 0;
+            const rate =
+              i > 0 && prev > 0
+                ? ` (${Math.round((s.orders / prev) * 100)}%)`
+                : "";
+            return (
+              <div key={s.label} className="flex justify-between gap-3">
+                <span className="text-ivory-dim">
+                  {i + 1}. {s.label}
+                </span>
+                <span className="tabular-nums">
+                  <b
+                    className={
+                      i === arr.length - 1 && s.orders ? "text-gold" : ""
+                    }
+                  >
+                    {s.orders}
+                  </b>
+                  <span className="text-ivory-dim/70">{rate}</span>
+                </span>
+              </div>
+            );
+          })}
+          {funnel.closedViews > 0 && (
+            <p className="mt-2 text-[0.78rem] text-ivory-dim">
+              결제 닫힘 기간 중 결제 페이지 방문(대기 수요):{" "}
+              <b className="text-ivory">{funnel.closedViews}</b>
+            </p>
+          )}
+          <p className="mt-3 text-[0.78rem] text-ivory-dim">실패·중단 사유</p>
+          {funnel.fails.length === 0 ? (
+            <p className="text-[0.78rem] text-ivory-dim/70">기록 없음</p>
+          ) : (
+            funnel.fails.map((f) => (
+              <div
+                key={`${f.label}-${f.code}`}
+                className="flex justify-between gap-3 text-[0.8rem]"
+              >
+                <span>
+                  {f.label} <code className="text-thread">{f.code}</code>
+                </span>
+                <b className="tabular-nums text-thread">{f.orders}</b>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+        <p className="mt-3 text-[0.82rem] text-ivory-dim">
+          결제 퍼널 집계는 payment_events 테이블 생성 후 시작됩니다.
+        </p>
+      )}
 
       {/* CS 이용 */}
       <h2 className="font-display mt-10 text-[1rem] font-semibold">

@@ -24,6 +24,7 @@ import { confirmTossPayment } from "@/lib/toss";
 import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
 import { verifyPaidOwnership } from "@/lib/payment-ownership";
 import { track } from "@vercel/analytics/server";
+import { logPayEventServer } from "@/lib/pay-events-server";
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
@@ -142,6 +143,7 @@ export async function confirmOrderPayment(params: {
       amountNumber !== row.payment_amount
     ) {
       console.error(`[pay:${requestId}] amount_mismatch`);
+      await logPayEventServer(orderNumber, "amount_mismatch");
       return { status: "amount_mismatch" };
     }
 
@@ -173,6 +175,7 @@ export async function confirmOrderPayment(params: {
         return { status: "already_paid", orderNumber };
       }
       console.error(`[pay:${requestId}] confirm_failed code=${confirm.code}`);
+      await logPayEventServer(orderNumber, "confirm_failed", confirm.code);
       return {
         status: "confirm_failed",
         message:
@@ -204,6 +207,7 @@ export async function confirmOrderPayment(params: {
       amount: row.payment_amount,
       method: confirm.method ?? null,
     });
+    await logPayEventServer(orderNumber, "pay_success", confirm.method ?? null);
 
     try {
       await track("payment_success");

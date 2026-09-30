@@ -6,6 +6,7 @@ import {
   RITUAL_REGULAR_PRICE_KRW,
 } from "@/lib/ritual-types";
 import { PAYMENTS_OPEN } from "@/lib/payment-availability";
+import PayEventPing from "@/components/pay/PayEventPing";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
 
@@ -37,9 +38,11 @@ function Guard({
 export default async function CompletePage({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string }>;
+  searchParams: Promise<{ order?: string; paytest?: string }>;
 }) {
-  const { order } = await searchParams;
+  const { order, paytest } = await searchParams;
+  /* 운영자 실결제 테스트용: 결제가 닫혀 있어도 ?paytest=1 이면 결제창 표시 */
+  const paymentsOpen = PAYMENTS_OPEN || paytest === "1";
   const orderNumber =
     typeof order === "string" && ORDER_NUMBER_RE.test(order) ? order : null;
 
@@ -98,6 +101,13 @@ export default async function CompletePage({
 
   return (
     <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col px-6 pb-16 pt-14">
+      {!alreadyPaid && (
+        <PayEventPing
+          orderNumber={orderNumber}
+          event="pay_page_view"
+          code={paymentsOpen ? "open" : "closed"}
+        />
+      )}
       <p className="text-center text-xs tracking-[0.35em] text-gold/90">
         月下緣
       </p>
@@ -130,7 +140,7 @@ export default async function CompletePage({
             홈으로 돌아가기
           </Link>
         </>
-      ) : !PAYMENTS_OPEN ? (
+      ) : !paymentsOpen ? (
         <>
           <p className="mt-9 text-center text-[0.8rem] text-ivory-dim">
             <span className="line-through opacity-60">

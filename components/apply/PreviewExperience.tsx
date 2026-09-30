@@ -20,6 +20,7 @@ import {
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN } from "@/lib/payment-availability";
+import { logPayEvent } from "@/lib/pay-events";
 import { trackEvent } from "@/lib/analytics";
 import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
 
@@ -500,7 +501,10 @@ export default function PreviewExperience({
           <>
             <Link
               href={payHref}
-              onClick={() => trackEvent("payment_cta_click")}
+              onClick={() => {
+                trackEvent("payment_cta_click");
+                logPayEvent(orderNumber, "preview_cta_click");
+              }}
               className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
             >
               {name

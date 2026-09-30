@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { logPayEventServer } from "@/lib/pay-events-server";
+
+export const dynamic = "force-dynamic";
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
@@ -21,6 +24,15 @@ export default async function PaymentFailPage({
     typeof orderId === "string" && ORDER_NUMBER_RE.test(orderId)
       ? orderId
       : null;
+
+  /* 실패 사유 코드 기록 — 카드사 거절·심사 미완료 등을 바로 파악하기 위함 */
+  if (orderNumber) {
+    await logPayEventServer(
+      orderNumber,
+      "pay_fail",
+      typeof code === "string" ? code : null
+    );
+  }
 
   const friendly =
     (typeof code === "string" && FRIENDLY[code]) ||
