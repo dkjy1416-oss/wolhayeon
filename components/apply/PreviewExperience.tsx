@@ -25,7 +25,9 @@ import {
   isPromoActive,
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
-import { PAYMENTS_OPEN } from "@/lib/payment-availability";
+import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
+import ProductPicker from "@/components/pay/ProductPicker";
+import { BUNDLE_PRICE_KRW } from "@/lib/ritual-types";
 import { logPayEvent } from "@/lib/pay-events";
 import { trackEvent } from "@/lib/analytics";
 import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
@@ -589,15 +591,25 @@ export default function PreviewExperience({
         </div>
         {PAYMENTS_OPEN ? (
           <>
+            {BOOK_SALES_OPEN && (
+              <div className="mx-auto mt-7 max-w-md text-left">
+                <p className="mb-3 text-center text-[0.72rem] tracking-[0.25em] text-gold/80">
+                  받아볼 구성을 골라주세요
+                </p>
+                <ProductPicker orderNumber={orderNumber} selected="bundle" messagePrice={price} />
+              </div>
+            )}
             <Link
-              href={payHref}
+              href={BOOK_SALES_OPEN ? `${payHref}&product=bundle` : payHref}
               onClick={() => {
                 trackEvent("payment_cta_click");
                 logPayEvent(orderNumber, "preview_cta_click");
               }}
               className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
             >
-              {name
+              {BOOK_SALES_OPEN
+                ? `패키지로 이어서 받기 · ${BUNDLE_PRICE_KRW.toLocaleString()}원`
+                : name
                 ? `${name}님의 다음 장 이어서 읽기 · ${priceText}`
                 : `${CTA_BUTTON} · ${priceText}`}
             </Link>
