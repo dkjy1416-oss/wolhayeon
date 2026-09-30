@@ -102,6 +102,12 @@ export default function ProductPicker({
           </Link>
         );
       })}
+      <Link
+        href={`/book?order=${encodeURIComponent(orderNumber)}`}
+        className="mt-1 text-center text-[0.74rem] text-gold/80 underline underline-offset-4"
+      >
+        책 차례와 실제 페이지 미리 보기
+      </Link>
     </div>
   );
 }
