@@ -2,6 +2,7 @@ import Link from "next/link";
 import { confirmOrderPayment } from "@/lib/payment-confirm";
 import { createProcessToken } from "@/lib/customer-process-auth";
 import AutoResultProcessing from "@/components/payment/AutoResultProcessing";
+import BookProcessing from "@/components/payment/BookProcessing";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PreviewCoreSchema } from "@/lib/ritual-preview-schema";
 import { getWaitingVideos } from "@/lib/home-media";
@@ -19,15 +20,17 @@ async function SuccessView({ orderNumber }: { orderNumber: string }) {
      - preview가 없거나 구조가 다른 기존 주문은 introLines=null */
   let applicantName: string | null = null;
   let introLines: string[] | null = null;
+  let product: string | null = null;
   try {
     const supabase = getSupabaseAdmin();
     const row = await supabase
       .from("ritual_orders")
-      .select("applicant_name, preview_content")
+      .select("applicant_name, preview_content, product")
       .eq("order_number", orderNumber)
       .maybeSingle();
     if (row.data) {
       applicantName = row.data.applicant_name ?? null;
+      product = (row.data as { product?: string | null }).product ?? null;
       const pv = PreviewCoreSchema.safeParse(row.data.preview_content);
       if (pv.success && pv.data.intro_lines.length === 3) {
         introLines = pv.data.intro_lines;
@@ -66,7 +69,26 @@ async function SuccessView({ orderNumber }: { orderNumber: string }) {
     );
   }
 
+  if (product === "book") {
+    return (
+      <BookProcessing
+        orderNumber={orderNumber}
+        processToken={processToken}
+        applicantName={applicantName}
+      />
+    );
+  }
+
   return (
+    <>
+    {product === "bundle" && (
+      <BookProcessing
+        orderNumber={orderNumber}
+        processToken={processToken}
+        applicantName={applicantName}
+        silent
+      />
+    )}
     <AutoResultProcessing
       orderNumber={orderNumber}
       processToken={processToken}
@@ -74,6 +96,7 @@ async function SuccessView({ orderNumber }: { orderNumber: string }) {
       introLines={introLines}
       waitingVideos={getWaitingVideos()}
     />
+    </>
   );
 }
 
