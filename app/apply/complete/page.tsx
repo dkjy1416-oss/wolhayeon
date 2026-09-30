@@ -6,13 +6,17 @@ import {
   RITUAL_REGULAR_PRICE_KRW,
   APOLOGY_PRICE_KRW,
   isAllowedPrice,
-  resolveOrderPrice,
   priceBadge,
   listPriceKRW,
   PROMO_DEADLINE_TEXT,
   isPromoActive,
+  isProduct,
+  productPrice,
+  PRODUCTS,
+  type Product,
 } from "@/lib/ritual-types";
-import { PAYMENTS_OPEN } from "@/lib/payment-availability";
+import ProductPicker from "@/components/pay/ProductPicker";
+import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import PayEventPing from "@/components/pay/PayEventPing";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
@@ -45,11 +49,13 @@ function Guard({
 export default async function CompletePage({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string; paytest?: string }>;
+  searchParams: Promise<{ order?: string; paytest?: string; product?: string }>;
 }) {
-  const { order, paytest } = await searchParams;
+  const { order, paytest, product: productParam } = await searchParams;
   /* 운영자 실결제 테스트용: 결제가 닫혀 있어도 ?paytest=1 이면 결제창 표시 */
   const paymentsOpen = PAYMENTS_OPEN || paytest === "1";
+  /* 책·패키지 판매: 오픈 전에는 운영자 테스트(?paytest=1)에서만 */
+  const bookSales = BOOK_SALES_OPEN || paytest === "1";
   const orderNumber =
     typeof order === "string" && ORDER_NUMBER_RE.test(order) ? order : null;
 
@@ -65,27 +71,41 @@ export default async function CompletePage({
 
   /* 결제창을 띄우기 전, 서버에서 주문 실존 여부·상태·금액을 확인.
      (query parameter의 order 값만 신뢰하지 않음, 개인정보 컬럼 미조회) */
-  let row: { payment_amount: number; payment_status: string } | null = null;
+  let row: {
+    payment_amount: number;
+    payment_status: string;
+    product: string | null;
+    message_amount: number | null;
+  } | null = null;
   let lookupFailed = false;
   try {
     const supabase = getSupabaseAdmin();
     const res = await supabase
       .from("ritual_orders")
-      .select("payment_amount, payment_status")
+      .select("payment_amount, payment_status, product, message_amount")
       .eq("order_number", orderNumber)
       .single();
     if (!res.error && res.data) {
       row = res.data;
-      /* 특가·사과 쿠폰 마감(10/4) 이후엔 결제 대기 주문을 정가로 맞춤 */
+      /* 상품 선택 반영 + 특가·사과 쿠폰 마감(10/4) 이후엔 정가로 맞춤.
+         금액은 항상 서버가 상품 규칙으로 정한다. */
       if (row && row.payment_status === "pending" && isAllowedPrice(row.payment_amount)) {
-        const want = resolveOrderPrice(row.payment_amount);
-        if (want !== row.payment_amount) {
+        const current: Product = isProduct(row.product) ? row.product : "message";
+        const target: Product =
+          bookSales && isProduct(productParam) ? productParam : current;
+        /* 책·패키지에서 메시지로 돌아오면 저장 금액이 책값이므로 메시지 기본가로 계산 */
+        const base =
+          current !== "message" && target === "message"
+            ? row.message_amount ?? RITUAL_PRICE_KRW
+            : row.payment_amount;
+        const want = productPrice(target, base);
+        if (want !== row.payment_amount || target !== current) {
           const upd = await supabase
             .from("ritual_orders")
-            .update({ payment_amount: want })
+            .update({ payment_amount: want, product: target })
             .eq("order_number", orderNumber)
             .eq("payment_status", "pending");
-          if (!upd.error) row = { ...row, payment_amount: want };
+          if (!upd.error) row = { ...row, payment_amount: want, product: target };
         }
       }
     }
@@ -120,6 +140,11 @@ export default async function CompletePage({
   /* 결제 오류 사과 쿠폰이 적용된 주문 */
   const isApologyCoupon = row.payment_amount === APOLOGY_PRICE_KRW;
   const badge = priceBadge(row.payment_amount);
+  const product: Product = isProduct(row.product) ? row.product : "message";
+  const messagePrice =
+    product === "message"
+      ? row.payment_amount
+      : productPrice("message", row.message_amount ?? RITUAL_PRICE_KRW);
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
 
@@ -232,7 +257,20 @@ export default async function CompletePage({
               </p>
             </div>
           ) : null}
-          {badge.strike !== null && (
+          {bookSales && (
+          <div className="mt-9">
+            <p className="mb-3 text-center text-[0.72rem] tracking-[0.25em] text-gold/80">
+              받아볼 구성을 골라주세요
+            </p>
+            <ProductPicker
+              orderNumber={orderNumber}
+              selected={product}
+              messagePrice={messagePrice}
+              extraQuery={paytest === "1" ? "&paytest=1" : ""}
+            />
+          </div>
+          )}
+          {product === "message" && badge.strike !== null && (
             <p className={`${isApologyCoupon ? "mt-5" : "mt-9"} text-center text-[0.8rem] text-ivory-dim`}>
               <span className="line-through opacity-60">
                 {badge.strike.toLocaleString()}원
@@ -240,7 +278,10 @@ export default async function CompletePage({
               <span className="ml-2 text-thread">{badge.label}</span>
             </p>
           )}
-          <p className={`font-display ${badge.strike === null ? "mt-9" : "mt-1.5"} text-center text-3xl font-semibold text-gold`}>
+          {product !== "message" && (
+            <p className="mt-9 text-center text-[0.8rem] text-ivory-dim">{PRODUCTS[product].name}</p>
+          )}
+          <p className={`font-display ${product === "message" && badge.strike !== null ? "mt-1.5" : product === "message" ? "mt-9" : "mt-1.5"} text-center text-3xl font-semibold text-gold`}>
             {row.payment_amount.toLocaleString()}
             <span className="ml-1 text-lg text-ivory-dim">원</span>
           </p>
@@ -256,6 +297,7 @@ export default async function CompletePage({
               clientKey={clientKey}
               orderNumber={orderNumber}
               amount={row.payment_amount}
+              orderName={PRODUCTS[product].orderName}
             />
           </div>
 
