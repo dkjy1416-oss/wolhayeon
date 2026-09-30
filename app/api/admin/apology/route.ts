@@ -20,6 +20,7 @@ import { createRemindToken } from "@/lib/remind-auth";
 import {
   APOLOGY_PRICE_KRW,
   RITUAL_PRICE_KRW,
+  RITUAL_REGULAR_PRICE_KRW,
   isValidEmail,
 } from "@/lib/ritual-types";
 import { sanitizeSiteUrl } from "@/lib/delivery-rules";
@@ -45,58 +46,125 @@ function maskEmail(e: string): string {
   return `${local.slice(0, 2)}***@${domain}`;
 }
 
+/** 사과 쿠폰 유효기한 (메일 안내용) */
+const COUPON_DEADLINE_LABEL = "10월 4일(일) 밤 11시 59분";
+
+/** 결제 후 받게 되는 내용 (메일 안내용 요약) */
+const INCLUDED: Array<[string, string]> = [
+  ["월화의 개인 편지", "들려주신 이야기에서 시작하는, 오직 한 분께만 쓰는 편지"],
+  ["두 사람의 관계 이야기", "어디서부터 어긋났는지, 지금 두 분 사이의 흐름"],
+  ["지금 내 마음 들여다보기", "그리움 뒤에 숨어 있는 진짜 마음"],
+  ["관계에서 반복된 흐름", "다시 이어지기 전에 꼭 짚어야 할 것"],
+  ["내가 정말 원하는 것", "재회인지, 연락인지, 사과인지, 정리인지"],
+  ["붉은 인연의 실 리추얼", "상황에 맞춰 구성한 약 5분의 개인 리추얼"],
+  ["리추얼 이후 24시간 가이드", "연락하고 싶어지는 순간을 넘기는 방법"],
+  ["7일 행동 가이드", "다음 일주일, 무엇을 하고 무엇을 참을지"],
+  ["21일 마음 회복 플랜", "관계를 다른 거리에서 바라보게 되는 3주"],
+  ["BONUS 마음 기록 질문", "스스로의 마음에 답해 보는 개인 질문"],
+];
+
 function buildEmail(name: string, openUrl: string) {
   const safe = name.trim() || "고객";
   const esc = escapeHtml(safe);
   const price = APOLOGY_PRICE_KRW.toLocaleString();
   const before = RITUAL_PRICE_KRW.toLocaleString();
-  const subject = `[월하연] ${safe}님, 결제 오류로 불편을 드려 죄송해요`;
+  const regular = RITUAL_REGULAR_PRICE_KRW.toLocaleString();
+  const subject = `[월하연] ${safe}님, 결제 오류로 불편을 드려 진심으로 사과드립니다`;
+
   const text = [
     `${safe}님, 안녕하세요. 월하연입니다.`,
     ``,
-    `며칠 전 결제를 시도하셨을 때 저희 결제 시스템 오류로`,
-    `결제가 완료되지 않았어요. 불편을 드려 정말 죄송합니다.`,
-    `(결제가 승인되지 않아 청구된 금액은 없어요.)`,
+    `먼저 진심으로 사과드립니다.`,
+    `9월 24일부터 28일 사이, 저희 결제 시스템의 설정 오류로`,
+    `${safe}님께서 어렵게 결정하신 결제가 끝까지 진행되지 못했습니다.`,
+    `마음을 꺼내 이야기를 들려주시고 결과를 기다리셨을 텐데,`,
+    `그 마음에 응답하지 못한 점 무겁게 받아들이고 있습니다.`,
+    `(결제가 승인되지 않아 실제로 청구된 금액은 없습니다.)`,
     ``,
-    `지금은 오류를 바로잡아 정상적으로 결제하실 수 있어요.`,
-    `사과의 마음을 담아 ${safe}님 주문에 사과 쿠폰을 적용해 두었어요.`,
-    `  ${before}원 → ${price}원`,
+    `지금은 원인을 바로잡아 모든 결제가 정상적으로 이루어지고 있습니다.`,
+    `죄송한 마음을 담아 ${safe}님의 신청서에 사과 쿠폰을 적용해 두었습니다.`,
     ``,
-    `아래 링크에서 들려주신 이야기와 미리보기부터 그대로 이어집니다.`,
+    `  정가 ${regular}원 · 현재 ${before}원 → ${safe}님 ${price}원`,
+    `  쿠폰 유효기한: ${COUPON_DEADLINE_LABEL}까지`,
+    ``,
+    `들려주신 이야기와 미리보기는 그대로 보관되어 있어,`,
+    `다시 작성하실 필요 없이 아래 링크에서 바로 이어서 보실 수 있습니다.`,
     openUrl,
     ``,
-    `— 월하연 月下緣`,
+    `[결제 후 ${safe}님께 드리는 것 — 9가지 이야기 + BONUS]`,
+    ...INCLUDED.map(([t, d], i) => `${i < 9 ? String(i + 1).padStart(2, "0") : "+"} ${t} — ${d}`),
     ``,
-    `이 메일은 월하연에서 결제를 시도하신 분께 드리는 안내 메일입니다.`,
+    `결과는 결제 직후 작성되어 이메일로 도착합니다.`,
+    `결과를 열어보시기 전이라면 7일 이내 전액 환불되니, 부담 없이 받아보셔도 괜찮습니다.`,
+    ``,
+    `다시 한번 불편을 드려 죄송합니다.`,
+    `${safe}님의 이야기에 끝까지 정성으로 답하겠습니다.`,
+    ``,
+    `— 월하연 月下緣 드림`,
+    ``,
+    `이 메일은 월하연에서 결제를 시도하셨던 분께 드리는 서비스 안내 메일입니다.`,
   ].join("\n");
+
+  const rows = INCLUDED.map(
+    ([t, d], i) => `<tr>
+        <td style="width:58px;vertical-align:top;padding:9px 0;font-size:11px;letter-spacing:0.1em;color:${i < 9 ? "#c9a96e" : "#e2c48a"};">${i < 9 ? String(i + 1).padStart(2, "0") : "BONUS"}</td>
+        <td style="vertical-align:top;padding:9px 0;border-bottom:1px solid rgba(201,169,110,.12);">
+          <div style="font-size:14px;color:#efe9dc;">${escapeHtml(t.replace(/^BONUS /, ""))}</div>
+          <div style="font-size:12.5px;color:#a89f8d;margin-top:3px;line-height:1.6;">${escapeHtml(d)}</div>
+        </td></tr>`
+  ).join("");
+
+  const btn = `display:block;text-align:center;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:15px;`;
 
   const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background:#0a0908;">
   <div style="max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
     <p style="font-size:11px;letter-spacing:0.3em;color:#c9a96e;margin:0 0 28px;">月下緣 · 월하연</p>
-    <p style="font-size:16px;line-height:2;margin:0 0 20px;">${esc}님, 안녕하세요.</p>
-    <p style="font-size:15px;line-height:2.1;color:#d8d2c6;margin:0 0 20px;">
-      며칠 전 결제를 시도하셨을 때 저희 결제 시스템 오류로<br/>
-      결제가 완료되지 않았어요. 불편을 드려 정말 죄송합니다.<br/>
-      <span style="color:#a89f8d;font-size:13px;">(결제가 승인되지 않아 청구된 금액은 없어요.)</span>
+    <p style="font-size:17px;line-height:1.9;margin:0 0 18px;">${esc}님, 안녕하세요.<br/>월하연입니다.</p>
+    <p style="font-size:15px;line-height:2.05;color:#d8d2c6;margin:0 0 18px;">
+      먼저 진심으로 사과드립니다.<br/>
+      9월 24일부터 28일 사이, 저희 결제 시스템의 설정 오류로
+      ${esc}님께서 어렵게 결정하신 결제가 끝까지 진행되지 못했습니다.
     </p>
-    <p style="font-size:15px;line-height:2.1;color:#d8d2c6;margin:0 0 24px;">
-      지금은 오류를 바로잡아 정상적으로 결제하실 수 있어요.<br/>
-      사과의 마음을 담아 ${esc}님 주문에 사과 쿠폰을 적용해 두었어요.
+    <p style="font-size:15px;line-height:2.05;color:#d8d2c6;margin:0 0 18px;">
+      마음을 꺼내 이야기를 들려주시고 결과를 기다리셨을 텐데,
+      그 마음에 제때 응답하지 못한 점 무겁게 받아들이고 있습니다.<br/>
+      <span style="color:#a89f8d;font-size:13px;">결제가 승인되지 않아 실제로 청구된 금액은 없습니다.</span>
     </p>
-    <div style="border:1px solid rgba(201,169,110,.35);border-radius:16px;padding:18px 20px;text-align:center;margin:0 0 28px;">
-      <p style="font-size:12px;letter-spacing:0.2em;color:#c9a96e;margin:0 0 8px;">결제 오류 사과 쿠폰</p>
-      <p style="font-size:14px;color:#8d8779;margin:0;"><span style="text-decoration:line-through;">${before}원</span></p>
-      <p style="font-size:26px;font-weight:600;color:#e2c48a;margin:4px 0 0;">${price}원</p>
+    <p style="font-size:15px;line-height:2.05;color:#d8d2c6;margin:0 0 26px;">
+      지금은 원인을 바로잡아 모든 결제가 정상적으로 이루어지고 있습니다.
+      죄송한 마음을 담아 ${esc}님의 신청서에 <span style="color:#e2c48a;">사과 쿠폰</span>을 적용해 두었습니다.
+    </p>
+
+    <div style="border:1px solid rgba(201,169,110,.4);border-radius:18px;padding:22px 20px;text-align:center;margin:0 0 22px;background:rgba(201,169,110,.04);">
+      <p style="font-size:12px;letter-spacing:0.2em;color:#c9a96e;margin:0 0 10px;">${esc}님께 드리는 사과 쿠폰</p>
+      <p style="font-size:13.5px;color:#8d8779;margin:0;"><span style="text-decoration:line-through;">${regular}원</span>&nbsp;&nbsp;<span style="text-decoration:line-through;">${before}원</span></p>
+      <p style="font-size:30px;font-weight:600;color:#e2c48a;margin:6px 0 0;">${price}원</p>
+      <p style="font-size:12.5px;color:#d8a0a8;margin:10px 0 0;">${COUPON_DEADLINE_LABEL}까지</p>
     </div>
-    <a href="${openUrl}"
-       style="display:block;text-align:center;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:16px 20px;font-size:15px;">
-      ${esc}님의 이야기 ${price}원으로 이어서 읽기
-    </a>
-    <p style="font-size:12.5px;color:#a89f8d;line-height:1.9;margin:20px 0 0;">
-      들려주신 이야기와 미리보기는 그대로 보관되어 있어요.
+
+    <a href="${openUrl}" style="${btn}">${esc}님의 이야기 이어서 보기</a>
+    <p style="font-size:12.5px;color:#a89f8d;line-height:1.9;margin:14px 0 36px;text-align:center;">
+      들려주신 이야기와 미리보기는 그대로 보관되어 있어요.<br/>다시 작성하실 필요 없이 바로 이어집니다.
     </p>
-    <p style="font-size:12px;color:#8d8779;line-height:1.9;margin:36px 0 0;">
-      이 메일은 월하연에서 결제를 시도하신 분께 드리는 안내 메일입니다.
+
+    <p style="font-size:12px;letter-spacing:0.2em;color:#c9a96e;margin:0 0 6px;">결제 후 ${esc}님께 드리는 것</p>
+    <p style="font-size:16px;color:#efe9dc;margin:0 0 10px;">월화가 준비하는 9가지 이야기 <span style="color:#e2c48a;">+ BONUS</span></p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 22px;">${rows}</table>
+
+    <p style="font-size:13.5px;line-height:1.95;color:#d8d2c6;margin:0 0 26px;">
+      결과는 결제 직후 작성되어 이메일로 도착합니다.<br/>
+      <span style="color:#a89f8d;">결과를 열어보시기 전이라면 7일 이내 전액 환불되니, 부담 없이 받아보셔도 괜찮습니다.</span>
+    </p>
+
+    <a href="${openUrl}" style="${btn}">${price}원으로 결과 받아보기</a>
+
+    <p style="font-size:14.5px;line-height:2;color:#d8d2c6;margin:36px 0 0;">
+      다시 한번 불편을 드려 죄송합니다.<br/>
+      ${esc}님의 이야기에 끝까지 정성으로 답하겠습니다.
+    </p>
+    <p style="font-size:14px;color:#c9a96e;margin:14px 0 0;">— 월하연 月下緣 드림</p>
+    <p style="font-size:11.5px;color:#7d776b;line-height:1.9;margin:40px 0 0;">
+      이 메일은 월하연에서 결제를 시도하셨던 분께 드리는 서비스 안내 메일입니다.
     </p>
   </div></body></html>`;
 
@@ -226,7 +294,7 @@ export async function POST(request: Request) {
           text: mail.text,
           html: mail.html,
         },
-        { idempotencyKey: `apology-v1-${t.order_number}` }
+        { idempotencyKey: `apology-v2-${t.order_number}` }
       );
       if (r.error) {
         failed += 1;
