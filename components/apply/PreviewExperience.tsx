@@ -19,6 +19,10 @@ import {
   RITUAL_REGULAR_PRICE_KRW,
   APOLOGY_PRICE_KRW,
   isAllowedPrice,
+  listPriceKRW,
+  priceBadge,
+  PROMO_DEADLINE_TEXT,
+  isPromoActive,
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN } from "@/lib/payment-availability";
@@ -118,7 +122,7 @@ export default function PreviewExperience({
   const [preview, setPreview] = useState<Preview | null>(null);
   const [name, setName] = useState<string>("");
   /* 주문별 결제 금액 — 사과 쿠폰 적용 주문이면 쿠폰가 */
-  const [price, setPrice] = useState<number>(RITUAL_PRICE_KRW);
+  const [price, setPrice] = useState<number>(() => listPriceKRW());
   const [showLoading, setShowLoading] = useState(false);
   const [slowNote, setSlowNote] = useState(false); // 15초 이상 걸릴 때 안심 문구
   const tries = useRef(0); // pending 폴링 횟수
@@ -495,15 +499,13 @@ export default function PreviewExperience({
             다음 장부터는 오직 당신의 사연으로만 쓰여요.
           </p>
           <p className="mt-4 text-[0.78rem] text-ivory-dim">
-            <span className="line-through opacity-60">
-              {(isApologyCoupon
-                ? RITUAL_PRICE_KRW
-                : RITUAL_REGULAR_PRICE_KRW
-              ).toLocaleString()}
-              원
-            </span>
+            {priceBadge(price).strike !== null && (
+              <span className="line-through opacity-60">
+                {priceBadge(price).strike!.toLocaleString()}원
+              </span>
+            )}
             <span className="ml-2 text-thread">
-              {isApologyCoupon ? "결제 오류 사과 쿠폰가" : "런칭 특가"}{" "}
+              {priceBadge(price).label ? `${priceBadge(price).label} ` : ""}
               {price.toLocaleString()}원
             </span>
           </p>
@@ -546,7 +548,9 @@ export default function PreviewExperience({
               <p className="mt-3 text-[0.8rem] font-light leading-[1.95] text-ivory-dim">
                 열리는 날, 입력하신 이메일로 가장 먼저 알려드릴게요.
                 <br />
-                런칭 특가 {RITUAL_PRICE_KRW.toLocaleString()}원은 그대로 지켜둡니다.
+                {isPromoActive()
+                  ? `재오픈 기념 특가 ${RITUAL_PRICE_KRW.toLocaleString()}원은 ${PROMO_DEADLINE_TEXT}예요.`
+                  : "지금 신청하신 가격은 그대로 지켜둡니다."}
               </p>
             </div>
             <p className="mx-auto mt-4 max-w-md text-[0.72rem] text-ivory-dim/70">

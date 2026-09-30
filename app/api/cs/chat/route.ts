@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PAYMENTS_OPEN } from "@/lib/payment-availability";
+import { priceSentence } from "@/lib/ritual-types";
 import { loadCsOrderLite, getCsStatus } from "@/lib/cs-actions";
 import {
   REFUND_POLICY_SECTIONS,
@@ -18,7 +19,7 @@ export const maxDuration = 30;
  *   주입한다 (클라이언트가 보낸 상태 텍스트는 신뢰하지 않음).
  * - 시크릿·paymentKey·OTP는 프롬프트에 절대 포함되지 않는다.
  */
-const CS_SYSTEM = `당신은 월하연(月下緣)의 안내자 월화(月華)의 CS 응대입니다.
+const csSystem = () => `당신은 월하연(月下緣)의 안내자 월화(月華)의 CS 응대입니다.
 말투는 월화답게 차분하고 다정하지만, CS에서는 신비주의 문장을 남발하지 않고
 현실적이고 정확하게, 짧고 실용적으로 답합니다. (예: "제가 바로 확인해볼게요.",
 "결제는 정상적으로 완료되어 있어요.")
@@ -42,7 +43,7 @@ const CS_SYSTEM = `당신은 월하연(月下緣)의 안내자 월화(月華)의
 
 [서비스 기본 정보 — 자유롭게 답변 가능]
 - 월하연: 헤어진 뒤의 마음과 두 사람 관계의 흐름을 읽어주는 개인화 리추얼
-  서비스. 신청서 작성 → 결제 전 무료 개인화 미리보기 → 12,900원(런칭 특가) 1회 결제 →
+  서비스. 신청서 작성 → 결제 전 무료 개인화 미리보기 → ${priceSentence()} 1회 결제 →
   전체 결과(월화의 편지, 관계 흐름, 개인 리추얼, 24시간/7일/21일 가이드).
 - 결과는 결제 후 보통 수 분 내 자동 생성되어 화면과 이메일로 전달됩니다.
 - 엔터테인먼트·자기성찰 콘텐츠이며 재회를 보장하지 않습니다.
@@ -130,7 +131,7 @@ export async function POST(req: Request) {
     if (/이용|가격|미리보기|리추얼/.test(lastText)) {
       return NextResponse.json({
         reply:
-          "월하연은 신청서 작성 → 무료 개인화 미리보기 → 12,900원(런칭 특가) 1회 결제 → 전체 결과 순서로 진행돼요.",
+          `월하연은 신청서 작성 → 무료 개인화 미리보기 → ${priceSentence()} 1회 결제 → 전체 결과 순서로 진행돼요.`,
       });
     }
     return NextResponse.json({
@@ -188,7 +189,7 @@ export async function POST(req: Request) {
     const res = await client.messages.create({
       model: getModel(),
       max_tokens: 500,
-      system: CS_SYSTEM + statusBlock,
+      system: csSystem() + statusBlock,
       messages,
     });
     const reply = res.content

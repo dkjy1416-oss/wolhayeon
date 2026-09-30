@@ -7,6 +7,7 @@
  * 전체 유료 결과 생성 구조는 변경하지 않는다.
  */
 import "server-only";
+import { resolveOrderPrice } from "@/lib/ritual-types";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -350,7 +351,7 @@ export async function getOrCreatePreview(
           status: "ready",
           preview: cached.data,
           applicantName: order.applicant_name,
-          paymentAmount: order.payment_amount,
+          paymentAmount: resolveOrderPrice(order.payment_amount),
           generated: true,
         };
       }
@@ -381,7 +382,7 @@ export async function getOrCreatePreview(
       status: "ready",
       preview,
       applicantName: order.applicant_name,
-          paymentAmount: order.payment_amount,
+          paymentAmount: resolveOrderPrice(order.payment_amount),
       generated: ai !== null,
     };
   } catch (e) {

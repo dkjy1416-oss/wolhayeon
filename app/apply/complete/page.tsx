@@ -6,6 +6,11 @@ import {
   RITUAL_REGULAR_PRICE_KRW,
   APOLOGY_PRICE_KRW,
   isAllowedPrice,
+  resolveOrderPrice,
+  priceBadge,
+  listPriceKRW,
+  PROMO_DEADLINE_TEXT,
+  isPromoActive,
 } from "@/lib/ritual-types";
 import { PAYMENTS_OPEN } from "@/lib/payment-availability";
 import PayEventPing from "@/components/pay/PayEventPing";
@@ -69,7 +74,21 @@ export default async function CompletePage({
       .select("payment_amount, payment_status")
       .eq("order_number", orderNumber)
       .single();
-    if (!res.error && res.data) row = res.data;
+    if (!res.error && res.data) {
+      row = res.data;
+      /* 특가·사과 쿠폰 마감(10/4) 이후엔 결제 대기 주문을 정가로 맞춤 */
+      if (row && row.payment_status === "pending" && isAllowedPrice(row.payment_amount)) {
+        const want = resolveOrderPrice(row.payment_amount);
+        if (want !== row.payment_amount) {
+          const upd = await supabase
+            .from("ritual_orders")
+            .update({ payment_amount: want })
+            .eq("order_number", orderNumber)
+            .eq("payment_status", "pending");
+          if (!upd.error) row = { ...row, payment_amount: want };
+        }
+      }
+    }
     else if (res.error && res.error.code !== "PGRST116") lookupFailed = true;
   } catch {
     lookupFailed = true;
@@ -100,6 +119,7 @@ export default async function CompletePage({
   const amountValid = isAllowedPrice(row.payment_amount);
   /* 결제 오류 사과 쿠폰이 적용된 주문 */
   const isApologyCoupon = row.payment_amount === APOLOGY_PRICE_KRW;
+  const badge = priceBadge(row.payment_amount);
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
 
@@ -147,13 +167,17 @@ export default async function CompletePage({
       ) : !paymentsOpen ? (
         <>
           <p className="mt-9 text-center text-[0.8rem] text-ivory-dim">
-            <span className="line-through opacity-60">
-              {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
-            </span>
-            <span className="ml-2 text-thread">런칭 특가</span>
+            {isPromoActive() && (
+              <span className="line-through opacity-60">
+                {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+              </span>
+            )}
+            {isPromoActive() && (
+              <span className="ml-2 text-thread">재오픈 기념 특가 · {PROMO_DEADLINE_TEXT}</span>
+            )}
           </p>
           <p className="font-display mt-1.5 text-center text-3xl font-semibold text-gold">
-            {RITUAL_PRICE_KRW.toLocaleString()}
+            {listPriceKRW().toLocaleString()}
             <span className="ml-1 text-lg text-ivory-dim">원</span>
           </p>
           <div className="mt-8 rounded-2xl border border-gold-dim/30 bg-ink-soft/60 px-6 py-7 text-center">
@@ -170,7 +194,7 @@ export default async function CompletePage({
               <br />
               가장 먼저 알려드릴게요.
               <br />
-              런칭 특가 가격은 그대로 지켜둡니다.
+              지금 신청하신 가격은 그대로 지켜둡니다.
             </p>
           </div>
           <p className="mt-5 text-center text-[0.78rem] leading-[1.9] text-ivory-dim/70">
@@ -208,19 +232,15 @@ export default async function CompletePage({
               </p>
             </div>
           ) : null}
-          <p className={`${isApologyCoupon ? "mt-5" : "mt-9"} text-center text-[0.8rem] text-ivory-dim`}>
-            <span className="line-through opacity-60">
-              {(isApologyCoupon
-                ? RITUAL_PRICE_KRW
-                : RITUAL_REGULAR_PRICE_KRW
-              ).toLocaleString()}
-              원
-            </span>
-            <span className="ml-2 text-thread">
-              {isApologyCoupon ? "사과 쿠폰가" : "런칭 특가"}
-            </span>
-          </p>
-          <p className="font-display mt-1.5 text-center text-3xl font-semibold text-gold">
+          {badge.strike !== null && (
+            <p className={`${isApologyCoupon ? "mt-5" : "mt-9"} text-center text-[0.8rem] text-ivory-dim`}>
+              <span className="line-through opacity-60">
+                {badge.strike.toLocaleString()}원
+              </span>
+              <span className="ml-2 text-thread">{badge.label}</span>
+            </p>
+          )}
+          <p className={`font-display ${badge.strike === null ? "mt-9" : "mt-1.5"} text-center text-3xl font-semibold text-gold`}>
             {row.payment_amount.toLocaleString()}
             <span className="ml-1 text-lg text-ivory-dim">원</span>
           </p>

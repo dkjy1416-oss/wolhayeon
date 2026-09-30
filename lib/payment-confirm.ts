@@ -21,7 +21,12 @@ import { randomUUID } from "crypto";
 import { Resend } from "resend";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { confirmTossPayment } from "@/lib/toss";
-import { RITUAL_PRICE_KRW, isAllowedPrice } from "@/lib/ritual-types";
+import {
+  RITUAL_PRICE_KRW,
+  isAllowedPrice,
+  resolveOrderPrice,
+  PROMO_GRACE_MS,
+} from "@/lib/ritual-types";
 import { verifyPaidOwnership } from "@/lib/payment-ownership";
 import { track } from "@vercel/analytics/server";
 import { logPayEventServer } from "@/lib/pay-events-server";
@@ -143,7 +148,9 @@ export async function confirmOrderPayment(params: {
        하나라도 다르면 변조 가능성 → 승인 자체를 하지 않음 */
     if (
       !isAllowedPrice(row.payment_amount) ||
-      amountNumber !== row.payment_amount
+      amountNumber !== row.payment_amount ||
+      /* 특가·쿠폰 마감 후엔 정가만 (마감 직후 30분 유예) */
+      row.payment_amount !== resolveOrderPrice(row.payment_amount, Date.now() - PROMO_GRACE_MS)
     ) {
       console.error(`[pay:${requestId}] amount_mismatch`);
       await logPayEventServer(orderNumber, "amount_mismatch");

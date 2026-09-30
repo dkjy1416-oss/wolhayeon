@@ -12,6 +12,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import { priceSentence } from "@/lib/ritual-types";
 
 type Bubble = { role: "user" | "assistant"; content: string };
 type Flow =
@@ -50,7 +51,7 @@ const QUICK_MENU: Array<{ label: string; needAuth: boolean; faq?: string }> = [
   {
     label: "월하연 이용 방법",
     needAuth: false,
-    faq: "월하연은 신청서 작성 → 결제 전 무료 개인화 미리보기 → 12,900원(런칭 특가) 1회 결제 → 전체 결과(월화의 편지·관계 흐름·개인 리추얼·24시간/7일/21일 가이드) 순서로 진행돼요. 결과는 결제 후 보통 수 분 내에 자동으로 열리고 이메일로도 보내드려요.",
+    faq: `월하연은 신청서 작성 → 결제 전 무료 개인화 미리보기 → ${priceSentence()} 1회 결제 → 전체 결과(월화의 편지·관계 흐름·개인 리추얼·24시간/7일/21일 가이드) 순서로 진행돼요. 결과는 결제 후 보통 수 분 내에 자동으로 열리고 이메일로도 보내드려요.`,
   },
   { label: "다른 문제가 있어요", needAuth: false, faq: "" },
 ];

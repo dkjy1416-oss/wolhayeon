@@ -317,8 +317,54 @@ export const RITUAL_REGULAR_PRICE_KRW = 16900;
 export const APOLOGY_PRICE_KRW = 9900;
 
 /** 서버가 승인할 수 있는 주문 금액 (DB payment_amount가 이 중 하나여야 함) */
+/** 재오픈 기념 특가(12,900원)·사과 쿠폰(9,900원) 마감: 2026-10-04(일) 23:59:59 KST */
+export const PROMO_END_MS = Date.parse("2026-10-04T23:59:59+09:00");
+export const PROMO_DEADLINE_TEXT = "10월 4일(일)까지";
+/** 마감 직후 결제창에 머물던 사람을 위한 승인 유예 (30분) */
+export const PROMO_GRACE_MS = 30 * 60 * 1000;
+
+export function isPromoActive(now: number = Date.now()): boolean {
+  return now <= PROMO_END_MS;
+}
+
+/** 지금 새로 신청하는 사람의 가격 */
+export function listPriceKRW(now: number = Date.now()): number {
+  return isPromoActive(now) ? RITUAL_PRICE_KRW : RITUAL_REGULAR_PRICE_KRW;
+}
+
+/** 주문에 저장된 금액 → 지금 결제할 금액 (특가·쿠폰 기한이 지나면 정가) */
+export function resolveOrderPrice(stored: unknown, now: number = Date.now()): number {
+  if (
+    isPromoActive(now) &&
+    (stored === RITUAL_PRICE_KRW || stored === APOLOGY_PRICE_KRW)
+  ) {
+    return stored as number;
+  }
+  return listPriceKRW(now);
+}
+
+/** 가격 옆 표시 (취소선 가격 + 라벨) */
+export function priceBadge(amount: number): { strike: number | null; label: string } {
+  if (amount === APOLOGY_PRICE_KRW)
+    return { strike: RITUAL_REGULAR_PRICE_KRW, label: `결제 오류 사과 쿠폰가 · ${PROMO_DEADLINE_TEXT}` };
+  if (amount === RITUAL_PRICE_KRW)
+    return { strike: RITUAL_REGULAR_PRICE_KRW, label: `재오픈 기념 특가 · ${PROMO_DEADLINE_TEXT}` };
+  return { strike: null, label: "" };
+}
+
+/** 챗봇 안내용 가격 문장 */
+export function priceSentence(now: number = Date.now()): string {
+  return isPromoActive(now)
+    ? `${RITUAL_PRICE_KRW.toLocaleString()}원(재오픈 기념 특가, ${PROMO_DEADLINE_TEXT} · 정가 ${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원)`
+    : `${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원`;
+}
+
 export function isAllowedPrice(amount: unknown): amount is number {
-  return amount === RITUAL_PRICE_KRW || amount === APOLOGY_PRICE_KRW;
+  return (
+    amount === RITUAL_PRICE_KRW ||
+    amount === APOLOGY_PRICE_KRW ||
+    amount === RITUAL_REGULAR_PRICE_KRW
+  );
 }
 
 /* ---------- 유틸 ---------- */
