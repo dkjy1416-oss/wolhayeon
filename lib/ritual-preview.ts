@@ -319,34 +319,30 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
    1차 시도 25초 초과 → 템플릿 폴백 노출). 미리보기는 결제 직전 핵심 화면이라
    템플릿 노출을 최소화해야 하므로 여유를 크게 둔다 (route maxDuration 60초). */
 const PREVIEW_AI_TIMEOUT_MS = 50_000;
-const PREVIEW_AI_MAX_TOKENS = 2400;
+const PREVIEW_AI_MAX_TOKENS = 1600;
 
 function getPreviewModelId(): string {
   /* 무료 분석은 결제 전환의 핵심 — 문장 정확도를 위해 Sonnet 기본 (운영자 선택 9/30) */
   return process.env.PREVIEW_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-6";
 }
 
-/* 두 부분을 병렬로 생성해 대기 시간을 절반으로 (Sonnet 단일 호출 실측 44~49초 → 한계 근접) */
-const PART_A_KEYS = ["intro_lines", "preview_letter_excerpt", "love100", "cta_lead_text"] as const;
-const PART_B_KEYS = ["relationship_state", "partner_reading", "cautions", "now_plan"] as const;
-const PreviewStructA = PreviewStructSchema.pick({
-  intro_lines: true,
-  preview_letter_excerpt: true,
-  love100: true,
-  cta_lead_text: true,
-});
-const PreviewStructB = PreviewStructSchema.pick({
-  relationship_state: true,
-  partner_reading: true,
-  cautions: true,
-  now_plan: true,
-});
+/* 네 조각을 병렬로 생성 — Sonnet 단일 호출 44~49초 → 2분할 39초 → 4분할 목표 20초대 */
+const PARTS = [
+  { label: "a1", keys: ["intro_lines", "preview_letter_excerpt"] },
+  { label: "a2", keys: ["love100", "cta_lead_text"] },
+  { label: "b1", keys: ["relationship_state", "partner_reading"] },
+  { label: "b2", keys: ["cautions", "now_plan"] },
+] as const;
+
+function partSchema(keys: readonly string[]) {
+  const mask = Object.fromEntries(keys.map((k) => [k, true])) as Record<string, true>;
+  return PreviewStructSchema.pick(mask as never);
+}
 
 async function callPart(
   client: Anthropic,
   order: RitualOrderRow,
   keys: readonly string[],
-  schema: typeof PreviewStructA | typeof PreviewStructB,
   label: string
 ): Promise<Record<string, unknown> | null> {
   const t0 = Date.now();
@@ -362,7 +358,7 @@ async function callPart(
             content: `${buildPreviewUserPrompt(order)}\n\n[이번 요청의 출력 범위]\n이번에는 다음 항목만 작성합니다: ${keys.join(", ")}. 나머지 항목은 다른 요청에서 작성되므로 쓰지 않습니다. 모든 규칙은 그대로 지킵니다.`,
           },
         ],
-        output_config: { format: zodOutputFormat(schema) },
+        output_config: { format: zodOutputFormat(partSchema(keys)) },
       },
       { timeout: PREVIEW_AI_TIMEOUT_MS }
     );
@@ -390,16 +386,15 @@ async function buildAiPreview(
 
   const t0 = Date.now();
   const client = new Anthropic({ apiKey, maxRetries: 0 });
-  const [partA, partB] = await Promise.all([
-    callPart(client, order, PART_A_KEYS, PreviewStructA, "a"),
-    callPart(client, order, PART_B_KEYS, PreviewStructB, "b"),
-  ]);
-  if (!partA || !partB) {
+  const parts = await Promise.all(
+    PARTS.map((p) => callPart(client, order, p.keys, p.label))
+  );
+  if (parts.some((x) => x === null)) {
     console.error(`[preview] ai_failed ms=${Date.now() - t0}`);
     return null;
   }
 
-  const parsed = PreviewSchema.safeParse({ ...partA, ...partB });
+  const parsed = PreviewSchema.safeParse(Object.assign({}, ...parts));
   if (!parsed.success) {
     const paths = parsed.error.issues
       .slice(0, 4)
