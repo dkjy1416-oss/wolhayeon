@@ -29,7 +29,8 @@ export const REFUND_POLICY_SECTIONS: Array<{ title: string; body: string }> = [
   {
     title: "2. 환불이 어려운 경우",
     body: `· 전체 결과 페이지를 이미 열람하신 경우에는, 1회성 맞춤 제작 디지털 콘텐츠의 특성상(전자상거래법 제17조제2항제5호) 단순 변심에 의한 환불이 제한됩니다.
-· 결과 열람 여부는 이메일 수신이 아니라, 결과 페이지가 실제로 열린 서버 기록을 기준으로 판단합니다.`,
+· 결과 열람 여부는 이메일 수신이 아니라, 결과 페이지가 실제로 열린 서버 기록을 기준으로 판단합니다.
+· 개인화 PDF 책은 다운로드 링크로 파일을 한 번이라도 받으신 경우 제공이 시작된 것으로 보아, 같은 기준으로 단순 변심 환불이 제한됩니다. 패키지는 메시지 결과 열람 또는 PDF 책 다운로드 중 하나라도 있으면 제공이 시작된 것으로 봅니다.`,
   },
   {
     title: "3. 표시·광고 또는 계약 내용과 다르게 제공된 경우",
@@ -44,7 +45,8 @@ export const REFUND_POLICY_SECTIONS: Array<{ title: string; body: string }> = [
   },
   {
     title: "5. 콘텐츠 열람 기간",
-    body: CONTENT_VIEW_SENTENCE,
+    body: `${CONTENT_VIEW_SENTENCE}
+· 개인화 PDF 책의 다운로드 링크는 결제일로부터 60일 동안 열려 있으며, 받은 파일은 기간과 관계없이 계속 보실 수 있습니다.`,
   },
 ];
 
@@ -73,6 +75,9 @@ export function evaluateRefund(
   > & {
     result_open_count?: number | null;
     refunded_at?: string | null;
+    product?: string | null;
+    book_status?: string | null;
+    book_downloaded_at?: string | null;
   },
   opts: { isDuplicatePayment?: boolean } = {}
 ): RefundEvaluation {
@@ -85,12 +90,17 @@ export function evaluateRefund(
   if (opts.isDuplicatePayment) {
     return { eligible: true, reason_code: "DUPLICATE_PAYMENT" };
   }
-  const opened = (order.result_open_count ?? 0) > 0;
+  /* 메시지 결과 열람 또는 PDF 책 다운로드 = 제공 개시 */
+  const opened = (order.result_open_count ?? 0) > 0 || Boolean(order.book_downloaded_at);
   if (opened) {
     return { eligible: false, reason_code: "DIGITAL_CONTENT_ACCESSED" };
   }
-  /* 미열람 + 생성이 끝내 실패 상태면 기간 무관 환불 */
-  if (order.generation_status === "failed") {
+  /* 미열람 + 생성이 끝내 실패 상태면 기간 무관 환불 (책 단품은 책 제작 상태 기준) */
+  const failed =
+    order.product === "book"
+      ? order.book_status === "failed"
+      : order.generation_status === "failed";
+  if (failed) {
     return { eligible: true, reason_code: "SERVICE_NOT_DELIVERED" };
   }
   const paidAt = order.paid_at ? Date.parse(order.paid_at) : NaN;
