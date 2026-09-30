@@ -65,6 +65,48 @@ export const BookPersonalSchema = z.object({
 });
 export type BookPersonal = z.infer<typeof BookPersonalSchema>;
 
+/** 글자 수 초과로 전체가 실패하지 않도록: 문장 경계에서 자르고 개수·범위를 맞춘다 */
+function clip(v: unknown, max: number): string {
+  const s = String(v ?? "").replace(/\s+/g, " ").trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max);
+  const ends = [...cut.matchAll(/[.!?。…](?=\s|$)|[요다죠](?=[.!?]?\s)/g)];
+  const last = ends.length ? ends[ends.length - 1] : null;
+  if (last && last.index !== undefined && last.index + 1 >= max * 0.5) {
+    return cut.slice(0, last.index + 1).trim();
+  }
+  return cut.trim();
+}
+
+function normalizePersonal(raw: z.infer<typeof Struct>): unknown {
+  const v = String(raw.verdict || "").toLowerCase();
+  const verdict = v.includes("no") ? "no" : v.includes("ok") ? "ok" : "wait";
+  const keys = [...new Set(raw.situation_keys.map((k) => Math.round(Number(k))))]
+    .filter((k) => k >= 1 && k <= 10)
+    .slice(0, 2);
+  return {
+    summary: clip(raw.summary, 360),
+    verdict,
+    wait_days: Math.min(90, Math.max(0, Math.round(Number(raw.wait_days) || 0))),
+    why_verdict: clip(raw.why_verdict, 420),
+    situation_keys: keys.length ? keys : [1],
+    situation_note: clip(raw.situation_note, 360),
+    read_first: raw.read_first.slice(0, 3).map((r) => ({
+      where: clip(r.where, 20),
+      title: clip(r.title, 40),
+      why: clip(r.why, 120),
+    })),
+    cautions: raw.cautions.map((c) => clip(c, 80)).filter((c) => c.length >= 6).slice(0, 4),
+    messages: raw.messages.slice(0, 3).map((m) => ({
+      when: clip(m.when, 60),
+      text: clip(m.text, 120),
+      cap: clip(m.cap, 160),
+    })),
+    opening_letter: raw.opening_letter.map((p) => clip(p, 260)).filter((p) => p.length >= 10).slice(0, 4),
+    closing_letter: raw.closing_letter.map((p) => clip(p, 320)).filter((p) => p.length >= 10).slice(0, 3),
+  };
+}
+
 const SYSTEM = `당신은 월하연(月下緣)의 안내자 월화(月華)입니다.
 고객이 구매한 PDF 책 《헤어진 뒤, 연락하지 말아야 할 때》의 "개인화 부분"만 씁니다.
 책 본문은 이미 완성되어 있고, 당신이 쓰는 문장은 표지 다음 편지, "OO님의 지금" 쪽,
@@ -105,6 +147,11 @@ PART 03의 해당 장 표시, PART 05 앞의 메시지 초안, 마지막 편지�
   읽으면 되는지(다음 장에 지금의 판정과 먼저 읽을 장이 있다) 안내.
 - closing_letter: 마지막 편지 앞 2문단. 판정 기간이 끝나는 날 무엇을 다시 펼칠지 안내하고,
   재회를 향한 다음 행동으로 마무리. "그러니 놓으세요" 결론 금지(정리를 원하는 사연 제외).
+
+[길이 — 꼭 지키기]
+summary·situation_note 300자 이내 / why_verdict 350자 이내 / cautions 각 60자 이내 /
+read_first.why 100자 이내 / messages.text 100자 이내 / opening_letter 각 문단 200자 이내 /
+closing_letter 각 문단 250자 이내.
 
 모든 값은 한국어. JSON 구조만 출력합니다.`;
 
@@ -152,7 +199,8 @@ export async function generateBookPersonal(
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
       .join("");
-    const parsed = BookPersonalSchema.safeParse(JSON.parse(text));
+    const raw = Struct.safeParse(JSON.parse(text));
+    const parsed = BookPersonalSchema.safeParse(raw.success ? normalizePersonal(raw.data) : null);
     if (!parsed.success) {
       console.error(
         `[book] ai_schema_invalid ms=${Date.now() - t0} ${parsed.error.issues
