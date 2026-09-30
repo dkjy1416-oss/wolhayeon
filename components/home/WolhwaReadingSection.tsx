@@ -48,19 +48,23 @@ export default function WolhwaReadingSection({
           <p className="font-display mt-4 text-[1.3rem] font-semibold leading-[1.8] text-ivory">
             당신의 이야기를 들은 뒤,
             <br />
-            월화는 이렇게 읽습니다.
+            월화는 이렇게 읽어요.
           </p>
         </Reveal>
         <Reveal delay={120}>
           <p className="mt-6 text-[0.92rem] font-light leading-[2.05] text-ivory-dim">
-            관계의 흐름은 감정보다
+            지금 관계가 어떤 상태인지,
             <br />
-            먼저 드러나는 순간이 있습니다.
+            상대가 왜 이렇게 행동하는지부터.
           </p>
           <p className="mt-4 text-[0.92rem] font-light leading-[2.05] text-ivory">
-            지금 필요한 건 조급한 연락인지,
+            지금 연락해도 되는지, 기다려야 하는지,
             <br />
-            천천한 거리두기인지 먼저 살펴봅니다.
+            무엇이 관계를 더 망치는지,
+            <br />
+            어떤 순서로 움직여야 하는지까지
+            <br />
+            당신의 상황으로 짚어드려요.
           </p>
         </Reveal>
       </div>

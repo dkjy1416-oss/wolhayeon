@@ -29,16 +29,25 @@ import { PAYMENTS_OPEN } from "@/lib/payment-availability";
 import { logPayEvent } from "@/lib/pay-events";
 import { trackEvent } from "@/lib/analytics";
 import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
+import {
+  NOW_STANCE_LABELS,
+  PAID_DEEP_ITEMS,
+} from "@/lib/preview-display";
 
-interface PreviewCard {
-  key: string;
-  title: string;
-  summary: string;
-}
 interface Preview {
   intro_lines: string[];
   preview_letter_excerpt: string[];
-  preview_cards: PreviewCard[];
+  relationship_state: { label: string; text: string };
+  partner_reading: { modes: string[]; text: string };
+  cautions: { action: string; why: string }[];
+  now_plan: {
+    stance: "wait" | "light_contact" | "hold_boundary";
+    period: string;
+    why: string;
+    watch: string[];
+    decide_rule: string;
+  };
+  love100: string[];
   cta_lead_text: string;
 }
 
@@ -244,7 +253,9 @@ export default function PreviewExperience({
           Array.isArray(cached.preview.intro_lines) &&
           cached.preview.intro_lines.length === 3 &&
           Array.isArray(cached.preview.preview_letter_excerpt) &&
-          Array.isArray(cached.preview.preview_cards)
+          Array.isArray(cached.preview.cautions) &&
+          !!cached.preview.now_plan &&
+          Array.isArray(cached.preview.love100)
         ) {
           if (
             typeof cached.applicantName === "string" &&
@@ -351,7 +362,6 @@ export default function PreviewExperience({
 
   /* ---------- ready: 같은 화면에서 fade로 preview 공개 ---------- */
   if (!preview) return null;
-  const cards = preview.preview_cards;
   const leadText = preview.cta_lead_text;
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
 
@@ -430,56 +440,123 @@ export default function PreviewExperience({
         </div>
       </section>
 
-      {/* ---------- 전체 결과 teaser: 3~5개만 컴팩트하게 (읽을거리 아님) ---------- */}
+      {/* ---------- A. 지금 두 사람의 자리 ---------- */}
       <section className="mt-6 px-6">
-        <p className="font-display text-center text-[1.02rem] font-medium text-ivory">
-          전체 결과에서 이어지는 이야기
-        </p>
-        <div className="mx-auto mt-4 flex max-w-md flex-col gap-2.5">
-          {cards.slice(0, 5).map((c, i) => {
-            /* 진행형 잠금: 앞 카드는 선명, 뒤로 갈수록 흐려지고 잠금 표시 */
-            const lockLevel = i < 2 ? 0 : i - 1; // 0,0,1,2,3
-            return (
-              <div
-                key={c.key}
-                className="relative overflow-hidden rounded-xl border border-gold-dim/25 bg-ink-soft px-5 pb-6 pt-3.5"
-                style={lockLevel ? { opacity: 1 - lockLevel * 0.08 } : undefined}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="text-[0.93rem] font-medium text-ivory">
-                    {c.title}
-                  </p>
-                  {lockLevel > 0 && (
-                    <span
-                      aria-hidden
-                      className="mt-0.5 shrink-0 text-[0.68rem] text-gold-dim/80"
-                    >
-                      🔒
-                    </span>
-                  )}
-                </div>
-                <p
-                  className={`mt-1 text-[0.82rem] font-light leading-[1.85] text-ivory-dim ${
-                    lockLevel >= 2 ? "blur-[1.5px]" : ""
-                  }`}
-                >
-                  {c.summary}
-                </p>
-                <p
-                  aria-hidden
-                  className="mt-1.5 select-none text-[0.78rem] font-light leading-[1.85] text-ivory-dim/60"
-                  style={{ filter: `blur(${4 + lockLevel * 1.5}px)` }}
-                >
-                  {BLUR_LINES[i % BLUR_LINES.length]}
-                </p>
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-ink-soft to-transparent"
-                />
-              </div>
-            );
-          })}
+        <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-6">
+          <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">02 · 지금 두 사람의 자리</p>
+          <p className="font-display mt-2 text-[1.08rem] font-semibold leading-snug text-ivory">
+            {preview.relationship_state.label}
+          </p>
+          <p className="mt-3 text-[0.9rem] font-light leading-[2] text-ivory">
+            {preview.relationship_state.text}
+          </p>
         </div>
+      </section>
+
+      {/* ---------- B. 상대 반응 해석 ---------- */}
+      <section className="mt-4 px-6">
+        <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-6">
+          <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">03 · 그 사람의 반응, 이렇게 읽혀요</p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {preview.partner_reading.modes.map((m) => (
+              <span
+                key={m}
+                className="rounded-full border border-thread/40 bg-thread/10 px-2.5 py-0.5 text-[0.72rem] text-thread"
+              >
+                {m}
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 text-[0.9rem] font-light leading-[2] text-ivory">
+            {preview.partner_reading.text}
+          </p>
+        </div>
+      </section>
+
+      {/* ---------- C. 지금 가장 조심할 행동 ---------- */}
+      <section className="mt-4 px-6">
+        <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-6">
+          <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">04 · 지금 가장 조심할 행동</p>
+          <ol className="mt-3 flex flex-col gap-3.5">
+            {preview.cautions.map((c, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-thread/50 text-[0.68rem] text-thread">
+                  {i + 1}
+                </span>
+                <div>
+                  <p className="text-[0.9rem] font-medium leading-[1.7] text-ivory">{c.action}</p>
+                  <p className="mt-0.5 text-[0.82rem] font-light leading-[1.85] text-ivory-dim">{c.why}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* ---------- D. 지금 해야 할 행동 ---------- */}
+      <section className="mt-4 px-6">
+        <div className="mx-auto max-w-md rounded-2xl border border-gold/35 bg-gradient-to-b from-ink-soft to-ink px-6 py-6">
+          <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">05 · 지금 해야 할 행동</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-gold/15 px-3 py-1 text-[0.8rem] font-medium text-gold">
+              {NOW_STANCE_LABELS[preview.now_plan.stance] ?? ""}
+            </span>
+            <span className="text-[0.8rem] text-ivory-dim">{preview.now_plan.period}</span>
+          </div>
+          <p className="mt-3 text-[0.9rem] font-light leading-[2] text-ivory">{preview.now_plan.why}</p>
+          <p className="mt-4 text-[0.74rem] tracking-wider text-gold/70">이 기간에 볼 것</p>
+          <ul className="mt-1.5 flex flex-col gap-1.5">
+            {preview.now_plan.watch.map((w, i) => (
+              <li key={i} className="text-[0.85rem] font-light leading-[1.8] text-ivory-dim">
+                · {w}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 rounded-xl border border-gold-dim/25 bg-ink/60 px-4 py-3">
+            <p className="text-[0.72rem] tracking-wider text-gold/70">다음 행동을 정하는 기준</p>
+            <p className="mt-1 text-[0.86rem] leading-[1.85] text-ivory">{preview.now_plan.decide_rule}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- 월하연의 관점: 사랑의 총량 100 (약 20%) ---------- */}
+      <section className="mt-4 px-6">
+        <div className="mx-auto max-w-md rounded-2xl border border-thread/25 bg-[#140c0e] px-6 py-6">
+          <p className="text-[0.7rem] tracking-[0.25em] text-thread/90">월화가 보는 당신의 100</p>
+          <div className="mt-3 flex flex-col gap-2.5">
+            {preview.love100.map((l, i) => (
+              <p
+                key={i}
+                className={`text-[0.9rem] leading-[2] ${
+                  i === 0 ? "font-display text-ivory" : "font-light text-ivory"
+                }`}
+              >
+                {l}
+              </p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- E. 전체 결과에서 더 깊게 보는 것 (고정 목록) ---------- */}
+      <section className="mt-8 px-6">
+        <p className="font-display text-center text-[1.02rem] font-medium text-ivory">
+          전체 결과에서 더 깊게 보는 것
+        </p>
+        <p className="mt-2 text-center text-[0.78rem] font-light text-ivory-dim">
+          지금 뭘 해야 하는지까지 봤다면, 다음은 언제·어떻게예요
+        </p>
+        <ul className="mx-auto mt-4 flex max-w-md flex-col gap-2">
+          {PAID_DEEP_ITEMS.map((item) => (
+            <li
+              key={item}
+              className="flex items-center justify-between gap-3 rounded-xl border border-gold-dim/20 bg-ink-soft px-4 py-3"
+            >
+              <span className="text-[0.86rem] text-ivory">{item}</span>
+              <span aria-hidden className="shrink-0 text-[0.7rem] text-gold-dim/80">🔒</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* ---------- 가격은 여기서 처음 등장 ---------- */}

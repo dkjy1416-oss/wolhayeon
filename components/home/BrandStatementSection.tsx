@@ -17,30 +17,28 @@ export default function BrandStatementSection({
       <div className="relative mx-auto max-w-xl">
         <Reveal>
           <p className="font-display text-[1.35rem] font-semibold leading-[1.95] text-ivory md:text-[1.7rem]">
-            계속 생각나는 데는
+            너무 힘든 거,
             <br />
-            이유가 있을 수 있습니다.
+            알고 있어요.
           </p>
           <p className="mt-6 text-[1rem] font-light leading-[2.1] text-ivory-dim">
-            그 이유가
+            그래서 그 마음을
             <br />
-            다시 만나야 한다는 뜻은
+            함부로 내려놓으라고
             <br />
-            아닐 수도 있고요.
+            하지 않을게요.
           </p>
         </Reveal>
         <Reveal delay={150}>
           <p className="mt-14 text-[1rem] font-light leading-[2.1] text-ivory">
-            그래서 월화는
+            재회를 약속할 수는 없지만,
             <br />
-            재회를 약속하기보다,
+            재회를 원한다면
           </p>
           <p className="font-display mt-4 text-[1.2rem] font-semibold leading-[1.95] text-gold">
-            지금 두 사람 사이에서
+            지금 할 수 있는 것부터
             <br />
-            무엇을 봐야 하는지부터
-            <br />
-            이야기합니다.
+            월화와 같이 봐요.
           </p>
         </Reveal>
       </div>

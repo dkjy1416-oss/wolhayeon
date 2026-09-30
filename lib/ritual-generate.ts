@@ -30,7 +30,7 @@ import {
   RitualJourneyStructSchema,
   RitualResultSchema,
 } from "@/lib/ritual-result-schema";
-import { PreviewSchema } from "@/lib/ritual-preview-schema";
+import { PreviewCoreSchema } from "@/lib/ritual-preview-schema";
 import { mergeLetterOpening } from "@/lib/letter-merge";
 import type { RitualOrderRow } from "@/lib/supabase/types";
 
@@ -107,7 +107,7 @@ export async function generateRitualForOrder(
     const order = claim.data as RitualOrderRow & { id: string };
 
     /* 결제 전 미리보기에서 고객이 이미 본 첫 편지 서두 (정상 구조일 때만 사용) */
-    const previewParsed = PreviewSchema.safeParse(order.preview_content);
+    const previewParsed = PreviewCoreSchema.safeParse(order.preview_content);
     const letterOpening = previewParsed.success
       ? previewParsed.data.preview_letter_excerpt
       : null;

@@ -3,7 +3,7 @@ import { confirmOrderPayment } from "@/lib/payment-confirm";
 import { createProcessToken } from "@/lib/customer-process-auth";
 import AutoResultProcessing from "@/components/payment/AutoResultProcessing";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { PreviewSchema } from "@/lib/ritual-preview-schema";
+import { PreviewCoreSchema } from "@/lib/ritual-preview-schema";
 import { getWaitingVideos } from "@/lib/home-media";
 
 async function SuccessView({ orderNumber }: { orderNumber: string }) {
@@ -28,7 +28,7 @@ async function SuccessView({ orderNumber }: { orderNumber: string }) {
       .maybeSingle();
     if (row.data) {
       applicantName = row.data.applicant_name ?? null;
-      const pv = PreviewSchema.safeParse(row.data.preview_content);
+      const pv = PreviewCoreSchema.safeParse(row.data.preview_content);
       if (pv.success && pv.data.intro_lines.length === 3) {
         introLines = pv.data.intro_lines;
       }

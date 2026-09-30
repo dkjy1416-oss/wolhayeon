@@ -48,7 +48,7 @@ export default function HeroSection({
       <div className="relative flex min-h-[100svh] flex-col justify-end px-6 pb-14 pt-24">
         <Reveal>
           <p className="text-[0.78rem] font-light leading-[1.8] tracking-wide text-gold/90">
-            끝난 건지, 아직 남아 있는 건지.
+            지금 이 마음이 100이라는 것, 알고 있어요.
           </p>
         </Reveal>
         <Reveal delay={100}>
@@ -60,9 +60,15 @@ export default function HeroSection({
         </Reveal>
         <Reveal delay={200}>
           <p className="mt-6 text-[0.95rem] font-light leading-[2.05] text-ivory-dim">
+            잊으라는 말도,
+            <br />
+            그만 좋아하라는 말도 하지 않을게요.
+            <br />
             <span className="text-ivory">
-              월화는 먼저,
-              <br />두 사람 사이의 흐름부터 읽습니다.
+              재회를 원한다면, 지금부터는
+              <br />그 마음을 망치지 않는 순서를
+              <br />
+              월화와 함께 찾아봐요.
             </span>
           </p>
         </Reveal>
@@ -76,7 +82,7 @@ export default function HeroSection({
             내 이야기 먼저 들려주기
           </TrackedCtaLink>
           <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/80">
-            결제 전, 개인화 미리보기부터 보여드려요
+            결제 전, 지금 내 관계 상태부터 무료로 보여드려요
           </p>
         </Reveal>
       </div>

@@ -10,12 +10,17 @@ export default function FinalCTASection() {
           <h2 className="font-display text-[1.45rem] font-semibold leading-[1.75] text-ivory">
             다시 만나고 싶은 마음이
             <br />
-            아직 남아 있다면,
+            아직 그대로라면,
           </h2>
           <p className="mt-6 text-[0.93rem] font-light leading-[2.05] text-ivory-dim">
-            그 마음을 없애려고 하기 전에
-            <br />왜 이렇게 남아 있는지부터
-            <br />한 번 제대로 봐도 됩니다.
+            그 마음을 없애지 않아도 돼요.
+            <br />
+            다만 그 마음을 망치지 않도록
+            <br />
+            지금 연락할지, 기다릴지,
+            <br />
+            어떤 순서로 움직일지는
+            <br />한 번 제대로 봐야 해요.
           </p>
           <p className="mt-6 text-[0.95rem] font-light leading-[2] text-ivory">
             월화에게
@@ -33,7 +38,7 @@ export default function FinalCTASection() {
             월화에게 내 이야기 들려주기
           </TrackedCtaLink>
           <p className="mt-4 text-[0.75rem] font-light text-ivory-dim/80">
-            결제 전 개인화 미리보기 제공
+            결제 전, 무료 관계 분석 먼저 제공
           </p>
         </Reveal>
       </div>

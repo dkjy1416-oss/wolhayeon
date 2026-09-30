@@ -35,16 +35,19 @@ export default function ResultPreviewSection({
       <div className="px-6">
         <Reveal>
           <p className="mx-auto mt-6 max-w-sm text-center text-[0.88rem] font-light leading-[2.1] text-ivory-dim">
-            왜 아직 이 사람이 마음에 남아 있는지,
+            상대가 왜 이렇게 행동하는지,
             <br />
-            지금 연락하는 것이 나은지,
-            <br />두 사람 사이에서 반복된 흐름,
+            지금 연락해도 되는지,
             <br />
-            다시 만난다면 달라져야 할 것,
+            연락한다면 언제, 어떻게 할지,
             <br />
-            지금 내가 할 수 있는 행동,
+            무엇이 관계를 더 망치는지,
             <br />
-            그리고 24시간 · 7일 · 21일 가이드까지.
+            다시 만난다면 반복되지 않으려면
+            <br />
+            무엇이 달라져야 하는지까지
+            <br />
+            구체적으로 답해요.
           </p>
         </Reveal>
       </div>
@@ -58,7 +61,7 @@ export default function ResultPreviewSection({
           sizes="(max-width: 520px) 100vw, 520px"
           bleed
           sceneEyebrow="당신만의 결과"
-          sceneTitle={"관계에서 반복된 흐름부터\n지금 할 수 있는 일까지"}
+          sceneTitle={"상대의 반응부터\n지금 해야 할 행동까지"}
         />
       </Reveal>
 
@@ -80,7 +83,7 @@ export default function ResultPreviewSection({
 
         <Reveal>
           <p className="font-display mt-14 text-center text-[1.05rem] font-medium text-ivory">
-            누구에게나 같은 결과가 아닙니다.
+            누구에게나 같은 결과가 아니에요.
           </p>
           <p className="mt-6 text-center text-[0.9rem] font-light leading-[2.1] text-ivory-dim">
             관계가 어떻게 시작됐는지,
@@ -96,7 +99,7 @@ export default function ResultPreviewSection({
           <p className="mt-5 text-center text-[0.92rem] font-light leading-[2] text-ivory">
             당신이 들려준 이야기에서
             <br />
-            결과가 시작됩니다.
+            결과가 시작돼요.
           </p>
         </Reveal>
 

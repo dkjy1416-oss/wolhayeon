@@ -6,22 +6,22 @@ const STEPS = [
   {
     no: "01",
     title: "내 이야기 들려주기",
-    body: "관계의 흐름,\n마지막 대화,\n지금 가장 힘든 마음을 적습니다.",
+    body: "관계의 흐름,\n마지막 대화,\n지금 가장 힘든 마음을 적어요.",
   },
   {
     no: "02",
-    title: "월화가 먼저 읽은 마음",
-    body: "결제 전에\n내 사연을 바탕으로 한\n개인화 메시지 3문장을 먼저 확인합니다.",
+    title: "결제 전, 무료로 먼저 받는 분석",
+    body: "현재 관계 상태, 상대 반응 해석,\n지금 조심할 행동과\n지금 해야 할 행동을 먼저 확인해요.",
   },
   {
     no: "03",
     title: "내 관계를 깊게 보기",
-    body: "관계의 흐름, 현재 감정,\n반복되었던 패턴,\n내가 정말 원하는 것을 봅니다.",
+    body: "상대 반응, 관계가 깨진 원인,\n연락 타이밍과 방식,\n첫 메시지 방향과 반응별 대응까지 봐요.",
   },
   {
     no: "04",
-    title: "다음 행동까지",
-    body: "개인 리추얼과\n24시간 · 7일 · 21일 가이드까지 이어집니다.",
+    title: "다시 반복되지 않도록",
+    body: "재회 후 같은 문제를 막는 방법,\n개인 리추얼과\n24시간 · 7일 · 21일 가이드까지 이어져요.",
   },
 ];
 
@@ -37,7 +37,7 @@ export default function HowItWorksSection({
           <h2 className="font-display text-center text-[1.4rem] font-semibold leading-snug text-ivory">
             몇 줄짜리 운세로
             <br />
-            끝나지 않습니다.
+            끝나지 않아요.
           </h2>
         </Reveal>
         <ol className="mt-12 flex flex-col gap-9">
