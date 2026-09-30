@@ -359,11 +359,65 @@ export function priceSentence(now: number = Date.now()): string {
     : `${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원`;
 }
 
+/* ---------- 상품 (메시지 / 개인화 책 / 패키지) ---------- */
+export type Product = "message" | "book" | "bundle";
+export const BOOK_PRICE_KRW = 29000;
+export const BUNDLE_PRICE_KRW = 39900;
+
+export const PRODUCTS: Record<
+  Product,
+  { name: string; orderName: string; tagline: string; includes: string[] }
+> = {
+  message: {
+    name: "월하연 메시지",
+    orderName: "월하연 메시지 (개인화 결과)",
+    tagline: "내 사연으로 쓴 전체 결과",
+    includes: [
+      "월화의 편지 · 관계가 깨진 원인 · 상대 반응 해석",
+      "연락 타이밍과 첫 메시지 방향 · 반응별 대응",
+      "개인 리추얼 · 24시간/7일/21일 가이드",
+    ],
+  },
+  book: {
+    name: "개인화 PDF 책",
+    orderName: "월하연 개인화 책 《헤어진 뒤, 연락하지 말아야 할 때》",
+    tagline: "《헤어진 뒤, 연락하지 말아야 할 때》 내 이름 판본",
+    includes: [
+      "약 125쪽 · 표지와 편지에 내 이름",
+      "지금의 판정과 날짜 · 나를 위한 메시지 초안",
+      "상황별 메시지 실전편 · 날짜가 적힌 7일/21일 기록장",
+    ],
+  },
+  bundle: {
+    name: "메시지 + 책 패키지",
+    orderName: "월하연 메시지 + 개인화 책 패키지",
+    tagline: "지금의 답과 오래 펼쳐 볼 한 권을 함께",
+    includes: ["월하연 메시지 전체 결과", "개인화 PDF 책 (약 125쪽)"],
+  },
+};
+
+export function isProduct(v: unknown): v is Product {
+  return v === "message" || v === "book" || v === "bundle";
+}
+
+/** 상품별 지금 결제할 금액 (메시지는 특가·사과 쿠폰 규칙 그대로) */
+export function productPrice(
+  product: unknown,
+  storedAmount: unknown,
+  now: number = Date.now()
+): number {
+  if (product === "book") return BOOK_PRICE_KRW;
+  if (product === "bundle") return BUNDLE_PRICE_KRW;
+  return resolveOrderPrice(storedAmount, now);
+}
+
 export function isAllowedPrice(amount: unknown): amount is number {
   return (
     amount === RITUAL_PRICE_KRW ||
     amount === APOLOGY_PRICE_KRW ||
-    amount === RITUAL_REGULAR_PRICE_KRW
+    amount === RITUAL_REGULAR_PRICE_KRW ||
+    amount === BOOK_PRICE_KRW ||
+    amount === BUNDLE_PRICE_KRW
   );
 }
 

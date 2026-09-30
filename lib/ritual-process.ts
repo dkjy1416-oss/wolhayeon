@@ -33,11 +33,13 @@ export async function processPaidOrder(
     const supabase = getSupabaseAdmin();
     const o = await supabase
       .from("ritual_orders")
-      .select("payment_status, generation_status, review_status, delivery_status, updated_at")
+      .select("payment_status, generation_status, review_status, delivery_status, updated_at, product")
       .eq("order_number", orderNumber)
       .maybeSingle();
     if (o.error || !o.data) return { status: "not_paid" };
     const order = o.data;
+    /* 책 단품 주문에는 메시지 결과를 만들지 않는다 (책은 lib/book/book-service) */
+    if ((order as { product?: string | null }).product === "book") return { status: "not_paid" };
 
     /* DB 기준 결제 재확인 — success URL 도착 자체는 신뢰하지 않음 */
     if (order.payment_status !== "paid") return { status: "not_paid" };

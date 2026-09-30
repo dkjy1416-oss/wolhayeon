@@ -24,7 +24,7 @@ import { confirmTossPayment } from "@/lib/toss";
 import {
   RITUAL_PRICE_KRW,
   isAllowedPrice,
-  resolveOrderPrice,
+  productPrice,
   PROMO_GRACE_MS,
 } from "@/lib/ritual-types";
 import { verifyPaidOwnership } from "@/lib/payment-ownership";
@@ -108,7 +108,7 @@ export async function confirmOrderPayment(params: {
     /* 1) 주문 존재 확인 — 개인정보 컬럼은 조회하지 않음 */
     const found = await supabase
       .from("ritual_orders")
-      .select("id, payment_amount, payment_status, payment_key, applicant_name")
+      .select("id, payment_amount, payment_status, payment_key, applicant_name, product")
       .eq("order_number", orderNumber)
       .single();
     if (found.error || !found.data) return { status: "not_found" };
@@ -150,7 +150,12 @@ export async function confirmOrderPayment(params: {
       !isAllowedPrice(row.payment_amount) ||
       amountNumber !== row.payment_amount ||
       /* 특가·쿠폰 마감 후엔 정가만 (마감 직후 30분 유예) */
-      row.payment_amount !== resolveOrderPrice(row.payment_amount, Date.now() - PROMO_GRACE_MS)
+      row.payment_amount !==
+        productPrice(
+          (row as { product?: string | null }).product ?? "message",
+          row.payment_amount,
+          Date.now() - PROMO_GRACE_MS
+        )
     ) {
       console.error(`[pay:${requestId}] amount_mismatch`);
       await logPayEventServer(orderNumber, "amount_mismatch");
