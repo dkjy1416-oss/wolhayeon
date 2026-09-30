@@ -30,6 +30,22 @@ const HANJA_CSS = ["Gowun Batang", "Nanum Myeongjo"]
 
 let fontCss: Promise<string> | null = null;
 
+/** 일러스트 표지 (public/book/cover-print.webp, 책 제작 API 번들에 포함). 실패 시 기본 표지 */
+let coverCache: string | null | undefined;
+export async function loadCoverDataUrl(): Promise<string | null> {
+  if (coverCache !== undefined) return coverCache;
+  try {
+    const { readFile } = await import("node:fs/promises");
+    const { join } = await import("node:path");
+    const buf = await readFile(join(process.cwd(), "public", "book", "cover-print.webp"));
+    coverCache = `data:image/webp;base64,${buf.toString("base64")}`;
+  } catch {
+    console.error("[book] cover_missing");
+    coverCache = null;
+  }
+  return coverCache;
+}
+
 function loadFontCss(): Promise<string> {
   if (!fontCss) {
     fontCss = Promise.all(

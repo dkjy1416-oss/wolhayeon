@@ -40,6 +40,8 @@ export function renderBookHtml(opts: {
   partner: string;
   paidAt: Date;
   personal: BookPersonal;
+  /** 일러스트 표지(data URL). 없으면 기본 표지 */
+  coverSrc?: string | null;
 }): string {
   const { personal: P } = opts;
   const N = esc(opts.name.trim() || "당신");
@@ -67,6 +69,20 @@ export function renderBookHtml(opts: {
     `<div class="sub">월화가 알려주는 재회의 순서<br><span style="color:#e2c48a">${N} 님을 위한 한 권 · ${d0.getUTCFullYear()}. ${d0.getUTCMonth() + 1}. ${d0.getUTCDate()}.</span></div>`
   );
   front = must(front, "WOLHAYEON · PDF BOOK", `WOLHAYEON · FOR ${N}`);
+  if (opts.coverSrc) {
+    const c0 = front.indexOf('<section class="full cover">');
+    const c1 = front.indexOf("</section>", c0) + "</section>".length;
+    if (c0 >= 0 && c1 > c0) {
+      front =
+        front.slice(0, c0) +
+        `<section class="full" style="background:#0f0d0b">
+  <img src="${opts.coverSrc}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+  <div style="position:absolute;left:0;right:0;top:0;height:24mm;background:linear-gradient(180deg,rgba(8,5,4,.92) 0%,rgba(8,5,4,.7) 45%,transparent 100%)"></div>
+  <div style="position:absolute;left:0;right:0;top:7.5mm;text-align:center;font-family:'Gowun Batang';font-size:8.2pt;letter-spacing:.28em;line-height:1.6;color:#f3ddb0;text-shadow:0 0 2mm #000">${N} 님을 위한 한 권 · ${d0.getUTCFullYear()}. ${d0.getUTCMonth() + 1}. ${d0.getUTCDate()}.</div>
+</section>` +
+        front.slice(c1);
+    }
+  }
   const i = front.indexOf('<section class="full centerpage"');
   const j = front.indexOf("</section>", i) + "</section>".length;
   const letter = P.opening_letter

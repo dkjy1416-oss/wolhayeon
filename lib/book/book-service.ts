@@ -13,7 +13,7 @@ import {
   type BookPersonal,
 } from "@/lib/book/book-personal";
 import { renderBookHtml } from "@/lib/book/book-render";
-import { renderBookPdf } from "@/lib/book/book-pdf";
+import { renderBookPdf, loadCoverDataUrl } from "@/lib/book/book-pdf";
 import { sendBookReadyEmail } from "@/lib/book/book-email";
 import { createBookToken } from "@/lib/book/book-auth";
 
@@ -92,6 +92,7 @@ export async function processBookOrder(orderNumber: string): Promise<BookOutcome
       partner: order.partner_name,
       paidAt: order.paid_at ? new Date(order.paid_at) : new Date(),
       personal,
+      coverSrc: await loadCoverDataUrl(),
     });
     const t0 = Date.now();
     const pdf = await renderBookPdf(html);
