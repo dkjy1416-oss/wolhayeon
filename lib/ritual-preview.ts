@@ -35,6 +35,8 @@ export type PreviewOutcome =
       applicantName: string;
       /** true = AI 개인화(또는 저장된 AI본), false = 즉석 템플릿 폴백 */
       generated: boolean;
+      /** 이 주문의 결제 금액 (사과 쿠폰 적용 시 쿠폰가) */
+      paymentAmount: number;
     }
   | { status: "not_found" }
   | { status: "server_error" };
@@ -348,6 +350,7 @@ export async function getOrCreatePreview(
           status: "ready",
           preview: cached.data,
           applicantName: order.applicant_name,
+          paymentAmount: order.payment_amount,
           generated: true,
         };
       }
@@ -378,6 +381,7 @@ export async function getOrCreatePreview(
       status: "ready",
       preview,
       applicantName: order.applicant_name,
+          paymentAmount: order.payment_amount,
       generated: ai !== null,
     };
   } catch (e) {

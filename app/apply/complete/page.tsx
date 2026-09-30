@@ -4,6 +4,8 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import {
   RITUAL_PRICE_KRW,
   RITUAL_REGULAR_PRICE_KRW,
+  APOLOGY_PRICE_KRW,
+  isAllowedPrice,
 } from "@/lib/ritual-types";
 import { PAYMENTS_OPEN } from "@/lib/payment-availability";
 import PayEventPing from "@/components/pay/PayEventPing";
@@ -94,8 +96,10 @@ export default async function CompletePage({
 
   /* 이미 결제 완료 → 결제창을 다시 띄우지 않음 */
   const alreadyPaid = row.payment_status === "paid";
-  /* pending인데 금액이 현재 가격(RITUAL_PRICE_KRW)과 다르면 비정상 주문 → 결제 진행 금지 */
-  const amountValid = row.payment_amount === RITUAL_PRICE_KRW;
+  /* pending인데 금액이 허용 가격(정상가·사과 쿠폰가)이 아니면 비정상 주문 → 결제 진행 금지 */
+  const amountValid = isAllowedPrice(row.payment_amount);
+  /* 결제 오류 사과 쿠폰이 적용된 주문 */
+  const isApologyCoupon = row.payment_amount === APOLOGY_PRICE_KRW;
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
 
@@ -194,14 +198,30 @@ export default async function CompletePage({
         </p>
       ) : (
         <>
-          <p className="mt-9 text-center text-[0.8rem] text-ivory-dim">
+          {isApologyCoupon ? (
+            <div className="mt-9 rounded-xl border border-thread/40 bg-thread/10 px-4 py-3 text-center">
+              <p className="text-[0.78rem] font-medium text-thread">
+                결제 오류 사과 쿠폰 적용
+              </p>
+              <p className="mt-1 text-[0.72rem] font-light leading-[1.8] text-ivory-dim">
+                결제가 원활하지 않아 불편을 드려 죄송해요.
+              </p>
+            </div>
+          ) : null}
+          <p className={`${isApologyCoupon ? "mt-5" : "mt-9"} text-center text-[0.8rem] text-ivory-dim`}>
             <span className="line-through opacity-60">
-              {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+              {(isApologyCoupon
+                ? RITUAL_PRICE_KRW
+                : RITUAL_REGULAR_PRICE_KRW
+              ).toLocaleString()}
+              원
             </span>
-            <span className="ml-2 text-thread">런칭 특가</span>
+            <span className="ml-2 text-thread">
+              {isApologyCoupon ? "사과 쿠폰가" : "런칭 특가"}
+            </span>
           </p>
           <p className="font-display mt-1.5 text-center text-3xl font-semibold text-gold">
-            {RITUAL_PRICE_KRW.toLocaleString()}
+            {row.payment_amount.toLocaleString()}
             <span className="ml-1 text-lg text-ivory-dim">원</span>
           </p>
           <p className="mt-2 text-center text-xs tracking-wide text-ivory-dim">

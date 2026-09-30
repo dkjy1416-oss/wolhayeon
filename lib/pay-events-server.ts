@@ -27,7 +27,8 @@ export type ServerPayEvent =
   | "pay_fail" // 토스가 failUrl로 돌려보냄 (code: 토스 오류 코드)
   | "pay_success" // 승인 완료
   | "confirm_failed" // 승인 API 실패 (code)
-  | "amount_mismatch"; // 금액 불일치로 승인 거부
+  | "amount_mismatch" // 금액 불일치로 승인 거부
+  | "apology_sent"; // 결제 오류 사과 쿠폰 메일 발송
 
 export type PayEvent = (typeof CLIENT_PAY_EVENTS)[number] | ServerPayEvent;
 

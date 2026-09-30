@@ -313,6 +313,14 @@ export const RITUAL_PRICE_KRW = 12900;
 /** 정가(원) — 런칭 특가 기간 동안 취소선으로 표시하는 원래 가격 */
 export const RITUAL_REGULAR_PRICE_KRW = 16900;
 
+/** 결제 오류 사과 쿠폰가(원) — 9/24~9/28 결제 실패 고객 주문에만 DB에서 적용 */
+export const APOLOGY_PRICE_KRW = 9900;
+
+/** 서버가 승인할 수 있는 주문 금액 (DB payment_amount가 이 중 하나여야 함) */
+export function isAllowedPrice(amount: unknown): amount is number {
+  return amount === RITUAL_PRICE_KRW || amount === APOLOGY_PRICE_KRW;
+}
+
 /* ---------- 유틸 ---------- */
 
 export function optionLabel(options: Option[], value: string | null): string {

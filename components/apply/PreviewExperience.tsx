@@ -17,6 +17,8 @@ import {
 import {
   RITUAL_PRICE_KRW,
   RITUAL_REGULAR_PRICE_KRW,
+  APOLOGY_PRICE_KRW,
+  isAllowedPrice,
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN } from "@/lib/payment-availability";
@@ -115,6 +117,8 @@ export default function PreviewExperience({
   );
   const [preview, setPreview] = useState<Preview | null>(null);
   const [name, setName] = useState<string>("");
+  /* 주문별 결제 금액 — 사과 쿠폰 적용 주문이면 쿠폰가 */
+  const [price, setPrice] = useState<number>(RITUAL_PRICE_KRW);
   const [showLoading, setShowLoading] = useState(false);
   const [slowNote, setSlowNote] = useState(false); // 15초 이상 걸릴 때 안심 문구
   const tries = useRef(0); // pending 폴링 횟수
@@ -167,6 +171,7 @@ export default function PreviewExperience({
         if (typeof json.applicantName === "string" && json.applicantName.trim()) {
           setName(json.applicantName.trim());
         }
+        if (isAllowedPrice(json.paymentAmount)) setPrice(json.paymentAmount);
         setPreview(json.preview as Preview);
         setPhase("ready");
         try {
@@ -346,7 +351,8 @@ export default function PreviewExperience({
   const leadText = preview.cta_lead_text;
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
 
-  const priceText = `${RITUAL_PRICE_KRW.toLocaleString()}원`;
+  const priceText = `${price.toLocaleString()}원`;
+  const isApologyCoupon = price === APOLOGY_PRICE_KRW;
   const ctaLabel = `내 전체 이야기 이어서 보기 · ${priceText}`;
 
   return (
@@ -490,10 +496,15 @@ export default function PreviewExperience({
           </p>
           <p className="mt-4 text-[0.78rem] text-ivory-dim">
             <span className="line-through opacity-60">
-              {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+              {(isApologyCoupon
+                ? RITUAL_PRICE_KRW
+                : RITUAL_REGULAR_PRICE_KRW
+              ).toLocaleString()}
+              원
             </span>
             <span className="ml-2 text-thread">
-              런칭 특가 {RITUAL_PRICE_KRW.toLocaleString()}원
+              {isApologyCoupon ? "결제 오류 사과 쿠폰가" : "런칭 특가"}{" "}
+              {price.toLocaleString()}원
             </span>
           </p>
         </div>
@@ -508,8 +519,8 @@ export default function PreviewExperience({
               className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
             >
               {name
-                ? `${name}님의 다음 장 이어서 읽기 · ${RITUAL_PRICE_KRW.toLocaleString()}원`
-                : `${CTA_BUTTON} · ${RITUAL_PRICE_KRW.toLocaleString()}원`}
+                ? `${name}님의 다음 장 이어서 읽기 · ${priceText}`
+                : `${CTA_BUTTON} · ${priceText}`}
             </Link>
             <div className="mx-auto mt-4 flex max-w-md flex-col gap-1">
               {CTA_HELPERS.map((h, i) => (

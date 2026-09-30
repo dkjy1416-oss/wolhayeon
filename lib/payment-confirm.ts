@@ -21,7 +21,7 @@ import { randomUUID } from "crypto";
 import { Resend } from "resend";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { confirmTossPayment } from "@/lib/toss";
-import { RITUAL_PRICE_KRW } from "@/lib/ritual-types";
+import { RITUAL_PRICE_KRW, isAllowedPrice } from "@/lib/ritual-types";
 import { verifyPaidOwnership } from "@/lib/payment-ownership";
 import { track } from "@vercel/analytics/server";
 import { logPayEventServer } from "@/lib/pay-events-server";
@@ -117,7 +117,9 @@ export async function confirmOrderPayment(params: {
       const owned = verifyPaidOwnership({
         dbPaymentKey: row.payment_key,
         dbAmount: row.payment_amount,
-        expectedAmount: RITUAL_PRICE_KRW,
+        expectedAmount: isAllowedPrice(row.payment_amount)
+          ? row.payment_amount
+          : RITUAL_PRICE_KRW,
         paymentKey,
         amount,
       });
@@ -135,11 +137,12 @@ export async function confirmOrderPayment(params: {
       return { status: "invalid_request" };
     }
 
-    /* 3) DB 금액 = RITUAL_PRICE_KRW / 4) URL amount = RITUAL_PRICE_KRW.
+    /* 3) DB 금액이 허용 가격(정상가 또는 사과 쿠폰가)인가
+       4) URL amount가 DB 금액과 정확히 같은가.
+       쿠폰가는 서버(DB)에서만 정해지므로 브라우저 조작으로 할인 불가.
        하나라도 다르면 변조 가능성 → 승인 자체를 하지 않음 */
     if (
-      row.payment_amount !== RITUAL_PRICE_KRW ||
-      amountNumber !== RITUAL_PRICE_KRW ||
+      !isAllowedPrice(row.payment_amount) ||
       amountNumber !== row.payment_amount
     ) {
       console.error(`[pay:${requestId}] amount_mismatch`);
