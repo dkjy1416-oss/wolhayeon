@@ -16,6 +16,7 @@ import {
   PreviewStructSchema,
   PREVIEW_SYSTEM_PROMPT,
   buildPreviewUserPrompt,
+  previewHasBannedPhrase,
   type RitualPreview,
 } from "@/lib/ritual-preview-schema";
 import type { RitualOrderRow } from "@/lib/supabase/types";
@@ -359,6 +360,10 @@ async function buildAiPreview(
       console.error(
         `[preview] ai_schema_invalid ms=${Date.now() - t0}`
       );
+      return null;
+    }
+    if (previewHasBannedPhrase(parsed.data)) {
+      console.error(`[preview] ai_banned_phrase ms=${Date.now() - t0}`);
       return null;
     }
     console.error(`[preview] ai_ok ms=${Date.now() - t0}`);
