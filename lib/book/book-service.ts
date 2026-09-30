@@ -1,0 +1,130 @@
+/**
+ * 개인화 책 제작 전체 흐름 (서버 전용).
+ * 결제 확인 → 개인화 부분 AI 작성 → HTML 조립 → PDF → 저장소 업로드 → 메일.
+ * 같은 주문에 대해 여러 번 호출돼도 한 번만 만든다(상태값으로 잠금).
+ */
+import "server-only";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
+import type { RitualOrderRow } from "@/lib/supabase/types";
+import { sanitizeSiteUrl } from "@/lib/delivery-rules";
+import {
+  BookPersonalSchema,
+  generateBookPersonal,
+  type BookPersonal,
+} from "@/lib/book/book-personal";
+import { renderBookHtml } from "@/lib/book/book-render";
+import { renderBookPdf } from "@/lib/book/book-pdf";
+import { sendBookReadyEmail } from "@/lib/book/book-email";
+import { createBookToken } from "@/lib/book/book-auth";
+
+export const BOOK_BUCKET = "books";
+const STALE_MS = 6 * 60 * 1000;
+
+export type BookOutcome =
+  | { status: "ready"; downloadPath: string }
+  | { status: "processing" }
+  | { status: "failed" }
+  | { status: "not_paid" }
+  | { status: "not_book" };
+
+export function bookDownloadPath(orderNumber: string): string | null {
+  const t = createBookToken(orderNumber);
+  if (!t) return null;
+  return `/api/books/download?order=${encodeURIComponent(orderNumber)}&t=${encodeURIComponent(t)}`;
+}
+
+export function productHasBook(product: string | null | undefined): boolean {
+  return product === "book" || product === "bundle";
+}
+
+export async function processBookOrder(orderNumber: string): Promise<BookOutcome> {
+  const supabase = getSupabaseAdmin();
+  const res = await supabase
+    .from("ritual_orders")
+    .select("*")
+    .eq("order_number", orderNumber)
+    .maybeSingle();
+  if (res.error || !res.data) return { status: "failed" };
+  const order = res.data as RitualOrderRow;
+  if (order.payment_status !== "paid") return { status: "not_paid" };
+  if (!productHasBook(order.product)) return { status: "not_book" };
+
+  const path = bookDownloadPath(orderNumber);
+  if (!path) return { status: "failed" };
+
+  if (order.book_status === "ready" && order.book_path) {
+    return { status: "ready", downloadPath: path };
+  }
+  const started = order.book_started_at ? Date.parse(order.book_started_at) : 0;
+  if (order.book_status === "generating" && Date.now() - started < STALE_MS) {
+    return { status: "processing" };
+  }
+
+  /* 잠금: 지금 상태 그대로일 때만 generating으로 전환 (동시 호출 1회만 통과) */
+  const nowIso = new Date().toISOString();
+  let lock = supabase
+    .from("ritual_orders")
+    .update({ book_status: "generating", book_started_at: nowIso })
+    .eq("id", order.id);
+  lock =
+    order.book_status === null || order.book_status === undefined
+      ? lock.is("book_status", null)
+      : lock.eq("book_status", order.book_status);
+  if (order.book_started_at) lock = lock.eq("book_started_at", order.book_started_at);
+  const locked = await lock.select("id");
+  if (locked.error || !locked.data || locked.data.length === 0) {
+    return { status: "processing" };
+  }
+
+  try {
+    let personal: BookPersonal | null = null;
+    const cached = BookPersonalSchema.safeParse(order.book_personal);
+    if (cached.success) personal = cached.data;
+    if (!personal) {
+      personal = await generateBookPersonal(order);
+      if (!personal) personal = await generateBookPersonal(order);
+      if (!personal) throw new Error("personal_failed");
+      await supabase.from("ritual_orders").update({ book_personal: personal }).eq("id", order.id);
+    }
+
+    const html = renderBookHtml({
+      name: order.applicant_name,
+      partner: order.partner_name,
+      paidAt: order.paid_at ? new Date(order.paid_at) : new Date(),
+      personal,
+    });
+    const t0 = Date.now();
+    const pdf = await renderBookPdf(html);
+    console.error(`[book] pdf_ok bytes=${pdf.length} ms=${Date.now() - t0}`);
+
+    const objectPath = `${orderNumber}.pdf`;
+    const up = await supabase.storage
+      .from(BOOK_BUCKET)
+      .upload(objectPath, pdf, { contentType: "application/pdf", upsert: true });
+    if (up.error) throw new Error(`upload_failed:${up.error.message}`);
+
+    await supabase
+      .from("ritual_orders")
+      .update({
+        book_status: "ready",
+        book_path: objectPath,
+        book_generated_at: new Date().toISOString(),
+      })
+      .eq("id", order.id);
+
+    const site = sanitizeSiteUrl(process.env.SITE_URL);
+    if (site && order.email) {
+      await sendBookReadyEmail({
+        to: order.email,
+        name: order.applicant_name,
+        orderNumber,
+        downloadUrl: `${site}${path}`,
+      });
+    }
+    return { status: "ready", downloadPath: path };
+  } catch (e) {
+    console.error(`[book] failed ${e instanceof Error ? e.message.slice(0, 80) : "unknown"}`);
+    await supabase.from("ritual_orders").update({ book_status: "failed" }).eq("id", order.id);
+    return { status: "failed" };
+  }
+}
