@@ -18,4 +18,4 @@ export const PAYMENTS_OPEN = true;
  * 개인화 책·패키지 판매 스위치.
  * false 동안은 메시지 상품만 보이고, 운영자 테스트(?paytest=1)에서만 책·패키지를 고를 수 있다.
  */
-export const BOOK_SALES_OPEN = false;
+export const BOOK_SALES_OPEN = true;
