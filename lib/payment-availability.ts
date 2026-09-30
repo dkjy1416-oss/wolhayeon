@@ -12,4 +12,4 @@
  *   (열면서 그동안 미리보기까지 본 대기 고객에게 오픈 알림 메일을 보내면
  *    오픈 첫날을 이벤트로 만들 수 있다 — 리마인드 인프라 재사용)
  */
-export const PAYMENTS_OPEN = false;
+export const PAYMENTS_OPEN = true;
