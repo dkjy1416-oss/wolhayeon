@@ -50,6 +50,16 @@ export interface RitualOrderRow extends RitualApplication {
   delivery_error_code: string | null;
   /** 발송 시도 횟수 */
   delivery_attempt_count: number;
+  /** 상품: message(메시지) / book(개인화 책) / bundle(메시지+책) */
+  product?: "message" | "book" | "bundle" | null;
+  book_status?: "generating" | "ready" | "failed" | null;
+  book_path?: string | null;
+  book_personal?: Record<string, unknown> | null;
+  book_started_at?: string | null;
+  book_generated_at?: string | null;
+  book_downloaded_at?: string | null;
+  /** 메시지 상품 고정가(사과 쿠폰 등) — 상품을 바꿨다 돌아와도 유지 */
+  message_amount?: number | null;
   created_at: string;
   updated_at: string;
 }
