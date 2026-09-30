@@ -102,10 +102,16 @@ export type RitualPreview = z.infer<typeof PreviewSchema>;
 
 /** 저장 전 최종 점검 — 단정·낙담·거친 표현이 섞이면 폐기(폴백/재시도) */
 const PREVIEW_BANNED_RE =
-  /결심한 상태|끝내기로 (?:이미 )?(?:마음먹|결심)|돌아가고 싶지 않다는 뜻|돌아오지 않을 (?:거|것)|마음이 식었|이미 끝났|파괴|곪|구차|매달리는|반드시 연락|재회하게 됩니다|아직 사랑하고 있/;
+  /결심한 상태|끝내기로 (?:이미 )?(?:마음먹었|결심했)|돌아가고 싶지 않다는 뜻|파괴되|곪|구차|반드시 연락|재회하게 됩니다/;
+
+/** 금지 표현이 있으면 그 표현(로그용, 개인정보 아님)을, 없으면 null */
+export function previewBannedMatch(p: RitualPreview): string | null {
+  const m = JSON.stringify(p).match(PREVIEW_BANNED_RE);
+  return m ? m[0] : null;
+}
 
 export function previewHasBannedPhrase(p: RitualPreview): boolean {
-  return PREVIEW_BANNED_RE.test(JSON.stringify(p));
+  return previewBannedMatch(p) !== null;
 }
 
 /** 유료 생성·결제 완료 화면이 필요한 부분만 읽는 느슨한 스키마

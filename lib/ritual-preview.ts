@@ -16,7 +16,7 @@ import {
   PreviewStructSchema,
   PREVIEW_SYSTEM_PROMPT,
   buildPreviewUserPrompt,
-  previewHasBannedPhrase,
+  previewBannedMatch,
   type RitualPreview,
 } from "@/lib/ritual-preview-schema";
 import type { RitualOrderRow } from "@/lib/supabase/types";
@@ -319,11 +319,67 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
    1차 시도 25초 초과 → 템플릿 폴백 노출). 미리보기는 결제 직전 핵심 화면이라
    템플릿 노출을 최소화해야 하므로 여유를 크게 둔다 (route maxDuration 60초). */
 const PREVIEW_AI_TIMEOUT_MS = 50_000;
-const PREVIEW_AI_MAX_TOKENS = 3600;
+const PREVIEW_AI_MAX_TOKENS = 2400;
 
 function getPreviewModelId(): string {
   /* 무료 분석은 결제 전환의 핵심 — 문장 정확도를 위해 Sonnet 기본 (운영자 선택 9/30) */
   return process.env.PREVIEW_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-6";
+}
+
+/* 두 부분을 병렬로 생성해 대기 시간을 절반으로 (Sonnet 단일 호출 실측 44~49초 → 한계 근접) */
+const PART_A_KEYS = ["intro_lines", "preview_letter_excerpt", "love100", "cta_lead_text"] as const;
+const PART_B_KEYS = ["relationship_state", "partner_reading", "cautions", "now_plan"] as const;
+const PreviewStructA = PreviewStructSchema.pick({
+  intro_lines: true,
+  preview_letter_excerpt: true,
+  love100: true,
+  cta_lead_text: true,
+});
+const PreviewStructB = PreviewStructSchema.pick({
+  relationship_state: true,
+  partner_reading: true,
+  cautions: true,
+  now_plan: true,
+});
+
+async function callPart(
+  client: Anthropic,
+  order: RitualOrderRow,
+  keys: readonly string[],
+  schema: typeof PreviewStructA | typeof PreviewStructB,
+  label: string
+): Promise<Record<string, unknown> | null> {
+  const t0 = Date.now();
+  try {
+    const message = await client.messages.create(
+      {
+        model: getPreviewModelId(),
+        max_tokens: PREVIEW_AI_MAX_TOKENS,
+        system: PREVIEW_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user",
+            content: `${buildPreviewUserPrompt(order)}\n\n[이번 요청의 출력 범위]\n이번에는 다음 항목만 작성합니다: ${keys.join(", ")}. 나머지 항목은 다른 요청에서 작성되므로 쓰지 않습니다. 모든 규칙은 그대로 지킵니다.`,
+          },
+        ],
+        output_config: { format: zodOutputFormat(schema) },
+      },
+      { timeout: PREVIEW_AI_TIMEOUT_MS }
+    );
+    if (message.stop_reason === "max_tokens" || message.stop_reason === "refusal") {
+      console.error(`[preview] ai_${label}_stop=${message.stop_reason} ms=${Date.now() - t0}`);
+      return null;
+    }
+    const text = message.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+    console.error(`[preview] ai_${label}_ms=${Date.now() - t0}`);
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    console.error(`[preview] ai_${label}_failed ms=${Date.now() - t0}`);
+    return null;
+  }
 }
 
 async function buildAiPreview(
@@ -333,46 +389,32 @@ async function buildAiPreview(
   if (!apiKey) return null;
 
   const t0 = Date.now();
-  try {
-    const client = new Anthropic({ apiKey, maxRetries: 0 });
-    const message = await client.messages.create(
-      {
-        model: getPreviewModelId(),
-        max_tokens: PREVIEW_AI_MAX_TOKENS,
-        system: PREVIEW_SYSTEM_PROMPT,
-        messages: [
-          { role: "user", content: buildPreviewUserPrompt(order) },
-        ],
-        output_config: { format: zodOutputFormat(PreviewStructSchema) },
-      },
-      { timeout: PREVIEW_AI_TIMEOUT_MS }
-    );
-    if (message.stop_reason === "max_tokens") return null;
-    if (message.stop_reason === "refusal") return null;
-
-    const text = message.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
-
-    const parsed = PreviewSchema.safeParse(JSON.parse(text));
-    if (!parsed.success) {
-      console.error(
-        `[preview] ai_schema_invalid ms=${Date.now() - t0}`
-      );
-      return null;
-    }
-    if (previewHasBannedPhrase(parsed.data)) {
-      console.error(`[preview] ai_banned_phrase ms=${Date.now() - t0}`);
-      return null;
-    }
-    console.error(`[preview] ai_ok ms=${Date.now() - t0}`);
-    return parsed.data;
-  } catch {
-    /* 타임아웃·네트워크·JSON 오류 등 — 폴백 사용, 개인정보 로그 금지 */
+  const client = new Anthropic({ apiKey, maxRetries: 0 });
+  const [partA, partB] = await Promise.all([
+    callPart(client, order, PART_A_KEYS, PreviewStructA, "a"),
+    callPart(client, order, PART_B_KEYS, PreviewStructB, "b"),
+  ]);
+  if (!partA || !partB) {
     console.error(`[preview] ai_failed ms=${Date.now() - t0}`);
     return null;
   }
+
+  const parsed = PreviewSchema.safeParse({ ...partA, ...partB });
+  if (!parsed.success) {
+    const paths = parsed.error.issues
+      .slice(0, 4)
+      .map((i) => `${i.path.join(".")}:${i.code}`)
+      .join(",");
+    console.error(`[preview] ai_schema_invalid ms=${Date.now() - t0} ${paths}`);
+    return null;
+  }
+  const banned = previewBannedMatch(parsed.data);
+  if (banned) {
+    console.error(`[preview] ai_banned_phrase ms=${Date.now() - t0} hit=${banned}`);
+    return null;
+  }
+  console.error(`[preview] ai_ok ms=${Date.now() - t0}`);
+  return parsed.data;
 }
 
 export async function getOrCreatePreview(
