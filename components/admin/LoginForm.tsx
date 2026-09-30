@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function LoginForm() {
-  const router = useRouter();
   const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +18,7 @@ export default function LoginForm() {
         body: JSON.stringify({ secret }),
       });
       if (res.ok) {
-        router.replace("/admin/orders");
+        window.location.href = "/admin";
         return;
       }
       setError("비밀번호가 올바르지 않습니다.");

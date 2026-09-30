@@ -5,7 +5,7 @@ import LoginForm from "@/components/admin/LoginForm";
 export const dynamic = "force-dynamic";
 
 export default async function AdminLoginPage() {
-  if (await isAdminAuthenticated()) redirect("/admin/orders");
+  if (await isAdminAuthenticated()) redirect("/admin");
   return (
     <main className="flex min-h-[100svh] flex-col items-center justify-center px-6">
       <p className="text-xs tracking-[0.35em] text-gold/90">月下緣 ADMIN</p>

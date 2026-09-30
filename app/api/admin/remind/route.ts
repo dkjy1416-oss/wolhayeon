@@ -23,6 +23,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { createRemindToken } from "@/lib/remind-auth";
 import { isValidEmail } from "@/lib/ritual-types";
 import { sanitizeSiteUrl } from "@/lib/delivery-rules";
+import { isAdminAuthenticated } from "@/lib/admin-auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -106,7 +107,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "invalid_json" }, { status: 400 });
   }
 
-  if (!secretOk(body.adminSecret)) {
+  /* 관리자 로그인 세션 또는 비밀번호 둘 중 하나면 허용 */
+  if (!secretOk(body.adminSecret) && !(await isAdminAuthenticated())) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
