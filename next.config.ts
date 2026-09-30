@@ -5,7 +5,10 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core"],
   /* Chromium 실행 파일(bin/*.br)은 자동 추적되지 않으므로 책 제작 API에 직접 포함 */
   outputFileTracingIncludes: {
-    "/api/books/process": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/books/process": [
+      "./node_modules/@sparticuz/chromium/bin/**",
+      "./public/book/cover-print.webp",
+    ],
   },
 };
 
