@@ -21,6 +21,7 @@ import ReviewEditor from "@/components/admin/ReviewEditor";
 import ResultLinkButtons from "@/components/admin/ResultLinkButtons";
 import DeliveryButton from "@/components/admin/DeliveryButton";
 import GenerateResultButton from "@/components/admin/GenerateResultButton";
+import CustomerEmailForm from "@/components/admin/CustomerEmailForm";
 
 export const dynamic = "force-dynamic";
 
@@ -162,6 +163,8 @@ export default async function AdminOrderDetailPage({
             />
           </div>
         )}
+
+      <CustomerEmailForm orderNumber={order.order_number} toEmail={order.email} />
 
       {/* 안전 경고 */}
       {safetyRisky.length > 0 && (
