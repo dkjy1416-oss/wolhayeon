@@ -9,6 +9,7 @@
  * - 일시적 생성 실패(failed)는 짧게 자동 재시도 후에만 실패 화면으로.
  */
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   getOrCreateSubmissionId,
@@ -23,6 +24,8 @@ import {
   priceBadge,
   PROMO_DEADLINE_TEXT,
   isPromoActive,
+  BOOK_PRICE_KRW,
+  BUNDLE_PRICE_KRW,
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
@@ -293,6 +296,29 @@ export default function PreviewExperience({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderNumber]);
 
+  /* 하단 고정 결제 버튼 — 02번 카드를 지나고, 본문 결제 버튼이 안 보일 때만 */
+  const [showSticky, setShowSticky] = useState(false);
+  const [bookOpen, setBookOpen] = useState(false);
+  const stickyStartRef = useRef<HTMLDivElement>(null);
+  const mainCtaRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (phase !== "ready" || !PAYMENTS_OPEN) return;
+    const onScroll = () => {
+      const s0 = stickyStartRef.current?.getBoundingClientRect();
+      const m = mainCtaRef.current?.getBoundingClientRect();
+      const pastStart = !!s0 && s0.top < 0;
+      const ctaVisible = !!m && m.top < window.innerHeight && m.bottom > 0;
+      setShowSticky(pastStart && !ctaVisible);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [phase]);
+
   /* ---------- 실패: full-bleed 유지 + 재시도만 (개인화 실패 시 결제 버튼 금지) ---------- */
   if (phase === "delayed") {
     return (
@@ -371,7 +397,7 @@ export default function PreviewExperience({
   const ctaLabel = `내 전체 이야기 이어서 보기 · ${priceText}`;
 
   return (
-    <div className="fade-in pb-16">
+    <div className="fade-in pb-28">
       {/* ---------- full-bleed: 이름 제목 + 월화의 개인화 문장 3줄 ---------- */}
       <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[88svh]">
         <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
@@ -453,6 +479,7 @@ export default function PreviewExperience({
           </p>
         </div>
       </section>
+      <div ref={stickyStartRef} aria-hidden />
 
       {/* ---------- B. 상대 반응 해석 ---------- */}
       <section className="mt-4 px-6">
@@ -502,20 +529,22 @@ export default function PreviewExperience({
             <span className="rounded-full bg-gold/15 px-3 py-1 text-[0.8rem] font-medium text-gold">
               {NOW_STANCE_LABELS[preview.now_plan.stance] ?? ""}
             </span>
-            <span className="text-[0.8rem] text-ivory-dim">{preview.now_plan.period}</span>
+            <span className="text-[0.76rem] text-ivory-dim/80">🔒 기간은 전체 결과에서</span>
           </div>
           <p className="mt-3 text-[0.9rem] font-light leading-[2] text-ivory">{preview.now_plan.why}</p>
-          <p className="mt-4 text-[0.74rem] tracking-wider text-gold/70">이 기간에 볼 것</p>
-          <ul className="mt-1.5 flex flex-col gap-1.5">
-            {preview.now_plan.watch.map((w, i) => (
-              <li key={i} className="text-[0.85rem] font-light leading-[1.8] text-ivory-dim">
-                · {w}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 rounded-xl border border-gold-dim/25 bg-ink/60 px-4 py-3">
-            <p className="text-[0.72rem] tracking-wider text-gold/70">다음 행동을 정하는 기준</p>
-            <p className="mt-1 text-[0.86rem] leading-[1.85] text-ivory">{preview.now_plan.decide_rule}</p>
+          {/* 언제까지·무엇을 보고·어떻게 다음 행동을 정할지는 유료 결과에서 (자리표시 문장만 흐림) */}
+          <div className="relative mt-4 overflow-hidden rounded-xl border border-gold-dim/25 bg-ink/60 px-4 py-3">
+            <p className="text-[0.72rem] tracking-wider text-gold/70">이 기간에 볼 것 · 다음 행동을 정하는 기준</p>
+            <div aria-hidden className="mt-2 select-none blur-[5px]">
+              <p className="text-[0.85rem] font-light leading-[1.8] text-ivory-dim">· 상대의 반응이 바뀌는 신호와 그때의 거리</p>
+              <p className="text-[0.85rem] font-light leading-[1.8] text-ivory-dim">· 먼저 움직여도 되는 조건과 멈춰야 하는 조건</p>
+              <p className="mt-1 text-[0.86rem] leading-[1.85] text-ivory-dim">이 기준이 채워지면 그때 한 번, 짧고 가볍게</p>
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center bg-ink/40">
+              <p className="rounded-full border border-gold/30 bg-ink/80 px-4 py-1.5 text-[0.74rem] text-gold">
+                🔒 언제까지·무엇을 보고 정할지는 전체 결과에서
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -545,7 +574,7 @@ export default function PreviewExperience({
           전체 결과에서 더 깊게 보는 것
         </p>
         <p className="mt-2 text-center text-[0.78rem] font-light text-ivory-dim">
-          지금 뭘 해야 하는지까지 봤다면, 다음은 언제·어떻게예요
+          방향은 봤어요. 이제 남은 건 언제·어떻게예요
         </p>
         <ul className="mx-auto mt-4 flex max-w-md flex-col gap-2">
           {PAID_DEEP_ITEMS.map((item) => (
@@ -589,12 +618,13 @@ export default function PreviewExperience({
           </p>
           {isPromoActive() && price < RITUAL_REGULAR_PRICE_KRW && (
             <p className="mt-2 text-[0.74rem] text-gold/90">
-              이 가격은 {PROMO_DEADLINE_TEXT}만이에요 · 10월 5일부터 {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+              10월 5일부터는 {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원으로 올라요
             </p>
           )}
         </div>
         {PAYMENTS_OPEN ? (
           <>
+            <div ref={mainCtaRef} />
             <Link
               href={payHref}
               onClick={() => {
@@ -617,7 +647,25 @@ export default function PreviewExperience({
             </div>
 
             {/* ---------- 월화가 함께 건네는 책 (패키지 소개) ---------- */}
-            {BOOK_SALES_OPEN && (
+            {BOOK_SALES_OPEN && !bookOpen && (
+              <button
+                type="button"
+                onClick={() => setBookOpen(true)}
+                className="mx-auto mt-8 flex w-full max-w-md items-center justify-between gap-3 rounded-2xl border border-gold-dim/30 bg-ink-soft px-5 py-4 text-left"
+              >
+                <span>
+                  <span className="block text-[0.7rem] tracking-wider text-gold/80">함께 받으면 더 좋은 책</span>
+                  <span className="mt-1 block text-[0.86rem] text-ivory">
+                    연락이 왔을 때·다시 만날 때까지 담은 한 권
+                    {price + BOOK_PRICE_KRW - BUNDLE_PRICE_KRW > 0
+                      ? ` · ${(price + BOOK_PRICE_KRW - BUNDLE_PRICE_KRW).toLocaleString()}원 아껴요`
+                      : ""}
+                  </span>
+                </span>
+                <span aria-hidden className="shrink-0 text-gold">▸</span>
+              </button>
+            )}
+            {BOOK_SALES_OPEN && bookOpen && (
               <BookPackageCard
                 orderNumber={orderNumber}
                 name={name}
@@ -658,6 +706,28 @@ export default function PreviewExperience({
         {/* 테스트 결제 모드 안내 (라이브 키 전환 시 컴포넌트 내부에서 끔) */}
         <DevPaymentNotice />
       </section>
+      {PAYMENTS_OPEN && typeof document !== "undefined" && createPortal(
+        <div
+          className={`fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim/25 bg-ink/95 px-4 pt-3 backdrop-blur transition-transform duration-300 ${
+            showSticky ? "translate-y-0" : "translate-y-full"
+          }`}
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
+          aria-hidden={!showSticky}
+        >
+          <Link
+            href={payHref}
+            tabIndex={showSticky ? 0 : -1}
+            onClick={() => {
+              trackEvent("payment_cta_click", { order: orderNumber });
+              logPayEvent(orderNumber, "preview_cta_click");
+            }}
+            className="mx-auto flex h-12 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-medium text-ivory active:opacity-85"
+          >
+            {name ? `${name}님의 다음 장 이어서 보기` : "다음 장 이어서 보기"} · {priceText}
+          </Link>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
