@@ -31,6 +31,7 @@ import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import BookPackageCard from "@/components/apply/BookPackageCard";
 import { logPayEvent } from "@/lib/pay-events";
+import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
 import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
 import {
@@ -299,6 +300,16 @@ export default function PreviewExperience({
   /* 하단 고정 결제 버튼 — 02번 카드를 지나고, 본문 결제 버튼이 안 보일 때만 */
   const [showSticky, setShowSticky] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
+  /* 책 소개 페이지에서 책·패키지를 고르고 온 손님 → 그 상품으로 결제 이어가기 */
+  const [want, setWant] = useState<WantProduct | null>(null);
+  useEffect(() => {
+    if (!BOOK_SALES_OPEN) return;
+    const w = loadWant();
+    if (w) {
+      setWant(w);
+      setBookOpen(true);
+    }
+  }, []);
   const stickyStartRef = useRef<HTMLDivElement>(null);
   const mainCtaRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -393,6 +404,14 @@ export default function PreviewExperience({
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
 
   const priceText = `${price.toLocaleString()}원`;
+  const wantPrice = want === "book" ? BOOK_PRICE_KRW : want === "bundle" ? BUNDLE_PRICE_KRW : price;
+  const mainHref = want ? `${payHref}&product=${want}` : payHref;
+  const mainLabel =
+    want === "book"
+      ? `${name ? `${name}님의 ` : "나의 "}책 받기 · ${BOOK_PRICE_KRW.toLocaleString()}원`
+      : want === "bundle"
+        ? `메시지 + 책 함께 받기 · ${BUNDLE_PRICE_KRW.toLocaleString()}원`
+        : null;
   const isApologyCoupon = price === APOLOGY_PRICE_KRW;
   const ctaLabel = `내 전체 이야기 이어서 보기 · ${priceText}`;
 
@@ -605,6 +624,12 @@ export default function PreviewExperience({
             <br />
             다음 장부터는 오직 당신의 사연으로만 쓰여요.
           </p>
+          {want ? (
+            <p className="mt-4 text-[0.78rem] text-ivory-dim">
+              {want === "book" ? "고르신 상품 · 개인화 PDF 책" : "고르신 상품 · 메시지 + 책 패키지"}
+              <span className="ml-2 text-thread">{wantPrice.toLocaleString()}원</span>
+            </p>
+          ) : (
           <p className="mt-4 text-[0.78rem] text-ivory-dim">
             {priceBadge(price).strike !== null && (
               <span className="line-through opacity-60">
@@ -616,7 +641,8 @@ export default function PreviewExperience({
               {price.toLocaleString()}원
             </span>
           </p>
-          {isPromoActive() && price < RITUAL_REGULAR_PRICE_KRW && (
+          )}
+          {!want && isPromoActive() && price < RITUAL_REGULAR_PRICE_KRW && (
             <p className="mt-2 text-[0.74rem] text-gold/90">
               10월 5일부터는 {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원으로 올라요
             </p>
@@ -626,17 +652,26 @@ export default function PreviewExperience({
           <>
             <div ref={mainCtaRef} />
             <Link
-              href={payHref}
+              href={mainHref}
               onClick={() => {
                 trackEvent("payment_cta_click", { order: orderNumber });
                 logPayEvent(orderNumber, "preview_cta_click");
               }}
               className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
             >
-              {name
-                ? `${name}님의 다음 장 이어서 읽기 · ${priceText}`
-                : `${CTA_BUTTON} · ${priceText}`}
+              {mainLabel ??
+                (name
+                  ? `${name}님의 다음 장 이어서 읽기 · ${priceText}`
+                  : `${CTA_BUTTON} · ${priceText}`)}
             </Link>
+            {want && (
+              <Link
+                href={payHref}
+                className="mx-auto mt-3 block max-w-md text-[0.76rem] text-ivory-dim underline underline-offset-4"
+              >
+                메시지만 받기 · {priceText}
+              </Link>
+            )}
             <div className="mx-auto mt-4 flex max-w-md flex-col gap-1">
               {CTA_HELPERS.map((h, i) => (
                 <p key={i} className="text-[0.72rem] text-ivory-dim/70">
@@ -715,7 +750,7 @@ export default function PreviewExperience({
           aria-hidden={!showSticky}
         >
           <Link
-            href={payHref}
+            href={mainHref}
             tabIndex={showSticky ? 0 : -1}
             onClick={() => {
               trackEvent("payment_cta_click", { order: orderNumber });
@@ -723,7 +758,7 @@ export default function PreviewExperience({
             }}
             className="mx-auto flex h-12 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-medium text-ivory active:opacity-85"
           >
-            {name ? `${name}님의 다음 장 이어서 보기` : "다음 장 이어서 보기"} · {priceText}
+            {mainLabel ?? `${name ? `${name}님의 다음 장 이어서 보기` : "다음 장 이어서 보기"} · ${priceText}`}
           </Link>
         </div>,
         document.body

@@ -84,7 +84,7 @@ export default function BookPackageCard({
           ))}
         </ul>
         <p className="mt-4 text-[0.76rem] font-light leading-[1.8] text-ivory-dim">
-          + 표지·편지에 {name ? `${name}님의` : "당신의"} 이름, 지금의 판정과 날짜, 날짜가 적힌 7일·21일 기록장 (약 125쪽)
+          + 표지·편지에 {name ? `${name}님의` : "당신의"} 이름, 지금의 판정과 날짜, 날짜가 적힌 7일·21일 기록장 (약 120쪽)
         </p>
 
         <ul className="mt-5 space-y-2 rounded-xl border border-gold-dim/20 bg-ink/60 px-4 py-4 text-[0.8rem] leading-[1.7]">
