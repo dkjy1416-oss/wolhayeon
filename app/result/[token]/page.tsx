@@ -12,6 +12,7 @@ import TwentyOneDayJourney from "@/components/result/TwentyOneDayJourney";
 import JournalSection from "@/components/result/JournalSection";
 import ResultFooter from "@/components/result/ResultFooter";
 import ResultOpenTracker from "@/components/result/ResultOpenTracker";
+import { reviewPath } from "@/lib/review-auth";
 
 /** 항상 동적 서버 조회 — 정적 생성/공용 캐시 금지 */
 export const dynamic = "force-dynamic";
@@ -54,6 +55,7 @@ export default async function ResultPage({
   }
 
   let name = "";
+  let reviewHref: string | null = null;
   let viewWindow: string | null = null;
   let content: ReturnType<typeof RitualResultSchema.safeParse>["data"] | null =
     null;
@@ -71,7 +73,7 @@ export default async function ResultPage({
 
     const o = await supabase
       .from("ritual_orders")
-      .select("applicant_name, payment_status, generation_status, review_status, paid_at")
+      .select("applicant_name, payment_status, generation_status, review_status, paid_at, order_number")
       .eq("id", r.data.order_id)
       .maybeSingle();
     if (o.error || !o.data) return <NotAvailable />;
@@ -88,6 +90,7 @@ export default async function ResultPage({
     }
 
     name = o.data.applicant_name;
+    reviewHref = o.data.order_number ? reviewPath(o.data.order_number as string) : null;
     content = parsed.data;
     viewWindow = formatViewWindow(o.data.paid_at);
   } catch {
@@ -171,6 +174,22 @@ export default async function ResultPage({
         intro={c.bonus_journal_questions.intro}
         questions={c.bonus_journal_questions.questions}
       />
+
+      {reviewHref && (
+        <section className="mx-auto max-w-md px-6 pb-4 pt-10 text-center">
+          <p className="text-[0.84rem] font-light leading-[1.95] text-ivory-dim">
+            읽어 보시고, 월화에게 한마디 남겨 주시겠어요?
+            <br />
+            좋았던 점도 아쉬웠던 점도 그대로 들려주세요.
+          </p>
+          <Link
+            href={reviewHref}
+            className="mt-4 inline-flex h-11 items-center justify-center rounded-full border border-gold/40 px-6 text-[0.84rem] text-gold"
+          >
+            후기 남기기
+          </Link>
+        </section>
+      )}
 
       <ResultFooter />
     </main>
