@@ -15,19 +15,44 @@ const CHANNEL_PRESETS: [string, string][] = [
   ["youtube", "유튜브"],
 ];
 
+const DESTS: [string, string][] = [
+  ["/", "첫 화면"],
+  ["/book", "책 소개 페이지"],
+];
+
 function LinkMaker() {
+  const [dest, setDest] = useState("/");
   const [src, setSrc] = useState("instagram");
   const [camp, setCamp] = useState("");
   const [copied, setCopied] = useState(false);
   const c = camp.trim().replace(/\s+/g, "_").replace(/[^\w가-힣-]/g, "");
-  const url = `https://thewolha.com/?utm_source=${src}${c ? `&utm_campaign=${encodeURIComponent(c)}` : ""}`;
+  const url = `https://thewolha.com${dest}?utm_source=${src}${c ? `&utm_campaign=${encodeURIComponent(c)}` : ""}`;
   return (
     <div className="rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
       <p className="text-sm font-semibold">홍보용 추적 링크 만들기</p>
       <p className="mt-1 text-[0.74rem] leading-relaxed text-ivory-dim">
         게시물·프로필·광고에 이 링크를 쓰면, 마케팅 화면의 &quot;어디서 들어왔나&quot;에 채널별 방문·신청·결제가 따로 잡혀요.
       </p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <p className="mt-3 text-[0.72rem] text-gold/80">어디로 보낼까요</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {DESTS.map(([v, l]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setDest(v)}
+            className={`rounded-full px-3 py-1 text-[0.76rem] ${dest === v ? "bg-gold/20 text-gold" : "border border-gold-dim/30 text-ivory-dim"}`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {dest === "/book" && (
+        <p className="mt-1.5 text-[0.7rem] leading-relaxed text-ivory-dim">
+          사연으로 만드는 책이라, 책 소개를 본 손님은 사연 쓰기 → 무료 미리보기 → 결제 화면에서 &quot;책만&quot;이나 패키지를 골라요.
+        </p>
+      )}
+      <p className="mt-3 text-[0.72rem] text-gold/80">어디에 올릴까요</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
         {CHANNEL_PRESETS.map(([v, l]) => (
           <button
             key={v}
