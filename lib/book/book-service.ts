@@ -17,6 +17,7 @@ import { renderBookPdf, loadCoverDataUrl } from "@/lib/book/book-pdf";
 import { sendBookReadyEmail } from "@/lib/book/book-email";
 import { createBookToken } from "@/lib/book/book-auth";
 import { sendOpsAlert } from "@/lib/ops-alert";
+import { reviewPath } from "@/lib/review-auth";
 
 export const BOOK_BUCKET = "books";
 const STALE_MS = 6 * 60 * 1000;
@@ -121,6 +122,10 @@ export async function processBookOrder(orderNumber: string): Promise<BookOutcome
         name: order.applicant_name,
         orderNumber,
         downloadUrl: `${site}${path}`,
+        reviewUrl: (() => {
+          const rp = reviewPath(orderNumber);
+          return rp ? `${site}${rp}` : null;
+        })(),
       });
     }
     return { status: "ready", downloadPath: path };

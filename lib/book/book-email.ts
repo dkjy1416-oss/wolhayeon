@@ -13,6 +13,8 @@ export async function sendBookReadyEmail(opts: {
   name: string;
   orderNumber: string;
   downloadUrl: string;
+  /** 후기 남기기 링크 (없으면 생략) */
+  reviewUrl?: string | null;
 }): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
@@ -31,6 +33,9 @@ export async function sendBookReadyEmail(opts: {
     ``,
     `휴대폰에 저장해 두고, 흔들리는 밤마다 필요한 장을 펼쳐 주세요.`,
     ``,
+    ...(opts.reviewUrl
+      ? [`책을 읽어 보시고, 월화에게 한마디 남겨 주시면 큰 힘이 돼요.`, opts.reviewUrl, ``]
+      : []),
     `— 월하연 月下緣`,
     `주문번호 ${opts.orderNumber}`,
   ].join("\n");
@@ -44,6 +49,12 @@ export async function sendBookReadyEmail(opts: {
     </p>
     <a href="${opts.downloadUrl}" style="display:block;text-align:center;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:15px;">내 책 PDF 받기</a>
     <p style="font-size:12.5px;color:#a89f8d;line-height:1.9;margin:14px 0 30px;text-align:center;">링크는 60일 동안 열려요. 휴대폰에 저장해 두고 흔들리는 밤마다 펼쳐 주세요.</p>
+    ${
+      opts.reviewUrl
+        ? `<p style="font-size:13px;color:#a89f8d;line-height:1.9;margin:0 0 6px;text-align:center;">책을 읽어 보시고, 월화에게 한마디 남겨 주시면 큰 힘이 돼요.</p>
+    <p style="text-align:center;margin:0 0 26px;"><a href="${opts.reviewUrl}" style="color:#c9a96e;font-size:13px;">후기 남기기</a></p>`
+        : ""
+    }
     <p style="font-size:11.5px;color:#7d776b;line-height:1.9;margin:30px 0 0;">주문번호 ${esc(opts.orderNumber)}</p>
   </div></body></html>`;
   try {
