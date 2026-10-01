@@ -196,8 +196,10 @@ export async function confirmOrderPayment(params: {
       return {
         status: "confirm_failed",
         message:
-          confirm.message ??
-          "결제 승인에 실패했습니다. 다시 시도하시거나 잠시 후 이용해주세요.",
+          confirm.code === "INVALID_UNREGISTERED_SUBMALL"
+            ? "현대카드는 지금 카드사 심사가 진행 중이라 결제가 되지 않아요. 현대카드가 아닌 다른 카드로 결제해 주세요. 카카오페이·네이버페이 같은 간편결제도 현대카드가 아닌 결제수단을 골라 주세요."
+            : confirm.message ??
+              "결제 승인에 실패했습니다. 다시 시도하시거나 잠시 후 이용해주세요.",
       };
     }
 
