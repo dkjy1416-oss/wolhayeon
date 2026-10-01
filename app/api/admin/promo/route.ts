@@ -4,7 +4,7 @@ import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { generatePromoReport } from "@/lib/promo-report";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 90;
+export const maxDuration = 120;
 
 export async function POST() {
   if (!(await isAdminAuthenticated())) {
