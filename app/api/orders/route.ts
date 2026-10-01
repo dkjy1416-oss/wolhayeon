@@ -20,6 +20,7 @@ import { sendPreviewLinkEmail } from "@/lib/preview-link-email";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sanitizeAndValidateApplication } from "@/lib/ritual-validation";
 import { createPreviewToken } from "@/lib/preview-auth";
+import { sendOpsAlert } from "@/lib/ops-alert";
 
 export const dynamic = "force-dynamic";
 
@@ -124,6 +125,10 @@ export async function POST(request: Request) {
       console.error(
         `[orders:${requestId}] insert_failed code=${res.error?.code ?? "unknown"}`
       );
+      await sendOpsAlert("order_save_failed", {
+        code: `insert_failed_${res.error?.code ?? "unknown"}`,
+        detail: "손님이 신청서를 제출했는데 저장되지 않았어요.",
+      });
       return NextResponse.json(
         { ok: false, error: "insert_failed", message: FRIENDLY_ERROR },
         { status: 500 }
@@ -155,6 +160,7 @@ export async function POST(request: Request) {
     // env 누락 등 초기화 실패 — 상세 내용은 사용자에게 노출하지 않음
     const code = e instanceof Error ? e.constructor.name : "unknown";
     console.error(`[orders:${requestId}] server_error code=${code}`);
+    await sendOpsAlert("order_save_failed", { code: `server_error_${code}` });
     return NextResponse.json(
       { ok: false, error: "server_error", message: FRIENDLY_ERROR },
       { status: 500 }
