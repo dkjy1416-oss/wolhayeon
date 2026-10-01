@@ -25,6 +25,7 @@ import {
   loadApplication,
   hasMeaningfulData,
   getOrCreateSubmissionId,
+  clearDraftBackup,
 } from "@/lib/ritual-storage";
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -83,6 +84,7 @@ export default function ConfirmPage() {
       const json = await res.json().catch(() => null);
       if (res.ok && json?.ok && typeof json.order_number === "string") {
         trackEvent("order_created", { order: json.order_number });
+        clearDraftBackup();
         /* 주문 저장 요청에서 이미 만들어진 무료 preview를 다음 화면이
            즉시 쓸 수 있게 세션 캐시에 넘긴다. 실패해도 기존 API fallback 유지. */
         try {
