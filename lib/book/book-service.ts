@@ -16,6 +16,7 @@ import { renderBookHtml } from "@/lib/book/book-render";
 import { renderBookPdf, loadCoverDataUrl } from "@/lib/book/book-pdf";
 import { sendBookReadyEmail } from "@/lib/book/book-email";
 import { createBookToken } from "@/lib/book/book-auth";
+import { sendOpsAlert } from "@/lib/ops-alert";
 
 export const BOOK_BUCKET = "books";
 const STALE_MS = 6 * 60 * 1000;
@@ -125,6 +126,11 @@ export async function processBookOrder(orderNumber: string): Promise<BookOutcome
     return { status: "ready", downloadPath: path };
   } catch (e) {
     console.error(`[book] failed ${e instanceof Error ? e.message.slice(0, 80) : "unknown"}`);
+    await sendOpsAlert("book_failed", {
+      orderNumber,
+      code: e instanceof Error ? e.name : "unknown",
+      detail: e instanceof Error ? e.message.slice(0, 120) : null,
+    });
     await supabase.from("ritual_orders").update({ book_status: "failed" }).eq("id", order.id);
     return { status: "failed" };
   }
