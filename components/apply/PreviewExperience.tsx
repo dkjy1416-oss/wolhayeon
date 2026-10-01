@@ -587,6 +587,11 @@ export default function PreviewExperience({
               {price.toLocaleString()}원
             </span>
           </p>
+          {isPromoActive() && price < RITUAL_REGULAR_PRICE_KRW && (
+            <p className="mt-2 text-[0.74rem] text-gold/90">
+              이 가격은 {PROMO_DEADLINE_TEXT}만이에요 · 10월 5일부터 {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+            </p>
+          )}
         </div>
         {PAYMENTS_OPEN ? (
           <>

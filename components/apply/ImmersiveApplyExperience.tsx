@@ -51,7 +51,12 @@ import {
   isValidEmail,
   type Option,
 } from "@/lib/ritual-types";
-import { loadApplication, saveApplication } from "@/lib/ritual-storage";
+import {
+  loadApplication,
+  saveApplication,
+  loadStepBackup,
+  saveStepBackup,
+} from "@/lib/ritual-storage";
 import { trackEvent } from "@/lib/analytics";
 
 /* ---------------- 인트로 카피 (§7) ---------------- */
@@ -451,7 +456,9 @@ export default function ImmersiveApplyExperience({
     const a = loadApplication();
     setApp(a);
     try {
-      const saved = Number(sessionStorage.getItem(STEP_KEY));
+      const rawStep = sessionStorage.getItem(STEP_KEY);
+      /* 탭이 닫혔다 다시 온 경우 — 기기 임시 사본의 마지막 질문부터 */
+      const saved = rawStep !== null ? Number(rawStep) : loadStepBackup() ?? 0;
       if (Number.isInteger(saved) && saved > 0) {
         setStep(saved);
         setPhase("questions");
@@ -474,6 +481,7 @@ export default function ImmersiveApplyExperience({
     } catch {
       /* noop */
     }
+    saveStepBackup(step);
   }, [step, phase, loaded]);
 
   /* 인트로 문장 자동 전개 (§8) — reduced motion이면 즉시 마지막 */
