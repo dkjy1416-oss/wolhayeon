@@ -12,6 +12,9 @@ const FRIENDLY: Record<string, string> = {
   PAY_PROCESS_ABORTED: "결제가 진행되지 못했습니다. 잠시 후 다시 시도해주세요.",
   REJECT_CARD_COMPANY:
     "카드사에서 결제를 거절했습니다. 다른 결제수단을 이용해주세요.",
+  /* 현대카드 카드사 심사 미완료 (2026-10 기준 심사 중) */
+  INVALID_UNREGISTERED_SUBMALL:
+    "현대카드는 지금 카드사 심사가 진행 중이라 결제가 되지 않아요. 현대카드가 아닌 다른 카드로 결제해 주세요. 카카오페이·네이버페이 같은 간편결제도 현대카드가 아닌 결제수단을 골라 주세요.",
 };
 
 export default async function PaymentFailPage({
