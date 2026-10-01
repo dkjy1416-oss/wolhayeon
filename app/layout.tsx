@@ -3,6 +3,7 @@ import { Noto_Serif_KR, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import CsChatWidget from "@/components/cs/CsChatWidget";
 import { Analytics } from "@vercel/analytics/next";
+import SiteTracker from "@/components/SiteTracker";
 
 const notoSerifKr = Noto_Serif_KR({
   subsets: ["latin"],
@@ -59,6 +60,7 @@ export default function RootLayout({
         {children}
         <CsChatWidget />
         <Analytics />
+        <SiteTracker />
       </body>
     </html>
   );
