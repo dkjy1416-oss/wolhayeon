@@ -9,6 +9,7 @@
  */
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { sendOpsAlert, isMerchantPaymentCode } from "@/lib/ops-alert";
 
 export const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
@@ -53,6 +54,19 @@ export async function logPayEventServer(
         event,
         code: sanitizeCode(code ?? null),
       });
+  } catch {
+    /* 기록 실패는 무시 — 결제가 우선 */
+  }
+  try {
+    const c = sanitizeCode(code ?? null);
+    if (
+      (event === "pay_fail" || event === "confirm_failed" || event === "pay_request_error") &&
+      isMerchantPaymentCode(c)
+    ) {
+      await sendOpsAlert("payment_merchant", { code: c });
+    } else if (event === "widget_error") {
+      await sendOpsAlert("payment_widget", { code: c });
+    }
   } catch {
     /* 기록 실패는 무시 — 결제가 우선 */
   }

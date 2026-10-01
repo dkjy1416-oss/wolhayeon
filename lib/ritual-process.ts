@@ -18,6 +18,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { generateRitualForOrder } from "@/lib/ritual-generate";
 import { autoApproveResult } from "@/lib/auto-approve-result";
 import { sendApprovedResultEmail } from "@/lib/result-email";
+import { sendOpsAlert } from "@/lib/ops-alert";
 
 export type ProcessOutcome =
   | { status: "ready"; resultPath: string; delivery: string }
@@ -96,13 +97,23 @@ export async function processPaidOrder(
     const approveStartedAt = Date.now();
     const approve = await autoApproveResult(orderNumber);
     console.error(`[perf] auto_approve_ms=${Date.now() - approveStartedAt}`);
-    if (approve.status === "needs_admin") return { status: "delayed" };
+    if (approve.status === "needs_admin") {
+      await sendOpsAlert("process_error", {
+        orderNumber,
+        code: "needs_admin_review",
+        detail: "자동 승인이 안 되는 결과라 관리자 검수를 기다리고 있어요. 손님은 결과를 기다리는 중입니다. 주문 화면에서 확인 후 최종 승인해 주세요.",
+      });
+      return { status: "delayed" };
+    }
     if (approve.status === "not_ready") {
       /* 생성 직후 상태 전파 지연 등 — 재요청 시 이어서 처리 */
       console.error(`[process] approve_not_ready reason=${approve.reason}`);
       return { status: "processing" };
     }
-    if (approve.status === "server_error") return { status: "server_error" };
+    if (approve.status === "server_error") {
+      await sendOpsAlert("process_error", { orderNumber, code: "auto_approve_server_error" });
+      return { status: "server_error" };
+    }
 
     /* 3) 이메일 — 실패해도 결과는 공개 */
     let delivery = "failed";
@@ -122,6 +133,7 @@ export async function processPaidOrder(
     };
   } catch {
     console.error("[process] server_error");
+    await sendOpsAlert("process_error", { orderNumber, code: "server_error" });
     return { status: "server_error" };
   }
 }

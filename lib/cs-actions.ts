@@ -25,6 +25,7 @@ import { evaluateRefund, refundReasonMessage } from "@/lib/refund-policy";
 import { cancelTossPayment } from "@/lib/toss-cancel";
 import { sendApprovedResultEmail } from "@/lib/result-email";
 import { fetchPaymentCardInfo, compareExactCardLast4 } from "@/lib/payment-factor";
+import { sendOpsAlert } from "@/lib/ops-alert";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
@@ -67,6 +68,7 @@ export async function createIncident(
   } catch {
     /* noop */
   }
+  await sendOpsAlert("cs_incident", { code: kind, detail });
 }
 
 function normEmail(v: string): string {

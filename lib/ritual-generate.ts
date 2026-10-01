@@ -33,6 +33,7 @@ import {
 import { PreviewCoreSchema } from "@/lib/ritual-preview-schema";
 import { mergeLetterOpening } from "@/lib/letter-merge";
 import type { RitualOrderRow } from "@/lib/supabase/types";
+import { sendOpsAlert } from "@/lib/ops-alert";
 
 /** 모델 ID는 이 한 곳에서만 관리.
  *  ANTHROPIC_MODEL 환경변수가 있으면 그 값을, 없으면 현재
@@ -118,6 +119,7 @@ export async function generateRitualForOrder(
     /* 선점 이후의 모든 실패는 failed로 되돌린다 */
     const markFailed = async (code: string) => {
       console.error(`[gen:${requestId}] failed code=${code}`);
+      await sendOpsAlert("generation_failed", { orderNumber, code });
       await supabase
         .from("ritual_orders")
         .update({ generation_status: "failed" })

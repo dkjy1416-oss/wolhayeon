@@ -30,6 +30,7 @@ import {
 import { verifyPaidOwnership } from "@/lib/payment-ownership";
 import { track } from "@vercel/analytics/server";
 import { logPayEventServer } from "@/lib/pay-events-server";
+import { sendOpsAlert } from "@/lib/ops-alert";
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
@@ -158,6 +159,7 @@ export async function confirmOrderPayment(params: {
         )
     ) {
       console.error(`[pay:${requestId}] amount_mismatch`);
+      await sendOpsAlert("payment_error", { orderNumber, code: "amount_mismatch" });
       await logPayEventServer(orderNumber, "amount_mismatch");
       return { status: "amount_mismatch" };
     }
@@ -213,6 +215,11 @@ export async function confirmOrderPayment(params: {
     if (upd.error) {
       // 승인은 성공했으므로 사용자에게는 성공으로 안내, 내부에만 코드 기록
       console.error(`[pay:${requestId}] db_update_failed code=${upd.error.code}`);
+      await sendOpsAlert("payment_error", {
+        orderNumber,
+        code: `db_update_failed_${upd.error.code}`,
+        detail: "토스 결제는 승인됐지만 주문 상태 저장에 실패했습니다. 결과가 자동으로 만들어지지 않을 수 있어요.",
+      });
     }
 
     await notifyOperatorPaid({
@@ -233,6 +240,7 @@ export async function confirmOrderPayment(params: {
     return { status: "success", orderNumber };
   } catch {
     console.error(`[pay:${requestId}] server_error`);
+    await sendOpsAlert("payment_error", { orderNumber, code: "server_error" });
     return { status: "server_error" };
   }
 }

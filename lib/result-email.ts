@@ -21,6 +21,7 @@ import {
   buildIdempotencyKey,
   normalizeResendError,
 } from "@/lib/delivery-rules";
+import { sendOpsAlert } from "@/lib/ops-alert";
 
 export type DeliveryOutcome =
   | "sent"
@@ -265,6 +266,7 @@ export async function sendApprovedResultEmail(
         .eq("id", order.id)
         .eq("delivery_status", "sending");
       console.error(`[delivery] send_failed code=${failCode}`);
+      await sendOpsAlert("delivery_failed", { orderNumber, code: failCode });
       if (failUpd.error) {
         /* 실패 기록조차 실패 — DB가 sending에 남을 수 있으므로
            failed로 확정 반환하지 않음. 안전 코드만 로그 */
@@ -303,6 +305,7 @@ export async function sendApprovedResultEmail(
     return { status: "sent" };
   } catch {
     console.error("[delivery] server_error");
+    await sendOpsAlert("delivery_failed", { orderNumber, code: "server_error" });
     return { status: "server_error" };
   }
 }

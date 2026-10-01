@@ -26,6 +26,7 @@ import {
   optionLabel,
 } from "@/lib/ritual-types";
 import { HIGH_RISK_SAFETY_VALUES } from "@/lib/wolhwa-prompt";
+import { sendOpsAlert } from "@/lib/ops-alert";
 
 export type PreviewOutcome =
   | {
@@ -496,6 +497,9 @@ export async function getOrCreatePreview(
         e instanceof Error ? e.name : "unknown"
       }`
     );
+    await sendOpsAlert("preview_error", {
+      code: `instant_${e instanceof Error ? e.name : "unknown"}`,
+    });
     return { status: "server_error" };
   }
 }
