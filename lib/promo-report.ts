@@ -57,7 +57,7 @@ const SYSTEM = `당신은 작은 1인 온라인 서비스의 마케팅 코치입
 - 유료 광고는 소액 테스트(하루 1~2만원)부터, 무료 채널(인스타 릴스, 스레드, 네이버 블로그 등)을 우선 고려하세요.
 - 홍보 링크에는 utm_source를 붙여 대시보드에서 어느 채널이 효과 있는지 볼 수 있게 안내하세요.
 
-출력은 JSON 하나만 (설명·코드블록 없이):
+출력은 JSON 하나만 (설명·코드블록 없이). 각 문장은 짧게(한 항목 2문장 이내), channels는 3~4개:
 {"headline": "한 줄 요약",
  "who": "지금 주로 오는 사람 (성별·나이대·상황, 숫자 포함)",
  "why": "그들이 찾아오는 이유와 결제하는 이유",
@@ -74,31 +74,41 @@ export async function generatePromoReport(days = 14): Promise<StoredPromo | { er
   const stats = await getMarketingStats(days);
   const compact = compactStats(stats);
 
-  let report: PromoReport;
-  try {
-    const client = new Anthropic({ apiKey });
-    const msg = await client.messages.create({
-      model: getModelId(),
-      max_tokens: 4000,
-      system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: `오늘(${new Date().toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })}) 기준 최근 ${days}일 데이터입니다:\n${JSON.stringify(compact)}`,
-        },
-      ],
-    });
-    const text = msg.content
-      .filter((c) => c.type === "text")
-      .map((c) => (c as { text: string }).text)
-      .join("");
-    const json = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
-    report = JSON.parse(json) as PromoReport;
-    if (!report.headline || !Array.isArray(report.channels)) throw new Error("shape");
-  } catch {
-    console.error("[promo] ai_failed");
-    return { error: "ai_failed" };
+  let report: PromoReport | null = null;
+  const client = new Anthropic({ apiKey });
+  for (let attempt = 0; attempt < 2 && !report; attempt++) {
+    try {
+      const msg = await client.messages.create({
+        model: getModelId(),
+        max_tokens: 8000,
+        system: SYSTEM,
+        messages: [
+          {
+            role: "user",
+            content: `오늘(${new Date().toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })}) 기준 최근 ${days}일 데이터입니다:\n${JSON.stringify(compact)}`,
+          },
+        ],
+      });
+      const text = msg.content
+        .filter((c) => c.type === "text")
+        .map((c) => (c as { text: string }).text)
+        .join("");
+      const json = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
+      const parsed = JSON.parse(json) as PromoReport;
+      if (!parsed.headline || !Array.isArray(parsed.channels)) throw new Error("shape");
+      parsed.problems ??= [];
+      parsed.this_week ??= [];
+      parsed.copy_ideas ??= [];
+      parsed.avoid ??= [];
+      report = parsed;
+      if (msg.stop_reason === "max_tokens") console.error("[promo] truncated_but_parsed");
+    } catch (e) {
+      console.error(
+        `[promo] ai_failed attempt=${attempt} ${e instanceof Anthropic.APIError ? `api_${e.status}` : e instanceof Error ? e.name + ":" + e.message.slice(0, 60) : "unknown"}`
+      );
+    }
   }
+  if (!report) return { error: "ai_failed" };
 
   const created_at = new Date().toISOString();
   try {
