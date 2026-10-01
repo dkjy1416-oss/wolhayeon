@@ -1,23 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Serif_KR, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import CsChatWidget from "@/components/cs/CsChatWidget";
 import { Analytics } from "@vercel/analytics/next";
 import SiteTracker from "@/components/SiteTracker";
-
-const notoSerifKr = Noto_Serif_KR({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-noto-serif-kr",
-  display: "swap",
-});
-
-const notoSansKr = Noto_Sans_KR({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "700"],
-  variable: "--font-noto-sans-kr",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://thewolha.com"),
@@ -54,9 +39,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body
-        className={`${notoSerifKr.variable} ${notoSansKr.variable} antialiased`}
-      >
+      <head>
+        {/* 글꼴: 본문 프리텐다드(OFL) · 제목 조선일보명조(눈누, 웹 임베딩 허용) */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
+      </head>
+      <body className="antialiased">
         {children}
         <CsChatWidget />
         <Analytics />

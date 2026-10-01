@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* 제목 글꼴 — 조선일보명조 (눈누 제공 웹폰트, 웹 임베딩·상업적 사용 허용) */
+@font-face {
+  font-family: "ChosunIlboMyungjo";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/Chosunilbo_myungjo.woff") format("woff");
+  font-weight: normal;
+  font-display: swap;
+}
+
 @theme {
   /* 월하연 brand palette — 월화 캐릭터 시트 기준 */
   --color-ink: #0d0d0f; /* deep black background (#0D0D0F) */
@@ -12,8 +20,9 @@
   --color-gold: #c9a96a; /* muted gold accent */
   --color-gold-dim: #75613f; /* hairlines */
 
-  --font-serif-kr: var(--font-noto-serif-kr), "Noto Serif KR", serif;
-  --font-sans-kr: var(--font-noto-sans-kr), "Noto Sans KR", sans-serif;
+  --font-serif-kr: "ChosunIlboMyungjo", "Noto Serif KR", serif;
+  --font-sans-kr: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 
 html {
@@ -32,6 +41,8 @@ body {
 .font-display {
   font-family: var(--font-serif-kr);
   letter-spacing: -0.01em;
+  /* 조선일보명조는 한 굵기뿐 — 가짜 굵게 처리하지 않고 원래 모양 그대로 */
+  font-synthesis-weight: none;
 }
 
 /* 캐릭터 이미지가 검은 배경에 자연스럽게 녹아들도록 하는 마스크.
@@ -193,4 +204,75 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-gold);
   outline-offset: 3px;
+}
+
+/* ---------- 책 소개 페이지 반복 애니메이션 (움직임 줄이기 설정 시 멈춤) ---------- */
+@keyframes bk-float {
+  0%, 100% { transform: translateY(0) rotate(-1.2deg); }
+  50% { transform: translateY(-10px) rotate(0.6deg); }
+}
+.bk-float { animation: bk-float 6s ease-in-out infinite; }
+
+@keyframes bk-shine {
+  0% { transform: translateX(-130%) skewX(-18deg); }
+  55%, 100% { transform: translateX(230%) skewX(-18deg); }
+}
+.bk-shine { position: relative; overflow: hidden; }
+.bk-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, rgba(255, 236, 200, 0.22), transparent);
+  animation: bk-shine 5.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes bk-halo {
+  0%, 100% { opacity: 0.55; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+}
+.bk-halo { animation: bk-halo 5s ease-in-out infinite; }
+
+/* 페이지가 한 장씩 넘어가는 반복 (4장 · 16초) */
+@keyframes bk-page {
+  0% { opacity: 0; transform: translateY(8px) scale(0.985); }
+  4%, 23% { opacity: 1; transform: none; }
+  27%, 100% { opacity: 0; transform: translateY(-6px) scale(0.99); }
+}
+.bk-page { opacity: 0; animation: bk-page 16s ease-in-out infinite; }
+
+@keyframes bk-thread {
+  0% { stroke-dashoffset: 420; opacity: 0.2; }
+  45% { stroke-dashoffset: 0; opacity: 0.9; }
+  75% { stroke-dashoffset: 0; opacity: 0.9; }
+  100% { stroke-dashoffset: -420; opacity: 0.2; }
+}
+.bk-thread { stroke-dasharray: 420; animation: bk-thread 7s ease-in-out infinite; }
+
+@keyframes bk-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.bk-marquee { animation: bk-marquee 38s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bk-float, .bk-shine::after, .bk-halo, .bk-thread, .bk-marquee { animation: none; }
+  .bk-page { animation: none; opacity: 0; }
+  .bk-page:first-child { opacity: 1; }
+}
+
+/* 책 페이지 넘김 */
+@keyframes bk-turn-next {
+  from { transform: rotateY(-75deg); transform-origin: left center; opacity: 0.2; }
+  to { transform: rotateY(0); transform-origin: left center; opacity: 1; }
+}
+@keyframes bk-turn-prev {
+  from { transform: rotateY(75deg); transform-origin: right center; opacity: 0.2; }
+  to { transform: rotateY(0); transform-origin: right center; opacity: 1; }
+}
+.bk-turn-next { animation: bk-turn-next 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.bk-turn-prev { animation: bk-turn-prev 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .bk-turn-next, .bk-turn-prev { animation: none; }
 }
