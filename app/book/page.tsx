@@ -6,6 +6,7 @@ import BookStickyBuy from "@/components/book/BookStickyBuy";
 import LoopVideo from "@/components/book/LoopVideo";
 import PageFlipper from "@/components/book/PageFlipper";
 import SituationPicker from "@/components/book/SituationPicker";
+import ResumeOrder from "@/components/book/ResumeOrder";
 import { BOOK_SITUATIONS_DATA } from "@/lib/book/book-situations";
 import {
   BOOK_PRICE_KRW,
@@ -334,6 +335,7 @@ export default async function BookPage({
       <div className="relative mx-auto min-h-screen w-full max-w-[500px] overflow-hidden bg-ink shadow-[0_0_80px_rgba(0,0,0,0.8)]">
         <Header ctaHref="#pick" ctaLabel="내 책 받기" />
         <main className="pb-20">
+          <ResumeOrder hasOrderParam={!!orderNumber} />
           {/* ===== 0. 첫 화면 — 월화가 붙잡는 장면 (영상) ===== */}
           <section className="relative">
             <LoopVideo
