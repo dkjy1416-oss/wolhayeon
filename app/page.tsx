@@ -9,6 +9,7 @@ import MomentsSection from "@/components/home/MomentsSection";
 import WhatYouGetSection from "@/components/home/WhatYouGetSection";
 import SampleAnswerSection from "@/components/home/SampleAnswerSection";
 import ProductsSection from "@/components/home/ProductsSection";
+import CompareSection from "@/components/home/CompareSection";
 import WolhwaNightsSection from "@/components/home/WolhwaNightsSection";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
 import FinalCTASection from "@/components/home/FinalCTASection";
@@ -42,6 +43,7 @@ export default async function Home() {
           <MomentsSection />
           <WhatYouGetSection />
           <SampleAnswerSection />
+          <CompareSection />
           <ProductsSection />
           <WolhwaNightsSection />
           <RealReviewsSection reviews={reviews} />
