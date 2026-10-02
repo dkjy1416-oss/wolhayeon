@@ -3,7 +3,9 @@ import LoopVideo from "@/components/book/LoopVideo";
 import TrackedCtaLink from "@/components/TrackedCtaLink";
 import {
   BOOK_PRICE_KRW,
-  BUNDLE_PRICE_KRW,
+  BUNDLE_REGULAR_PRICE_KRW,
+  PROMO_DEADLINE_TEXT,
+  bundlePrice,
   RITUAL_PRICE_KRW,
   RITUAL_REGULAR_PRICE_KRW,
   isPromoActive,
@@ -17,7 +19,8 @@ export default function ProductsSection() {
   const promo = isPromoActive();
   const msg = promo ? RITUAL_PRICE_KRW : RITUAL_REGULAR_PRICE_KRW;
   const separate = msg + BOOK_PRICE_KRW;
-  const save = separate - BUNDLE_PRICE_KRW;
+  const bundle = bundlePrice();
+  const save = separate - bundle;
 
   return (
     <section id="products" className="scroll-mt-20 border-y border-gold-dim/10 bg-gradient-to-b from-ink-soft/60 to-ink px-5 py-16">
@@ -49,6 +52,11 @@ export default function ProductsSection() {
                 )}
               </div>
             </div>
+            {promo && (
+              <p className="mt-2 inline-block rounded-full bg-thread/15 px-2.5 py-0.5 text-[0.7rem] text-thread">
+                재오픈 특가 {PROMO_DEADLINE_TEXT} · 이후 {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
+              </p>
+            )}
             <p className="mt-2 text-[0.8rem] font-light leading-[1.85] text-ivory-dim">
               첫 편지 · 관계 읽기 5편 · 24시간·7일 가이드 · 21일 플랜 · 리추얼. 결제 전 미리보기는 무료예요.
             </p>
@@ -84,9 +92,14 @@ export default function ProductsSection() {
                   지금을 읽는 메시지와, 기다리는 동안 곁에 둘 내 이름의 책
                 </p>
                 <p className="font-display mt-2 text-[1.45rem] font-semibold text-gold">
-                  {BUNDLE_PRICE_KRW.toLocaleString()}
+                  {bundle.toLocaleString()}
                   <span className="ml-0.5 text-sm text-ivory-dim">원</span>
                 </p>
+                {promo && (
+                  <p className="text-[0.7rem] text-gold/90">
+                    특가 {PROMO_DEADLINE_TEXT} · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원
+                  </p>
+                )}
                 {save > 0 && (
                   <p className="text-[0.7rem] text-thread">
                     따로 사면 {separate.toLocaleString()}원 · {save.toLocaleString()}원 아껴요
