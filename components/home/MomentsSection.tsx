@@ -10,7 +10,7 @@ const MOMENTS = [
   { src: "/book/v3/fight.mp4", poster: "/book/v3/fight.webp", tag: "싸우고 끝난 밤", line: "“근데 너도 그렇게까지\n말할 필요는 없었잖아”" },
   { src: "/book/v3/grab.mp4", poster: "/book/v3/grab.webp", tag: "붙잡았던 날", line: "“이번에 안 받아주면\n진짜 끝이야”" },
   { src: "/book/v3/drink.mp4", poster: "/book/v3/drink.webp", tag: "혼자 마신 새벽", line: "“자니…? 그냥\n생각나서”" },
-  { src: "/book/v3/typing.mp4", poster: "/book/v3/typing.webp", tag: "썼다 지운 메시지", line: "“솔직하게 말해줘.\n나 아직 좋아해?”" },
+  { src: "/book/v3/bed.mp4", poster: "/book/v3/bed.webp", tag: "썼다 지운 메시지", line: "“솔직하게 말해줘.\n나 아직 좋아해?”" },
 ];
 
 export default function MomentsSection() {
@@ -33,7 +33,7 @@ export default function MomentsSection() {
                 src={m.src}
                 poster={m.poster}
                 label={m.tag}
-                className="block aspect-[9/14] w-full object-cover object-top"
+                className="block aspect-[9/16] w-full object-cover"
               />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ink via-ink/75 to-transparent" />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 px-3 pb-3">

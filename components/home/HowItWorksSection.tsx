@@ -62,7 +62,8 @@ export default function HowItWorksSection() {
             src="/book/v3/w-cups.mp4"
             poster="/book/v3/w-cups.webp"
             label="붉은 실로 이어진 찻잔 앞의 월화"
-            className="block aspect-[4/5] w-full object-cover object-top"
+            fit="contain"
+            className="block aspect-[3/4] w-full"
           />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-ink-soft/80 to-transparent" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-ink via-ink/70 to-transparent" />

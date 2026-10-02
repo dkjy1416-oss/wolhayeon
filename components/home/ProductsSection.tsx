@@ -81,7 +81,8 @@ export default function ProductsSection() {
                   src="/book/v3/w-reading.mp4"
                   poster="/book/v3/w-reading.webp"
                   label="이야기를 읽는 월화"
-                  className="block h-full min-h-[13rem] w-full object-cover object-top"
+                  fit="contain"
+                  className="block h-full min-h-[13rem] w-full"
                 />
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent to-[#1a1310]" />
               </div>

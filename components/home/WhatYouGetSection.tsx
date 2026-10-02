@@ -30,7 +30,8 @@ export default function WhatYouGetSection() {
           src="/book/v3/w-reading.mp4"
           poster="/book/v3/w-reading.webp"
           label="이야기를 읽는 월화"
-          className="block aspect-[4/4.4] w-full object-cover object-top"
+          fit="contain"
+          className="block aspect-[3/4] w-full"
         />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-ink to-transparent" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-ink to-transparent" />

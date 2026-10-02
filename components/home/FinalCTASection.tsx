@@ -11,7 +11,8 @@ export default function FinalCTASection() {
           src="/book/v3/w-final.mp4"
           poster="/book/v3/w-final.webp"
           label="월화"
-          className="block aspect-[4/5] w-full object-cover object-top"
+          fit="contain"
+          className="block aspect-[3/4] w-full"
         />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ink to-transparent" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
