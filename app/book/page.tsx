@@ -9,7 +9,9 @@ import SituationPicker from "@/components/book/SituationPicker";
 import { BOOK_SITUATIONS_DATA } from "@/lib/book/book-situations";
 import {
   BOOK_PRICE_KRW,
-  BUNDLE_PRICE_KRW,
+  BUNDLE_REGULAR_PRICE_KRW,
+  PROMO_DEADLINE_TEXT,
+  bundlePrice,
   RITUAL_PRICE_KRW,
   RITUAL_REGULAR_PRICE_KRW,
   isPromoActive,
@@ -228,7 +230,7 @@ const MINE: Array<{ n: string; title: string; body: string }> = [
 
 /** 재회 상담과 비교 — 시장 가격은 공개 자료 기준 예시 (출처는 표 아래 표기) */
 const COMPARE: Array<{ label: string; them: string; us: string }> = [
-  { label: "비용", them: "1회 상담\n5만~20만 원\n4~8주 상담\n29만~52만 원", us: "책 29,000원\n메시지까지 39,900원\n1회 결제" },
+  { label: "비용", them: "1회 상담\n5만~20만 원\n4~8주 상담\n29만~52만 원", us: "책 29,000원\n메시지까지 패키지\n1회 결제" },
   { label: "도움받는 때", them: "예약한 상담 시간 안에서", us: "새벽 2시에도, 21일 내내 펼쳐 봐요" },
   { label: "남는 것", them: "통화의 기억과 메모", us: "내 이름이 적힌 PDF 한 권\n60일 동안 언제든 다시 받기" },
   { label: "약속", them: "곳마다 달라요", us: "재회를 보장하지 않아요\n대신 ‘무엇을, 언제’의 순서" },
@@ -265,7 +267,9 @@ export default async function BookPage({
       : `/apply?want=${product}`;
   const messageNow = isPromoActive() ? RITUAL_PRICE_KRW : RITUAL_REGULAR_PRICE_KRW;
   const separate = messageNow + BOOK_PRICE_KRW;
-  const save = separate - BUNDLE_PRICE_KRW;
+  const bundleNow = bundlePrice();
+  const promoOn = isPromoActive();
+  const save = separate - bundleNow;
   const reviews = await getPublicReviews(12);
   const avg = reviews.length ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : 0;
 
@@ -285,7 +289,7 @@ export default async function BookPage({
         </p>
         <div className="mt-3 flex flex-wrap items-baseline gap-x-2">
           <p className="font-display text-[1.75rem] font-semibold text-gold">
-            {BUNDLE_PRICE_KRW.toLocaleString()}
+            {bundleNow.toLocaleString()}
             <span className="ml-1 text-base text-ivory-dim">원</span>
           </p>
           {save > 0 && (
@@ -295,6 +299,11 @@ export default async function BookPage({
             </>
           )}
         </div>
+        {promoOn && (
+          <p className="mt-1.5 text-[0.72rem] text-gold/90">
+            패키지 특가 {PROMO_DEADLINE_TEXT} · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원
+          </p>
+        )}
         <span className="mt-4 flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] text-ivory">
           패키지로 받기
         </span>
@@ -348,7 +357,7 @@ export default async function BookPage({
             <div className="mt-4 flex items-center justify-center gap-2 text-[0.78rem]">
               <span className="rounded-full border border-gold/40 px-3 py-1 text-gold">책 {BOOK_PRICE_KRW.toLocaleString()}원</span>
               <span className="rounded-full border border-gold-dim/30 px-3 py-1 text-ivory-dim">
-                메시지와 함께 {BUNDLE_PRICE_KRW.toLocaleString()}원
+                메시지와 함께 {bundleNow.toLocaleString()}원
               </span>
             </div>
             <a
@@ -390,7 +399,7 @@ export default async function BookPage({
               bookHref={hrefFor("book")}
               bundleHref={hrefFor("bundle")}
               bookPrice={BOOK_PRICE_KRW}
-              bundlePrice={BUNDLE_PRICE_KRW}
+              bundlePrice={bundleNow}
             />
           </section>
 
