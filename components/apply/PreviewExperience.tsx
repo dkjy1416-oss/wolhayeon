@@ -32,6 +32,7 @@ import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import BookPackageCard from "@/components/apply/BookPackageCard";
 import PreviewWaiting from "@/components/apply/PreviewWaiting";
+import SceneBreak from "@/components/apply/SceneBreak";
 import { logPayEvent } from "@/lib/pay-events";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
@@ -397,6 +398,24 @@ export default function PreviewExperience({
   const isApologyCoupon = price === APOLOGY_PRICE_KRW;
   const ctaLabel = `내 전체 이야기 이어서 보기 · ${priceText}`;
 
+  /* 카드 사이 장면 — 이 사람의 미리보기 내용(상대 반응·지금 할 일)에 맞춰 고른다 */
+  const firstMode = preview.partner_reading.modes[0] ?? "";
+  const scene =
+    preview.now_plan.stance === "hold_boundary"
+      ? { v: "alone", eyebrow: "혼자 견딘 밤", line: "혼자 견디는 밤이\n길었다면" }
+      : firstMode === "방어" || firstMode === "감정소진"
+      ? { v: "fight", eyebrow: "그날의 장면", line: "그날의 말들이\n아직 귓가에 남아 있다면" }
+      : firstMode === "거리두기" || firstMode === "부담"
+        ? { v: "cry", eyebrow: "멀어지는 뒷모습", line: "붙잡고 싶었는데,\n뒷모습만 남았다면" }
+        : { v: "call", eyebrow: "새벽의 화면", line: "전화를 걸까 말까,\n화면만 켰다 껐다 했다면" };
+  const stance = preview.now_plan.stance;
+  const stanceScene =
+    stance === "light_contact"
+      ? { v: "w-thread", line: "끊어지지 않은 실을,\n서두르지 않고 천천히" }
+      : stance === "hold_boundary"
+        ? { v: "w-mirror", line: "나를 지키는 거리도\n이 관계를 아끼는 방법이에요" }
+        : { v: "w-phone", line: "지금은, 휴대폰을\n한 번 내려놓을 때" };
+
   return (
     <div className="fade-in pb-28">
       {/* ---------- full-bleed: 이름 제목 + 월화의 개인화 문장 3줄 ---------- */}
@@ -468,8 +487,15 @@ export default function PreviewExperience({
         </div>
       </section>
 
+      <SceneBreak
+        video={`/book/v3/${scene.v}.mp4`}
+        poster={`/book/v3/${scene.v}.webp`}
+        eyebrow={scene.eyebrow}
+        line={scene.line}
+      />
+
       {/* ---------- A. 지금 두 사람의 자리 ---------- */}
-      <section className="mt-6 px-6">
+      <section className="mt-2 px-6">
         <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-6">
           <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">02 · 지금 두 사람의 자리</p>
           <p className="font-display mt-2 text-[1.08rem] font-semibold leading-snug text-ivory">
@@ -502,8 +528,16 @@ export default function PreviewExperience({
         </div>
       </section>
 
+      <SceneBreak
+        video="/book/v3/typing.mp4"
+        poster="/book/v3/typing.webp"
+        eyebrow="보내기 직전"
+        line={"썼다 지운 그 한 줄이,\n지금 가장 위험해요"}
+        aspect="aspect-[4/3]"
+      />
+
       {/* ---------- C. 지금 가장 조심할 행동 ---------- */}
-      <section className="mt-4 px-6">
+      <section className="mt-2 px-6">
         <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-6">
           <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">04 · 지금 가장 조심할 행동</p>
           <ol className="mt-3 flex flex-col gap-3.5">
@@ -522,8 +556,15 @@ export default function PreviewExperience({
         </div>
       </section>
 
+      <SceneBreak
+        video={`/book/v3/${stanceScene.v}.mp4`}
+        poster={`/book/v3/${stanceScene.v}.webp`}
+        eyebrow="월화가 건네는 방향"
+        line={stanceScene.line}
+      />
+
       {/* ---------- D. 지금 해야 할 행동 ---------- */}
-      <section className="mt-4 px-6">
+      <section className="mt-2 px-6">
         <div className="mx-auto max-w-md rounded-2xl border border-gold/35 bg-gradient-to-b from-ink-soft to-ink px-6 py-6">
           <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">05 · 지금 해야 할 행동</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -550,8 +591,10 @@ export default function PreviewExperience({
         </div>
       </section>
 
+      <SceneBreak image="/wolhwa/wolhwa-gaze.webp" eyebrow="月華" line={"그 마음이 100이라는 것,\n월화는 알고 있어요"} aspect="aspect-[4/4]" />
+
       {/* ---------- 월하연의 관점: 사랑의 총량 100 (약 20%) ---------- */}
-      <section className="mt-4 px-6">
+      <section className="mt-2 px-6">
         <div className="mx-auto max-w-md rounded-2xl border border-thread/25 bg-[#140c0e] px-6 py-6">
           <p className="text-[0.7rem] tracking-[0.25em] text-thread/90">월화가 보는 당신의 100</p>
           <div className="mt-3 flex flex-col gap-2.5">
@@ -569,8 +612,16 @@ export default function PreviewExperience({
         </div>
       </section>
 
+      <SceneBreak
+        image="/wolhwa/result-cards.webp"
+        eyebrow="전체 결과"
+        line={"상대의 반응부터\n지금 해야 할 행동까지"}
+        aspect="aspect-[4/3.6]"
+        position="object-center"
+      />
+
       {/* ---------- E. 전체 결과에서 더 깊게 보는 것 (고정 목록) ---------- */}
-      <section className="mt-8 px-6">
+      <section className="mt-4 px-6">
         <p className="font-display text-center text-[1.02rem] font-medium text-ivory">
           전체 결과에서 더 깊게 보는 것
         </p>
@@ -590,8 +641,16 @@ export default function PreviewExperience({
         </ul>
       </section>
 
+      <SceneBreak
+        video="/book/v3/w-final.mp4"
+        poster="/book/v3/w-final.webp"
+        eyebrow="다음 장"
+        line={name ? `여기서부터는,\n${name}님만의 이야기예요` : "여기서부터는,\n당신만의 이야기예요"}
+        aspect="aspect-[4/4.2]"
+      />
+
       {/* ---------- 가격은 여기서 처음 등장 ---------- */}
-      <section className="mt-12 px-6 text-center">
+      <section className="mt-4 px-6 text-center">
         <div className="mx-auto max-w-md rounded-2xl border border-thread/30 bg-gradient-to-b from-[#160d10] to-ink-soft px-6 py-7">
           <p className="text-[0.65rem] tracking-[0.3em] text-thread/90">
             여기까지가 월화가 먼저 전한 이야기예요
