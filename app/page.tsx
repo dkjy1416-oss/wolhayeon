@@ -6,11 +6,7 @@ import { getPublicReviews } from "@/lib/reviews";
 
 import HeroSection from "@/components/home/HeroSection";
 import MomentsSection from "@/components/home/MomentsSection";
-import ReunionQuestionsSection from "@/components/home/ReunionQuestionsSection";
-import WolhwaInsightSection from "@/components/home/WolhwaInsightSection";
-import WolhwaReadingSection from "@/components/home/WolhwaReadingSection";
-import HowItWorksSection from "@/components/home/HowItWorksSection";
-import ResultPreviewSection from "@/components/home/ResultPreviewSection";
+import WhatYouGetSection from "@/components/home/WhatYouGetSection";
 import ProductsSection from "@/components/home/ProductsSection";
 import WolhwaNightsSection from "@/components/home/WolhwaNightsSection";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
@@ -41,11 +37,7 @@ export default async function Home() {
         <main>
           <HeroSection video={media.heroVideo} poster={media.heroPoster} clips={HERO_CLIPS} />
           <MomentsSection />
-          <ReunionQuestionsSection />
-          <WolhwaReadingSection video="/book/v3/w-reading.mp4" poster="/book/v3/w-reading.webp" />
-          <WolhwaInsightSection gaze={media.wolhwaGaze} />
-          <HowItWorksSection />
-          <ResultPreviewSection resultCards={media.resultCards} />
+          <WhatYouGetSection />
           <ProductsSection />
           <WolhwaNightsSection />
           <RealReviewsSection reviews={reviews} />
