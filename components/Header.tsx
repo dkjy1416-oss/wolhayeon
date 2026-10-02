@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-export default function Header() {
+export default function Header({
+  ctaHref = "/apply",
+  ctaLabel = "리추얼 시작하기",
+}: {
+  /** 오른쪽 버튼 이동 위치 (기본: 사연 쓰기 시작) */
+  ctaHref?: string;
+  ctaLabel?: string;
+} = {}) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -29,10 +36,10 @@ export default function Header() {
           월하연 <span className="text-gold">月下緣</span>
         </Link>
         <Link
-          href="#pricing"
+          href={ctaHref}
           className="rounded-full border border-gold-dim/40 px-4 py-2 text-sm text-ivory transition-colors hover:border-gold/70 hover:text-gold"
         >
-          리추얼 시작하기
+          {ctaLabel}
         </Link>
       </div>
     </header>
