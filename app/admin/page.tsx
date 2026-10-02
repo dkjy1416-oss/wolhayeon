@@ -69,7 +69,7 @@ export default async function AdminDashboard() {
   const yesterdayKey = kstDate(yesterdayStart);
 
   /* 최근 7일 주문 + 처리 필요 주문(기간 무관) */
-  const [recentRes, attentionRes, csChatRes, incidentRes, failRes] =
+  const [recentRes, attentionRes, csChatRes, incidentRes, failRes, reviewRes] =
     await Promise.all([
       supabase
         .from("ritual_orders")
@@ -82,7 +82,7 @@ export default async function AdminDashboard() {
       supabase
         .from("ritual_orders")
         .select(
-          "order_number, applicant_name, email, created_at, paid_at, preview_generated_at, payment_status, payment_amount, generation_status, review_status, delivery_status"
+          "order_number, applicant_name, email, created_at, paid_at, preview_generated_at, payment_status, payment_amount, generation_status, review_status, delivery_status, product, book_status"
         )
         .eq("payment_status", "paid")
         .order("paid_at", { ascending: false })
@@ -103,6 +103,7 @@ export default async function AdminDashboard() {
         .gt("created_at", todayStart)
         .in("event", ["pay_fail", "confirm_failed", "amount_mismatch"])
         .limit(2000),
+      supabase.from("reviews").select("id").eq("status", "pending").limit(500),
     ]);
 
   const recent = ((recentRes.data ?? []) as OrderRow[]).filter(
@@ -144,11 +145,36 @@ export default async function AdminDashboard() {
     ? null
     : new Set((failRes.data ?? []).map((e: { order_number: string }) => e.order_number)).size;
 
+  /* 결제 10분이 지났는데 결과가 아직 안 만들어진 메시지·패키지 주문 (자동 처리 누락) */
+  const tenMinAgo = Date.now() - 10 * 60 * 1000;
+  type Paid = OrderRow & { product?: string | null; book_status?: string | null };
+  const stuck = (paidAll as Paid[]).filter(
+    (r) =>
+      (r.product ?? "message") !== "book" &&
+      (r.generation_status === "waiting" || r.generation_status === "generating") &&
+      r.paid_at &&
+      Date.parse(r.paid_at) < tenMinAgo
+  );
+  const bookPending = (paidAll as Paid[]).filter(
+    (r) =>
+      (r.product === "book" || r.product === "bundle") &&
+      r.book_status !== "ready" &&
+      r.paid_at &&
+      Date.parse(r.paid_at) < tenMinAgo
+  );
+  const reviewPending = reviewRes.error ? 0 : (reviewRes.data ?? []).length;
+
   const couponPending = recent.filter(
     (r) => r.payment_status === "pending" && r.payment_amount === APOLOGY_PRICE_KRW
   ).length;
 
   const todos: { label: string; count: number; href: string; tone: "warn" | "info" }[] = [];
+  if (stuck.length)
+    todos.push({ label: "결제 10분이 지났는데 결과 미생성", count: stuck.length, href: "/admin/orders?f=stuck", tone: "warn" });
+  if (bookPending.length)
+    todos.push({ label: "결제 10분이 지났는데 책 미완성", count: bookPending.length, href: "/admin/orders?f=book_pending", tone: "warn" });
+  if (reviewPending)
+    todos.push({ label: "확인 전 고객 후기", count: reviewPending, href: "/admin/reviews", tone: "info" });
   if (genFailed.length)
     todos.push({ label: "결과 생성 실패 (결제 완료 주문)", count: genFailed.length, href: "/admin/orders?f=gen_failed", tone: "warn" });
   if (undelivered.length)
