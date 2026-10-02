@@ -10,7 +10,7 @@ export default function SceneBreak({
   poster,
   eyebrow,
   line,
-  aspect = "aspect-[4/3.4]",
+  aspect = "aspect-[3/4]",
   position = "object-top",
 }: {
   video?: string;
@@ -24,10 +24,14 @@ export default function SceneBreak({
   return (
     <figure className="relative mt-8 overflow-hidden">
       {video ? (
-        <LoopVideo src={video} poster={poster} label={line} className={`block ${aspect} w-full object-cover ${position}`} />
+        <LoopVideo src={video} poster={poster} label={line} fit="contain" className={`block ${aspect} w-full`} />
       ) : image ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt="" loading="lazy" className={`block ${aspect} w-full object-cover ${position}`} />
+        <div className={`relative overflow-hidden bg-ink ${aspect} w-full`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image} alt="" aria-hidden loading="lazy" className="absolute inset-0 h-full w-full scale-125 object-cover opacity-55 blur-2xl" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image} alt="" loading="lazy" className={`relative h-full w-full object-contain ${position}`} />
+        </div>
       ) : null}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-ink to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ink via-ink/75 to-transparent" />

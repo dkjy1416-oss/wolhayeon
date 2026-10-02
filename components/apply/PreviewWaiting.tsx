@@ -13,6 +13,7 @@ const CLIPS = [
   { src: "/book/v3/w-cups.mp4", poster: "/book/v3/w-cups.webp", position: "object-top" },
   { src: "/book/v3/w-mirror.mp4", poster: "/book/v3/w-mirror.webp", position: "object-top" },
   { src: "/book/v3/w-phone.mp4", poster: "/book/v3/w-phone.webp", position: "object-top" },
+  { src: "/book/v3/w-phone2.mp4", poster: "/book/v3/w-phone2.webp", position: "object-top" },
 ];
 
 export default function PreviewWaiting({ name, slow }: { name?: string | null; slow?: boolean }) {

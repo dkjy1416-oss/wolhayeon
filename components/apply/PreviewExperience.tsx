@@ -407,7 +407,7 @@ export default function PreviewExperience({
       ? { v: "fight", eyebrow: "그날의 장면", line: "그날의 말들이\n아직 귓가에 남아 있다면" }
       : firstMode === "거리두기" || firstMode === "부담"
         ? { v: "cry", eyebrow: "멀어지는 뒷모습", line: "붙잡고 싶었는데,\n뒷모습만 남았다면" }
-        : { v: "call", eyebrow: "새벽의 화면", line: "전화를 걸까 말까,\n화면만 켰다 껐다 했다면" };
+        : { v: "night", eyebrow: "새벽의 불빛", line: "연락할까 말까,\n화면만 켰다 껐다 했다면" };
   const stance = preview.now_plan.stance;
   const stanceScene =
     stance === "light_contact"
@@ -529,11 +529,10 @@ export default function PreviewExperience({
       </section>
 
       <SceneBreak
-        video="/book/v3/typing.mp4"
-        poster="/book/v3/typing.webp"
+        video="/book/v3/bed.mp4"
+        poster="/book/v3/bed.webp"
         eyebrow="보내기 직전"
         line={"썼다 지운 그 한 줄이,\n지금 가장 위험해요"}
-        aspect="aspect-[4/3]"
       />
 
       {/* ---------- C. 지금 가장 조심할 행동 ---------- */}
@@ -591,7 +590,7 @@ export default function PreviewExperience({
         </div>
       </section>
 
-      <SceneBreak image="/wolhwa/wolhwa-gaze.webp" eyebrow="月華" line={"그 마음이 100이라는 것,\n월화는 알고 있어요"} aspect="aspect-[4/4]" />
+      <SceneBreak image="/wolhwa/wolhwa-gaze.webp" eyebrow="月華" line={"그 마음이 100이라는 것,\n월화는 알고 있어요"} />
 
       {/* ---------- 월하연의 관점: 사랑의 총량 100 (약 20%) ---------- */}
       <section className="mt-2 px-6">
@@ -616,7 +615,6 @@ export default function PreviewExperience({
         image="/wolhwa/result-cards.webp"
         eyebrow="전체 결과"
         line={"상대의 반응부터\n지금 해야 할 행동까지"}
-        aspect="aspect-[4/3.6]"
         position="object-center"
       />
 
@@ -646,7 +644,6 @@ export default function PreviewExperience({
         poster="/book/v3/w-final.webp"
         eyebrow="다음 장"
         line={name ? `여기서부터는,\n${name}님만의 이야기예요` : "여기서부터는,\n당신만의 이야기예요"}
-        aspect="aspect-[4/4.2]"
       />
 
       {/* ---------- 가격은 여기서 처음 등장 ---------- */}
