@@ -28,6 +28,8 @@ interface Content {
   part_13_21day_plan: { days: Day[] };
   part_14_final_letter: Titled;
   bonus_journal_questions: { title: string; intro: string; questions: string[] };
+  /* 실전 노트 — 편집 UI는 없지만 저장 시 그대로 보존 */
+  bonus_playbook?: unknown;
 }
 
 const TITLED_PARTS: Array<{ key: keyof Content; label: string }> = [
@@ -97,6 +99,7 @@ function normalizeContent(raw: Record<string, unknown>): Content {
       intro: typeof bonus.intro === "string" ? bonus.intro : "",
       questions: arr(bonus.questions),
     },
+    ...(raw.bonus_playbook ? { bonus_playbook: raw.bonus_playbook } : {}),
   };
 }
 
