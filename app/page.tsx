@@ -13,6 +13,7 @@ import WolhwaNightsSection from "@/components/home/WolhwaNightsSection";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
 import FinalCTASection from "@/components/home/FinalCTASection";
 import StickyMobileCta from "@/components/home/StickyMobileCta";
+import ResumeOrder from "@/components/book/ResumeOrder";
 
 /* 승인된 실제 후기·프로모션 가격 반영 (10분마다 새로) */
 export const revalidate = 600;
@@ -37,6 +38,7 @@ export default async function Home() {
         <Header />
         <main>
           <HeroSection video={media.heroVideo} poster={media.heroPoster} clips={HERO_CLIPS} />
+          <ResumeOrder className="mx-4 mt-6" />
           <MomentsSection />
           <WhatYouGetSection />
           <SampleAnswerSection />
