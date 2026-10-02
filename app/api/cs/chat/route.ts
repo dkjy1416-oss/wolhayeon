@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PAYMENTS_OPEN } from "@/lib/payment-availability";
-import { priceSentence } from "@/lib/ritual-types";
+import {
+  priceSentence,
+  BOOK_PRICE_KRW,
+  bundlePrice,
+  PROMO_DEADLINE_TEXT,
+  isPromoActive,
+} from "@/lib/ritual-types";
 import { loadCsOrderLite, getCsStatus } from "@/lib/cs-actions";
 import {
   REFUND_POLICY_SECTIONS,
@@ -45,7 +51,15 @@ const csSystem = () => `당신은 월하연(月下緣)의 안내자 월화(月�
 - 월하연: 헤어진 뒤의 마음과 두 사람 관계의 흐름을 읽어주는 개인화 리추얼
   서비스. 신청서 작성 → 결제 전 무료 개인화 미리보기 → ${priceSentence()} 1회 결제 →
   전체 결과(월화의 편지, 관계 흐름, 개인 리추얼, 24시간/7일/21일 가이드).
-- 결과는 결제 후 보통 수 분 내 자동 생성되어 화면과 이메일로 전달됩니다.
+- 결과는 결제 후 보통 1~3분 안에 자동 생성되어 화면과 이메일로 전달됩니다.
+- 상품은 세 가지입니다: ① 월화의 메시지 ${priceSentence()} ② 개인화 PDF 책
+  《헤어진 뒤, 연락하지 말아야 할 때》 ${BOOK_PRICE_KRW.toLocaleString()}원 (약 120쪽, 내 이름 판본,
+  연락이 왔을 때 대처·재회를 말할 때의 문장·다시 만나기 전 체크리스트 등)
+  ③ 메시지+책 패키지 ${bundlePrice().toLocaleString()}원${isPromoActive() ? ` (특가 ${PROMO_DEADLINE_TEXT})` : ""}.
+- 책은 결제 후 몇 분 안에 PDF로 만들어져, 완성 화면·결과 화면의 'PDF로 저장하기/바로 열어 보기'
+  버튼과 이메일('내 책 PDF 받기' 버튼, 60일 동안 유효)로 받을 수 있습니다.
+- 메시지를 이미 받은 분은 결과 화면 아래 '사연 다시 안 쓰고 책 받기' 버튼으로 같은 사연의 책만
+  따로 결제할 수 있습니다.
 - 엔터테인먼트·자기성찰 콘텐츠이며 재회를 보장하지 않습니다.
 ${
   PAYMENTS_OPEN
@@ -128,6 +142,17 @@ export async function POST(req: Request) {
           "환불 가능 여부는 결제 상태와 전체 결과 열람 여부에 따라 달라져요. 주문 상태를 먼저 확인한 뒤, 실제 환불 확인·요청 단계에서만 이메일 인증을 진행해요.",
       });
     }
+    if (/책|pdf|PDF|패키지|다운로드|다운/.test(lastText)) {
+      return NextResponse.json({
+        reply: `개인화 PDF 책《헤어진 뒤, 연락하지 말아야 할 때》는 ${BOOK_PRICE_KRW.toLocaleString()}원, 메시지와 함께 받는 패키지는 ${bundlePrice().toLocaleString()}원이에요. 책은 결제 후 몇 분 안에 만들어져 화면 버튼과 이메일('내 책 PDF 받기')로 받을 수 있어요. 이미 결제하셨는데 책을 못 받으셨다면 아래 '주문 확인하기'로 상태를 바로 확인해 드릴게요.`,
+      });
+    }
+    if (/언제|얼마나|몇 분|안 와|안와|기다/.test(lastText)) {
+      return NextResponse.json({
+        reply:
+          "결과는 결제 후 보통 1~3분 안에 화면에 열리고 이메일로도 보내 드려요. 그보다 오래 걸린다면 아래 '주문 확인하기'로 상태를 확인하고, '결과 생성 다시 확인'을 누르면 바로 이어서 처리돼요.",
+      });
+    }
     if (/이용|가격|미리보기|리추얼/.test(lastText)) {
       return NextResponse.json({
         reply:
@@ -165,7 +190,19 @@ export async function POST(req: Request) {
               : "생성 대기";
       const mail =
         s.delivery === "sent" ? "발송 완료" : "결과 완성 후 발송 예정";
-      statusBlock = `\n\n[확인된 주문 상태 — 이 내용만 사실로 언급 가능]\n결제: ${pay}\n결과: ${gen}\n이메일: ${mail}\n결과 열람: ${
+      const productLabel =
+        s.product === "book" ? "개인화 책" : s.product === "bundle" ? "메시지+책 패키지" : "메시지";
+      const bookLine =
+        s.book === "none"
+          ? ""
+          : `\n개인화 책: ${
+              s.book === "ready"
+                ? "완성(이메일의 '내 책 PDF 받기' 또는 화면 버튼으로 받기 가능)"
+                : s.book === "failed"
+                  ? "제작 재시도 필요(화면의 '결과 생성 다시 확인' 버튼으로 이어서 제작)"
+                  : "제작 중(완성되면 이메일로 전송)"
+            }`;
+      statusBlock = `\n\n[확인된 주문 상태 — 이 내용만 사실로 언급 가능]\n상품: ${productLabel}\n결제: ${pay}${bookLine}\n결과: ${s.product === "book" ? "해당 없음(책 단품)" : gen}\n이메일: ${mail}\n결과 열람: ${
         ctx.level === "full"
           ? s.resultPath
             ? "화면의 버튼으로 바로 열 수 있음"
