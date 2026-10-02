@@ -4,6 +4,9 @@ import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { APOLOGY_PRICE_KRW } from "@/lib/ritual-types";
 import { isOperatorEmail, won } from "@/lib/admin-util";
+import CsvButton from "@/components/admin/CsvButton";
+
+const PRODUCT_LABEL: Record<string, string> = { message: "메시지", book: "책", bundle: "패키지" };
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +58,9 @@ interface Row {
   review_status: string;
   delivery_status: string;
   created_at: string;
+  product: string | null;
+  book_status: string | null;
+  paid_at: string | null;
 }
 
 /* 목록 필터 — 대시보드 "지금 처리할 일"에서도 이 값으로 연결 */
@@ -63,7 +69,10 @@ const FILTERS: { key: string; label: string }[] = [
   { key: "paid", label: "결제 완료" },
   { key: "pending", label: "결제 전" },
   { key: "coupon", label: "사과 쿠폰" },
+  { key: "book", label: "책·패키지" },
+  { key: "book_pending", label: "책 미완성" },
   { key: "gen_failed", label: "생성 실패" },
+  { key: "stuck", label: "결과 미생성" },
   { key: "undelivered", label: "메일 미발송" },
   { key: "review", label: "검수 대기" },
   { key: "refunded", label: "환불" },
@@ -89,7 +98,7 @@ export default async function AdminOrdersPage({
     let query = supabase
       .from("ritual_orders")
       .select(
-        "id, order_number, applicant_name, email, payment_amount, payment_status, generation_status, review_status, delivery_status, created_at"
+        "id, order_number, applicant_name, email, payment_amount, payment_status, generation_status, review_status, delivery_status, created_at, product, book_status, paid_at"
       );
     if (q) {
       query = query.or(
@@ -100,6 +109,17 @@ export default async function AdminOrdersPage({
     if (f === "pending") query = query.eq("payment_status", "pending");
     if (f === "refunded") query = query.eq("payment_status", "refunded");
     if (f === "coupon") query = query.eq("payment_amount", APOLOGY_PRICE_KRW);
+    if (f === "stuck")
+      query = query
+        .eq("payment_status", "paid")
+        .neq("product", "book")
+        .in("generation_status", ["waiting", "generating"]);
+    if (f === "book") query = query.in("product", ["book", "bundle"]);
+    if (f === "book_pending")
+      query = query
+        .eq("payment_status", "paid")
+        .in("product", ["book", "bundle"])
+        .or("book_status.is.null,book_status.neq.ready");
     if (f === "gen_failed")
       query = query.eq("payment_status", "paid").eq("generation_status", "failed");
     if (f === "undelivered")
@@ -190,10 +210,32 @@ export default async function AdminOrdersPage({
         })}
       </div>
       {!loadError && (
-        <p className="mt-3 text-[0.75rem] text-ivory-dim">
-          {rows.length}건{rows.length >= 300 ? " (최근 300건까지 표시)" : ""}
-          {q && ` · "${q}" 검색 결과`}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[0.75rem] text-ivory-dim">
+            {rows.length}건{rows.length >= 300 ? " (최근 300건까지 표시)" : ""}
+            {q && ` · "${q}" 검색 결과`}
+            {" · 결제 합계 "}
+            {won(rows.filter((r) => r.payment_status === "paid").reduce((a, r) => a + (r.payment_amount ?? 0), 0))}
+          </p>
+          <CsvButton
+            filename={`월하연_주문_${f}_${new Date().toISOString().slice(0, 10)}.csv`}
+            header={["주문번호", "신청일", "결제일", "이름", "이메일", "상품", "금액", "결제", "결과 생성", "검수", "메일", "책"]}
+            rows={rows.map((r) => [
+              r.order_number,
+              new Date(r.created_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
+              r.paid_at ? new Date(r.paid_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) : "",
+              r.applicant_name,
+              r.email,
+              PRODUCT_LABEL[r.product ?? "message"] ?? r.product,
+              r.payment_amount,
+              r.payment_status,
+              r.generation_status,
+              r.review_status,
+              r.delivery_status,
+              r.book_status ?? "",
+            ])}
+          />
+        </div>
       )}
 
       {loadError ? (
@@ -241,6 +283,12 @@ export default async function AdminOrdersPage({
                   {r.payment_amount === APOLOGY_PRICE_KRW && (
                     <span className="rounded-full border border-thread/50 px-2 py-0.5 text-[0.62rem] text-thread">
                       사과 쿠폰
+                    </span>
+                  )}
+                  {r.product && r.product !== "message" && (
+                    <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[0.62rem] text-gold">
+                      {PRODUCT_LABEL[r.product] ?? r.product}
+                      {r.payment_status === "paid" && ` · 책 ${r.book_status === "ready" ? "완성" : r.book_status === "failed" ? "실패" : "제작 중"}`}
                     </span>
                   )}
                   <Badge kind="pay" value={r.payment_status} />
