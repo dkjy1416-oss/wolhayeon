@@ -25,6 +25,7 @@ import {
 } from "@/lib/ritual-types";
 import { sanitizeSiteUrl } from "@/lib/delivery-rules";
 import { logPayEventServer, ORDER_NUMBER_RE } from "@/lib/pay-events-server";
+import { runBookCoupon } from "@/lib/book/book-coupon";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -204,6 +205,12 @@ export async function POST(request: Request) {
     : [];
   if (orderNumbers.length === 0) {
     return NextResponse.json({ ok: false, error: "no_orders" }, { status: 400 });
+  }
+
+  /* 책 출간 안내 + 책 3,000원 쿠폰 (사과 쿠폰 고객 대상) */
+  if (body.campaign === "book") {
+    const out = await runBookCoupon(orderNumbers, mode);
+    return NextResponse.json(out, { status: out.ok ? 200 : 500 });
   }
 
   const supabase = getSupabaseAdmin();
