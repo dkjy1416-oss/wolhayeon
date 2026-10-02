@@ -134,7 +134,7 @@ export default function PreviewExperience({
   readingVideo: string | null;
   readingPoster: string | null;
 }) {
-  const [phase, setPhase] = useState<"loading" | "ready" | "delayed">(
+  const [phase, setPhase] = useState<"loading" | "ready" | "delayed" | "expired">(
     "loading"
   );
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -220,6 +220,12 @@ export default function PreviewExperience({
           return;
         }
         setPhase("delayed");
+        return;
+      }
+
+      /* 링크(접근 토큰)가 만료된 경우 — 재시도해도 소용없으니 바로 안내 화면으로 */
+      if (res.status === 404 || json?.error === "not_found") {
+        setPhase("expired");
         return;
       }
 
@@ -339,6 +345,46 @@ export default function PreviewExperience({
       window.removeEventListener("resize", onScroll);
     };
   }, [phase]);
+
+  /* ---------- 오래된 링크: 미리보기는 메일 링크로, 결제·책은 바로 이어서 ---------- */
+  if (phase === "expired") {
+    const o = encodeURIComponent(orderNumber);
+    return (
+      <div className="fade-in">
+        <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[92svh]">
+          <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
+          <p className="font-display mt-5 text-[1.2rem] leading-[1.8] text-ivory">
+            이 미리보기 링크는
+            <br />
+            보안을 위해 시간이 지나 닫혔어요.
+          </p>
+          <p className="mt-3 text-[0.86rem] font-light leading-[1.95] text-ivory-dim">
+            사연은 그대로 저장돼 있어요.
+            <br />
+            신청할 때 받은 메일 <span className="text-ivory">「이야기가 저장되었어요」</span>의 링크로
+            <br />
+            언제든 다시 열 수 있어요.
+          </p>
+          <div className="mt-7 flex flex-col gap-2.5">
+            <Link
+              href={`/apply/complete?order=${o}`}
+              className="cta-glow inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory"
+            >
+              저장된 사연으로 바로 결제하기
+            </Link>
+            {BOOK_SALES_OPEN && (
+              <Link
+                href={`/book?order=${o}`}
+                className="inline-flex h-12 w-full items-center justify-center rounded-full border border-gold-dim/40 text-[0.88rem] text-gold"
+              >
+                책 자세히 보기
+              </Link>
+            )}
+          </div>
+        </FullBleedReading>
+      </div>
+    );
+  }
 
   /* ---------- 실패: full-bleed 유지 + 재시도만 (개인화 실패 시 결제 버튼 금지) ---------- */
   if (phase === "delayed") {
