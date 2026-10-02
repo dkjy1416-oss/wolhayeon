@@ -45,8 +45,8 @@ type Scene = {
 
 /** 장면 밖 추가 순간들 (자막 없는 원본 · 무음) */
 const MOMENTS = [
-  { src: "/book/v3/typing.mp4", poster: "/book/v3/typing.webp", label: "보낼 메시지를 쓰고 지우는 손" },
-  { src: "/book/v3/call.mp4", poster: "/book/v3/call.webp", label: "새벽에 전화를 걸까 망설이는 모습" },
+  { src: "/book/v3/bed.mp4", poster: "/book/v3/bed.webp", label: "보낼 메시지 앞에서 망설이는 모습" },
+  { src: "/book/v3/night.mp4", poster: "/book/v3/night.webp", label: "새벽에 휴대폰 불빛만 바라보는 모습" },
   { src: "/book/v3/check.mp4", poster: "/book/v3/check.webp", label: "답장을 확인하다 놀라는 모습" },
 ];
 
@@ -340,7 +340,8 @@ export default async function BookPage({
               src="/book/v3/stop.mp4"
               poster="/book/v3/stop.webp"
               label="떠나는 사람을 향해 손을 뻗으며 우는 장면"
-              className="block aspect-[9/12] w-full object-cover object-top"
+              fit="contain"
+              className="block aspect-[3/4] w-full"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-ink/50 via-transparent via-55% to-ink" />
             <p className="pointer-events-none absolute inset-x-0 top-[5.2rem] text-center text-[0.72rem] tracking-[0.35em] text-gold/90">
@@ -420,7 +421,8 @@ export default async function BookPage({
                       src={s.videos[0].src}
                       poster={s.videos[0].poster}
                       label={s.videos[0].label}
-                      className="block aspect-[9/13] w-full object-cover object-top"
+                      fit="contain"
+                      className="block aspect-[3/4] w-full"
                     />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 px-5 pb-5">
@@ -539,7 +541,8 @@ export default async function BookPage({
               src="/book/v3/w-phone.mp4"
               poster="/book/v3/w-phone.webp"
               label="붉은 실이 감긴 휴대폰과 월화"
-              className="block aspect-[4/5] w-full object-cover object-top"
+              fit="contain"
+              className="block aspect-[3/4] w-full"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink" />
             <p className="font-display absolute inset-x-0 bottom-6 px-6 text-center text-[1.05rem] leading-[1.8] text-ivory">
@@ -591,7 +594,8 @@ export default async function BookPage({
               src="/book/v3/w-reading.mp4"
               poster="/book/v3/w-reading.webp"
               label="이야기를 읽는 월화"
-              className="block aspect-[4/5] w-full object-cover object-top"
+              fit="contain"
+              className="block aspect-[3/4] w-full"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-ink/30 via-transparent to-ink" />
             <svg aria-hidden viewBox="0 0 400 60" className="absolute inset-x-0 bottom-20 w-full">
@@ -779,7 +783,8 @@ export default async function BookPage({
               src="/book/v3/w-final.mp4"
               poster="/book/v3/w-final.webp"
               label="월화"
-              className="block aspect-[4/5] w-full object-cover object-top"
+              fit="contain"
+              className="block aspect-[3/4] w-full"
             />
             <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-ink to-transparent" />
             <p className="font-display absolute inset-x-0 bottom-5 px-6 text-center text-[1.05rem] leading-[1.8] text-ivory">
