@@ -11,8 +11,8 @@ export default function ApplyPage() {
     <main>
       <WantCapture />
       <ImmersiveApplyExperience
-        video="/wolhwa/wolhwa-reading-loop.mp4"
-        poster="/wolhwa/reading-poster.webp"
+        video="/book/v3/w-reading.mp4"
+        poster="/book/v3/w-reading.webp"
       />
     </main>
   );
