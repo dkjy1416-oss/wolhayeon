@@ -40,6 +40,7 @@ import { PreviewCoreSchema } from "@/lib/ritual-preview-schema";
 import { mergeLetterOpening } from "@/lib/letter-merge";
 import type { RitualOrderRow } from "@/lib/supabase/types";
 import { sendOpsAlert } from "@/lib/ops-alert";
+import { fallbackForGroup } from "@/lib/ritual-fallback";
 
 /** 모델 ID는 이 한 곳에서만 관리.
  *  ANTHROPIC_MODEL 환경변수가 있으면 그 값을, 없으면 현재
@@ -193,6 +194,7 @@ export async function generateRitualForOrder(
     ];
 
     const MAX_ATTEMPTS = 3;
+    const fallbackUsed: string[] = [];
     const runGroup = async (g: Group): Promise<Record<string, unknown>> => {
       let lastCode = "unknown";
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -246,6 +248,16 @@ export async function generateRitualForOrder(
         }
         console.error(`[gen:${requestId}] retry ${g.label} attempt=${attempt} code=${lastCode}`);
       }
+      /* 3번 모두 실패 — 실전 노트(선택)는 건너뛰고, 필수 그룹은 기본 원고로 채운다.
+         (결제한 손님의 결과가 '생성 실패'로 멈추지 않게) */
+      if (g.label !== "playbook") {
+        const fb = g.check.safeParse(normalizeRitualPartial(fallbackForGroup(g.label, order)));
+        if (fb.success) {
+          console.error(`[gen:${requestId}] fallback_used ${g.label} last=${lastCode}`);
+          fallbackUsed.push(`${g.label}(${lastCode})`);
+          return fb.data as Record<string, unknown>;
+        }
+      }
       throw { code: lastCode };
     };
 
@@ -274,6 +286,15 @@ export async function generateRitualForOrder(
       return { status: "generation_failed", code };
     }
 
+    if (fallbackUsed.length > 0) {
+      await sendOpsAlert("process_error", {
+        orderNumber,
+        code: `fallback_used:${fallbackUsed.join(",")}`.slice(0, 80),
+        detail:
+          "AI가 일부 파트를 3번 모두 만들지 못해 기본 원고로 채워 결과를 열었습니다. 손님은 결과를 정상적으로 받았습니다. 필요하면 검수 화면에서 해당 파트를 다듬어 주세요.",
+      });
+    }
+
     /* 3) 그룹 병합 후 전체 구조 검증 — 실패 시 부분 저장 없이 failed */
     const mergeStartedAt = Date.now();
     const parsed = parseRitualResultObject(merged);
@@ -285,16 +306,19 @@ export async function generateRitualForOrder(
     /* 3-b) 미리보기 서두를 첫 편지 맨 앞에 정확히 결합 (중복 방지 포함).
        결합 후 최종 구조를 한 번 더 전체 검증 — 실패 시 DB 저장 금지 */
     if (letterOpening) {
+      const originalLetter = parsed.data.part_01_letter.content;
       parsed.data.part_01_letter.content = mergeLetterOpening(
         letterOpening,
         parsed.data.part_01_letter.content
       );
       const finalCheck = RitualResultSchema.safeParse(parsed.data);
-      if (!finalCheck.success) {
-        await markFailed("merged_letter_invalid");
-        return { status: "generation_failed", code: "merged_letter_invalid" };
+      if (finalCheck.success) {
+        parsed.data = finalCheck.data;
+      } else {
+        /* 서두 결합이 어긋나면 결합 없이 원문 편지로 진행 (실패 처리하지 않음) */
+        console.error(`[gen:${requestId}] merged_letter_invalid — 결합 생략`);
+        parsed.data.part_01_letter.content = originalLetter;
       }
-      parsed.data = finalCheck.data;
     }
     console.error(`[perf] merge_validation_ms=${Date.now() - mergeStartedAt}`);
     /* 병렬 호출 → parse → merge → 스키마 검증 → 서두 결합까지 완료 시점 */

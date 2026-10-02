@@ -243,7 +243,23 @@ export function containsDevKeys(value: unknown): boolean {
  *  - 21일 플랜: 21개를 넘으면 앞 21개, DAY 번호는 1..21로 다시 매김
  *  - 기록장 질문은 최대 10개
  */
-export function normalizeRitualPartial(input: unknown): unknown {
+/** 고객 문장에 섞여 나온 개발 용어(part_07, JSON 등)를 지운다 — 거절 대신 정리 */
+function scrubDevKeys(v: unknown): unknown {
+  if (typeof v === "string") {
+    return v
+      .replace(/\(?\s*part[_\s-]?\d{1,2}(?:_[a-z0-9_]+)?(?:\s*[~\-–]\s*part[_\s-]?\d{1,2}(?:_[a-z0-9_]+)?)?\s*\)?/gi, "")
+      .replace(/\bjson\b|\bschema\b|섹션\s*키/gi, "")
+      .replace(/[ \t]{2,}/g, " ");
+  }
+  if (Array.isArray(v)) return v.map(scrubDevKeys);
+  if (v && typeof v === "object") {
+    return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, scrubDevKeys(x)]));
+  }
+  return v;
+}
+
+export function normalizeRitualPartial(rawInput: unknown): unknown {
+  const input = scrubDevKeys(rawInput);
   if (!input || typeof input !== "object" || Array.isArray(input)) return input;
   const out: Record<string, unknown> = {};
   const clip = (v: unknown, n: number) =>
