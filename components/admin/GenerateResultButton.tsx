@@ -36,7 +36,7 @@ export default function GenerateResultButton({
       });
       const json = await res.json().catch(() => null);
       if (res.ok && json?.ok) {
-        setMsg({ ok: true, text: "AI 결과 생성이 완료되었습니다." });
+        setMsg({ ok: true, text: "결과 생성·승인·고객 메일 발송까지 완료되었습니다." });
         router.refresh();
       } else {
         setMsg({
@@ -68,7 +68,7 @@ export default function GenerateResultButton({
       </button>
       {busy && (
         <p className="text-xs text-ivory-dim">
-          1~2분 정도 걸릴 수 있습니다. 창을 닫지 말고 기다려주세요.
+          1~3분 정도 걸립니다. 완료되면 자동 승인되고 고객에게 메일이 갑니다.
         </p>
       )}
       {msg && (
