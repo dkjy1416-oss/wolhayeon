@@ -33,6 +33,9 @@ interface CsStatusView {
   continuePath?: string | null;
   level: "lite" | "full";
   resultPath: string | null;
+  product?: string;
+  book?: "none" | "ready" | "making" | "failed";
+  bookPath?: string | null;
 }
 
 const QUICK_MENU: Array<{ label: string; needAuth: boolean; faq?: string }> = [
@@ -832,12 +835,27 @@ export default function CsChatWidget() {
                   ) : (
                     <>
                       <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1">
+                        {status?.book === "ready" &&
+                          (status?.bookPath ? (
+                            <a href={status.bookPath} className={`${btnCls} shrink-0`}>
+                              내 책 PDF 받기
+                            </a>
+                          ) : (
+                            <button type="button" onClick={() => startSensitive("open_result")} disabled={busy} className={`${btnCls} shrink-0`}>
+                              내 책 PDF 받기 🔒
+                            </button>
+                          ))}
+                        {status?.payment === "paid" && (status?.book === "making" || status?.book === "failed") && status?.product === "book" && (
+                          <button type="button" onClick={actRetryGeneration} disabled={busy} className={`${btnCls} shrink-0`}>
+                            책 제작 다시 확인
+                          </button>
+                        )}
                         {status?.hasResult && (
                           <button type="button" onClick={actResend} disabled={busy} className={`${btnCls} shrink-0`}>
                             등록된 이메일로 결과 다시 받기
                           </button>
                         )}
-                        {status?.payment === "paid" && !status?.hasResult && (
+                        {status?.payment === "paid" && !status?.hasResult && status?.product !== "book" && (
                           <button type="button" onClick={actRetryGeneration} disabled={busy} className={`${btnCls} shrink-0`}>
                             결과 생성 다시 확인
                           </button>
