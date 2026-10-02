@@ -31,6 +31,7 @@ import {
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import BookPackageCard from "@/components/apply/BookPackageCard";
+import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import { logPayEvent } from "@/lib/pay-events";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
@@ -373,30 +374,7 @@ export default function PreviewExperience({
     if (!showLoading) {
       return <div className="min-h-[100svh] bg-ink" />;
     }
-    return (
-      <div className="fade-in">
-        <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[92svh]">
-          <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
-          <p className="font-display mt-5 text-[1.15rem] leading-[1.9] text-ivory">
-            월화가 {name ? `${name}님의` : "당신의"} 이야기를
-            <br />
-            먼저 읽고 있어요.
-          </p>
-          <p className="mt-3 text-[0.82rem] font-light leading-[1.95] text-ivory-dim">
-            조금만 기다리면
-            <br />
-            무료 개인화 미리보기가 바로 이어집니다.
-          </p>
-          {slowNote && (
-            <p className="fade-in mt-4 text-[0.78rem] font-light leading-[1.9] text-gold/80">
-              사연이 깊을수록,
-              <br />
-              월화가 조금 더 천천히 읽어요.
-            </p>
-          )}
-        </FullBleedReading>
-      </div>
-    );
+    return <PreviewWaiting name={name} slow={slowNote} />;
   }
 
   /* ---------- ready: 같은 화면에서 fade로 preview 공개 ---------- */
