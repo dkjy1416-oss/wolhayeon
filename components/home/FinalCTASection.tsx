@@ -1,11 +1,22 @@
 import TrackedCtaLink from "@/components/TrackedCtaLink";
 import Reveal from "@/components/home/Reveal";
+import LoopVideo from "@/components/book/LoopVideo";
 
 /** SECTION 10 — FINAL CTA (결제 압박 없이 신청 시작 유도) */
 export default function FinalCTASection() {
   return (
-    <section id="final-cta" className="bg-ink-soft/40 px-6 py-28">
-      <div className="mx-auto max-w-md text-center">
+    <section id="final-cta" className="relative overflow-hidden bg-ink">
+      <div className="relative">
+        <LoopVideo
+          src="/book/v3/w-final.mp4"
+          poster="/book/v3/w-final.webp"
+          label="월화"
+          className="block aspect-[4/5] w-full object-cover object-top"
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ink to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
+      </div>
+      <div className="relative mx-auto -mt-28 max-w-md px-6 pb-24 text-center">
         <Reveal>
           <h2 className="font-display text-[1.45rem] font-semibold leading-[1.75] text-ivory">
             다시 만나고 싶은 마음이
@@ -40,6 +51,12 @@ export default function FinalCTASection() {
           <p className="mt-4 text-[0.75rem] font-light text-ivory-dim/80">
             결제 전, 무료 관계 분석 먼저 제공
           </p>
+          <a
+            href="/book"
+            className="mt-5 inline-block text-[0.8rem] text-gold/90 underline decoration-gold/30 underline-offset-[6px]"
+          >
+            혼자 펼쳐 볼 책이 필요하다면 → 책 자세히 보기
+          </a>
         </Reveal>
       </div>
     </section>

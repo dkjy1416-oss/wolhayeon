@@ -1,5 +1,5 @@
 import Reveal from "@/components/home/Reveal";
-import HomeImage from "@/components/home/HomeImage";
+import LoopVideo from "@/components/book/LoopVideo";
 
 /** SECTION 05 — 월화가 어떻게 읽는가 (4단계 + ritual-letter 상징 이미지) */
 const STEPS = [
@@ -25,11 +25,7 @@ const STEPS = [
   },
 ];
 
-export default function HowItWorksSection({
-  ritualLetter,
-}: {
-  ritualLetter: string | null;
-}) {
+export default function HowItWorksSection() {
   return (
     <section className="bg-ink-soft/40 py-20">
       <div className="px-6">
@@ -59,17 +55,26 @@ export default function HowItWorksSection({
         </ol>
       </div>
 
-      {/* 편지와 붉은 실 — 월하연의 상징 */}
+      {/* 붉은 실 — 월하연의 상징 (원본 영상, 무음) */}
       <Reveal className="mt-12">
-        <HomeImage
-          src={ritualLetter}
-          alt="촛불 아래 붉은 실로 묶인 편지"
-          aspect="aspect-[4/5]"
-          sizes="(max-width: 520px) 100vw, 520px"
-          bleed
-          sceneEyebrow="붉은 실의 리추얼"
-          sceneTitle={"다시 만나기 전에\n먼저 봐야 할 것"}
-        />
+        <div className="relative">
+          <LoopVideo
+            src="/book/v3/w-cups.mp4"
+            poster="/book/v3/w-cups.webp"
+            label="붉은 실로 이어진 찻잔 앞의 월화"
+            className="block aspect-[4/5] w-full object-cover object-top"
+          />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-ink-soft/80 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 px-6 pb-6">
+            <p className="text-[0.66rem] tracking-[0.3em] text-gold/80">붉은 실의 리추얼</p>
+            <p className="font-display mt-2 text-[1.15rem] leading-[1.7] text-ivory">
+              다시 만나기 전에
+              <br />
+              먼저 봐야 할 것
+            </p>
+          </div>
+        </div>
       </Reveal>
     </section>
   );
