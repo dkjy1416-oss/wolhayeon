@@ -5,6 +5,9 @@ import {
   RITUAL_PRICE_KRW,
   RITUAL_REGULAR_PRICE_KRW,
   APOLOGY_PRICE_KRW,
+  BOOK_COUPON_PRICE_KRW,
+  BOOK_COUPON_DEADLINE_TEXT,
+  BOOK_PRICE_KRW,
   isAllowedPrice,
   priceBadge,
   listPriceKRW,
@@ -279,7 +282,15 @@ export default async function CompletePage({
             </p>
           )}
           {product !== "message" && (
-            <p className="mt-9 text-center text-[0.8rem] text-ivory-dim">{PRODUCTS[product].name}</p>
+            <p className="mt-9 text-center text-[0.8rem] text-ivory-dim">
+              {PRODUCTS[product].name}
+              {product === "book" && row.payment_amount === BOOK_COUPON_PRICE_KRW && (
+                <span className="mt-1 block">
+                  <span className="line-through opacity-60">{BOOK_PRICE_KRW.toLocaleString()}원</span>
+                  <span className="ml-2 text-thread">책 출간 기념 쿠폰 · {BOOK_COUPON_DEADLINE_TEXT}</span>
+                </span>
+              )}
+            </p>
           )}
           <p className={`font-display ${product === "message" && badge.strike !== null ? "mt-1.5" : product === "message" ? "mt-9" : "mt-1.5"} text-center text-3xl font-semibold text-gold`}>
             {row.payment_amount.toLocaleString()}
