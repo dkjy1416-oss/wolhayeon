@@ -51,8 +51,8 @@ export default async function ApplyPreviewPage({
         continueToken={
           typeof ct === "string" && ct.length <= 160 ? ct : null
         }
-        readingVideo={found("wolhwa/wolhwa-reading-loop.mp4")}
-        readingPoster={found("wolhwa/reading-poster.webp")}
+        readingVideo={found("book/v3/w-reading.mp4")}
+        readingPoster={found("book/v3/w-reading.webp")}
       />
     </main>
   );
