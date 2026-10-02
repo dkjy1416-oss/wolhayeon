@@ -58,7 +58,7 @@ export default function ProductsSection() {
               </p>
             )}
             <p className="mt-2 text-[0.8rem] font-light leading-[1.85] text-ivory-dim">
-              첫 편지 · 관계 읽기 5편 · 24시간·7일 가이드 · 21일 플랜 · 리추얼. 결제 전 미리보기는 무료예요.
+              첫 편지 · 관계 읽기 · 연락 타이밍과 첫 메시지 예시 · 반응별 대응 · 24시간·7일·21일 가이드 · 리추얼. 결제 전 미리보기는 무료예요.
             </p>
             <TrackedCtaLink
               event="home_cta_click"

@@ -85,17 +85,30 @@ function PaidTab() {
         웃던 두 사람이었을 거예요…
       </Box>
 
-      <Box tag="02 · 관계 읽기 5편">
+      <Box tag="02 · 관계 읽기 4편">
         <ul className="space-y-1.5">
           <li><b className="font-normal text-ivory">두 사람의 이야기</b> — 서운함이 말이 되기까지 걸린 시간</li>
           <li><b className="font-normal text-ivory">지금 내 마음</b> — 그리움과 억울함이 섞인 자리</li>
           <li><b className="font-normal text-ivory">반복된 흐름</b> — ‘참다가 한 번에 터지는’ 패턴</li>
           <li><b className="font-normal text-ivory">내가 정말 원하는 것</b> — 사과받는 것과 다시 만나는 것의 차이</li>
-          <li><b className="font-normal text-ivory">지금 바꿀 수 있는 것</b> — 상대가 아니라 내 쪽의 세 가지</li>
         </ul>
       </Box>
 
-      <Box tag="03 · 24시간 · 7일 가이드">
+      <Box tag="03 · 연락 전략" title="18일 뒤, 짧고 가볍게 한 번">
+        <p>
+          <span className="text-ivory">첫 메시지 예시</span>
+          <span className="mt-1 block rounded-lg bg-[#eef3ea] px-3 py-2 text-[0.82rem] text-[#2a1f1a]">
+            잘 지내? 그때 내가 말을 너무 세게 했던 것 같아. 답은 편할 때 해도 돼.
+          </span>
+        </p>
+        <ul className="mt-2.5 space-y-1">
+          <li>· 반가운 답이 오면 — 대화를 길게 끌지 않고 한 번만 더 주고받기</li>
+          <li>· 단답이 오면 — 고맙다는 말로 가볍게 닫고 2주 더 두기</li>
+          <li>· 답이 없으면 — 다시 보내지 않기, 21일 플랜으로 돌아가기</li>
+        </ul>
+      </Box>
+
+      <Box tag="04 · 24시간 · 7일 가이드">
         <ul className="space-y-1.5">
           <li>· 오늘 밤: 보내고 싶은 말은 메모장에만 쓰고, 휴대폰은 다른 방에</li>
           <li>· 3일째: 그날 싸움을 ‘후회되는 말 / 억울한 것’ 두 칸으로 나눠 적기</li>
@@ -103,7 +116,7 @@ function PaidTab() {
         </ul>
       </Box>
 
-      <Box tag="04 · 21일 하루 플랜">
+      <Box tag="05 · 21일 하루 플랜">
         <ul className="space-y-1.5">
           <li><span className="text-gold">DAY 1</span> 연락 충동이 온 시간대를 적어 두기</li>
           <li><span className="text-gold">DAY 8</span> 그날 내가 정말 하고 싶었던 말 한 문장 찾기</li>
@@ -112,7 +125,7 @@ function PaidTab() {
       </Box>
 
       <div className="relative overflow-hidden rounded-xl border border-gold-dim/20 bg-ink/60 px-4 py-4">
-        <p className="text-[0.66rem] tracking-[0.18em] text-gold/80">05 · 붉은 실 리추얼 · 06 · 마지막 편지 · 마음 기록장</p>
+        <p className="text-[0.66rem] tracking-[0.18em] text-gold/80">06 · 붉은 실 리추얼 · 07 · 마지막 편지 · 마음 기록장</p>
         <p aria-hidden className="mt-2 select-none text-[0.82rem] font-light leading-[1.9] text-ivory-dim blur-[5px]">
           흔들리는 밤에는 붉은 실을 손가락에 한 번 감고, 오늘 보내지 않은 말을 종이에 적어 접어 두세요. 그리고 나에게 이렇게
           말해 주세요. 나는 지금 기다리는 중이지, 멈춰 있는 게 아니라고.
