@@ -6,6 +6,7 @@
  * 화면을 닫아도 서버에서 제작이 이어지고, 완성되면 메일로도 링크가 간다.
  */
 import { useEffect, useRef, useState } from "react";
+import { forgetOrder } from "@/components/book/ResumeOrder";
 import Link from "next/link";
 
 export default function BookProcessing({
@@ -23,6 +24,9 @@ export default function BookProcessing({
   const [path, setPath] = useState<string | null>(null);
   const started = useRef(false);
 
+  useEffect(() => {
+    forgetOrder();
+  }, []);
   useEffect(() => {
     if (started.current) return;
     started.current = true;

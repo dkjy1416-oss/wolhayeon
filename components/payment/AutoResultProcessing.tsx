@@ -10,6 +10,7 @@
  * - 결제 페이지로는 절대 되돌리지 않음.
  */
 import { useEffect, useRef, useState } from "react";
+import { forgetOrder } from "@/components/book/ResumeOrder";
 import { useRouter } from "next/navigation";
 import { clearApplication } from "@/lib/ritual-storage";
 import WaitingContent, {
@@ -52,6 +53,9 @@ export default function AutoResultProcessing({
   const failRetries = useRef(0);
 
   /* 문구 순환 */
+  useEffect(() => {
+    forgetOrder();
+  }, []);
   useEffect(() => {
     if (phase !== "working") return;
     const id = setInterval(
