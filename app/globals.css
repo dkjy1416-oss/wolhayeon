@@ -276,3 +276,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .bk-turn-next, .bk-turn-prev { animation: none; }
 }
+
+/* 대기 화면 — 진행률 숫자 없이 흐르는 막대 */
+.wh-indeterminate {
+  animation: wh-indeterminate 1.8s ease-in-out infinite;
+}
+@keyframes wh-indeterminate {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(320%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wh-indeterminate { animation: none; width: 100%; opacity: 0.5; }
+}
