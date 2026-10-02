@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import { trackEvent } from "@/lib/analytics";
 import {
   RitualApplication,
@@ -160,117 +161,134 @@ export default function ConfirmPage() {
     .map((v) => optionLabel(PAIN_POINT_OPTIONS, v))
     .join(", ");
 
+  if (submitting) return <PreviewWaiting name={data.applicant_name} />;
+
+  const chips = [
+    data.relationship_type === "other"
+      ? data.relationship_type_other
+      : optionLabel(RELATIONSHIP_TYPE_OPTIONS, data.relationship_type),
+    optionLabel(RELATIONSHIP_DURATION_OPTIONS, data.relationship_duration),
+    data.breakup_elapsed ? `헤어진 지 ${optionLabel(BREAKUP_ELAPSED_OPTIONS, data.breakup_elapsed)}` : "",
+    optionLabel(CONTACT_STATUS_OPTIONS, data.contact_status),
+    optionLabel(MAIN_WISH_OPTIONS, data.main_wish),
+  ].filter((c) => c && c.trim());
+  const story = data.story.trim();
+  const excerpt = story.length > 90 ? `${story.slice(0, 90)}…` : story;
+
   return (
-    <main className="mx-auto min-h-[100svh] w-full max-w-md px-6 pb-44 pt-16">
-      <h1 className="font-display text-center text-xl font-semibold leading-[1.6] text-ivory">
-        당신의 이야기를
-        <br />
-        이렇게 들었습니다.
-      </h1>
+    <main className="mx-auto min-h-[100svh] w-full max-w-md pb-44">
+      {/* 월화 영상 + 한 줄 */}
+      <section className="relative">
+        <video
+          className="block aspect-[4/4.6] w-full object-cover object-top"
+          src="/book/v3/w-reading.mp4"
+          poster="/book/v3/w-reading.webp"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-ink to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink via-ink/80 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 px-6 pb-2">
+          <p className="text-[0.7rem] tracking-[0.3em] text-gold/90">月下緣</p>
+          <h1 className="font-display mt-2 text-[1.45rem] leading-[1.55] text-ivory">
+            {data.applicant_name ? `${data.applicant_name}님의 이야기,` : "당신의 이야기,"}
+            <br />
+            <span className="text-gold">월화가 다 들었어요.</span>
+          </h1>
+        </div>
+      </section>
 
-      <div className="mt-8 flex flex-col gap-3">
-        <Group title="나">
-          <Row label="이름" value={data.applicant_name} />
-          <Row
-            label="성별 / 출생연도"
-            value={`${optionLabel(APPLICANT_GENDER_OPTIONS, data.applicant_gender)} / ${data.applicant_birth_year ?? "-"}`}
-          />
-          <Row
-            label="현재 생활"
-            value={optionLabel(LIFE_STAGE_OPTIONS, data.life_stage)}
-          />
-        </Group>
-
-        <Group title="그 사람">
-          <Row label="상대 이름" value={data.partner_name} />
-          <Row
-            label="상대 성별 / 출생연도"
-            value={`${data.partner_gender ? optionLabel(PARTNER_GENDER_OPTIONS, data.partner_gender) : "미입력"} / ${data.partner_birth_year ?? "미입력"}`}
-          />
-        </Group>
-
-        <Group title="우리의 관계">
-          <Row
-            label="현재 관계"
-            value={
-              data.relationship_type === "other"
-                ? `기타 — ${data.relationship_type_other}`
-                : optionLabel(RELATIONSHIP_TYPE_OPTIONS, data.relationship_type)
-            }
-          />
-          <Row
-            label="관계 기간"
-            value={optionLabel(
-              RELATIONSHIP_DURATION_OPTIONS,
-              data.relationship_duration
-            )}
-          />
-          {data.breakup_elapsed !== null && (
-            <Row
-              label="이별 시점"
-              value={optionLabel(BREAKUP_ELAPSED_OPTIONS, data.breakup_elapsed)}
-            />
+      <div className="px-6">
+        {/* 사연 한 장 요약 */}
+        <section className="mt-6 rounded-2xl border border-gold-dim/30 bg-ink-soft/70 px-5 py-5">
+          <div className="flex items-center justify-between">
+            <p className="text-[0.86rem] text-ivory">
+              {data.applicant_name || "나"}
+              <span className="mx-1.5 text-thread">—</span>
+              {data.partner_name || "그 사람"}
+            </p>
+            <span className="text-[0.66rem] tracking-[0.2em] text-gold/70">내 사연</span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {chips.map((c) => (
+              <span key={c} className="rounded-full bg-ink px-2.5 py-1 text-[0.72rem] text-ivory-dim">
+                {c}
+              </span>
+            ))}
+          </div>
+          {excerpt && (
+            <p className="font-display mt-4 border-l-2 border-thread/50 pl-3 text-[0.86rem] leading-[1.9] text-ivory/90">
+              “{excerpt}”
+            </p>
           )}
-          {data.breakup_initiator !== null && (
-            <Row
-              label="먼저 이야기한 사람"
-              value={optionLabel(
-                BREAKUP_INITIATOR_OPTIONS,
-                data.breakup_initiator
-              )}
-            />
-          )}
-          <Row
-            label="마지막 연락"
-            value={optionLabel(LAST_CONVERSATION_OPTIONS, data.last_conversation)}
-          />
-        </Group>
 
-        <Group title="지금의 상황">
-          <Row
-            label="연락 가능 여부"
-            value={optionLabel(CONTACT_STATUS_OPTIONS, data.contact_status)}
-          />
-          <Row
-            label="상대의 새로운 연인 여부"
-            value={optionLabel(
-              PARTNER_NEW_RELATIONSHIP_OPTIONS,
-              data.partner_new_relationship
-            )}
-          />
-        </Group>
+          <details className="group mt-4">
+            <summary className="cursor-pointer list-none text-[0.76rem] text-gold/80">
+              <span className="group-open:hidden">내가 쓴 내용 전체 보기 ▾</span>
+              <span className="hidden group-open:inline">접기 ▴</span>
+            </summary>
+            <div className="mt-3 flex flex-col gap-3">
+              <Group title="나">
+                <Row label="이름" value={data.applicant_name} />
+                <Row
+                  label="성별 / 출생연도"
+                  value={`${optionLabel(APPLICANT_GENDER_OPTIONS, data.applicant_gender)} / ${data.applicant_birth_year ?? "-"}`}
+                />
+                <Row label="현재 생활" value={optionLabel(LIFE_STAGE_OPTIONS, data.life_stage)} />
+              </Group>
+              <Group title="그 사람">
+                <Row label="상대 이름" value={data.partner_name} />
+                <Row
+                  label="상대 성별 / 출생연도"
+                  value={`${data.partner_gender ? optionLabel(PARTNER_GENDER_OPTIONS, data.partner_gender) : "미입력"} / ${data.partner_birth_year ?? "미입력"}`}
+                />
+              </Group>
+              <Group title="우리의 관계">
+                {data.breakup_initiator !== null && (
+                  <Row label="먼저 이야기한 사람" value={optionLabel(BREAKUP_INITIATOR_OPTIONS, data.breakup_initiator)} />
+                )}
+                <Row label="마지막 연락" value={optionLabel(LAST_CONVERSATION_OPTIONS, data.last_conversation)} />
+                <Row
+                  label="상대의 새로운 연인 여부"
+                  value={optionLabel(PARTNER_NEW_RELATIONSHIP_OPTIONS, data.partner_new_relationship)}
+                />
+              </Group>
+              <Group title="내 마음">
+                <Row label="가장 힘든 것" value={painLabels} />
+                <Row label="현재 감정" value={optionLabel(CURRENT_EMOTION_OPTIONS, data.current_emotion)} />
+              </Group>
+              <Group title="우리의 이야기">
+                <Row label="상세 사연" value={data.story} />
+                <Row label="마지막 대화에서 남은 말" value={data.last_conversation_memory} />
+                <Row label="듣고 싶은 한마디" value={data.wish_sentence} />
+                <Row label="다시 이어진다면 달라졌으면 하는 점" value={data.desired_change} />
+              </Group>
+            </div>
+          </details>
+        </section>
 
-        <Group title="내 마음">
-          <Row label="가장 힘든 것" value={painLabels} />
-          <Row
-            label="가장 바라는 것"
-            value={optionLabel(MAIN_WISH_OPTIONS, data.main_wish)}
-          />
-          <Row
-            label="현재 감정"
-            value={optionLabel(CURRENT_EMOTION_OPTIONS, data.current_emotion)}
-          />
-        </Group>
+        {/* 마음이 놓이는 세 줄 */}
+        <ul className="mt-6 space-y-3">
+          {[
+            ["결제 전, 무료로 먼저", "지금 연락해도 되는지부터 먼저 보여드려요."],
+            ["오직 이 사연으로만", "누구에게나 같은 말이 아니라, 두 사람의 이야기로 써요."],
+            ["서두르지 않게, 순서부터", "관계를 더 멀게 만드는 한 줄을 보내기 전에 멈출 수 있게."],
+          ].map(([t, d]) => (
+            <li key={t} className="flex gap-3">
+              <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-thread" />
+              <p className="text-[0.86rem] leading-[1.75] text-ivory">
+                {t}
+                <span className="block text-[0.78rem] font-light text-ivory-dim">{d}</span>
+              </p>
+            </li>
+          ))}
+        </ul>
 
-        <Group title="우리의 이야기">
-          <Row label="상세 사연" value={data.story} />
-        </Group>
-
-        <Group title="마음에 남은 말">
-          <Row label="마지막 대화" value={data.last_conversation_memory} />
-        </Group>
-
-        <Group title="듣고 싶은 한마디">
-          <Row label="입력 내용" value={data.wish_sentence} />
-        </Group>
-
-        <Group title="다시 이어진다면">
-          <Row label="달라졌으면 하는 점" value={data.desired_change} />
-        </Group>
-
-        <p className="mt-2 text-center text-xs text-ivory-dim/50">
-          결과는 {data.email} 로 안내됩니다.
-        </p>
+        <p className="mt-6 text-center text-xs text-ivory-dim/50">결과는 {data.email} 로 안내됩니다.</p>
       </div>
 
       {/* 하단 버튼 */}
@@ -279,7 +297,7 @@ export default function ConfirmPage() {
           <button
             type="button"
             onClick={() => router.push("/apply")}
-            className="inline-flex h-14 w-32 items-center justify-center rounded-full border border-gold-dim/40 text-[0.95rem] text-ivory-dim active:bg-ivory/5"
+            className="inline-flex h-14 w-28 items-center justify-center rounded-full border border-gold-dim/40 text-[0.92rem] text-ivory-dim active:bg-ivory/5"
           >
             수정하기
           </button>
@@ -287,13 +305,13 @@ export default function ConfirmPage() {
             type="button"
             onClick={handleReadNow}
             disabled={submitting}
-            className="inline-flex h-14 flex-1 items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory active:opacity-85 disabled:opacity-60"
+            className="cta-glow inline-flex h-14 flex-1 items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory active:opacity-85 disabled:opacity-60"
           >
-            {submitting ? "이야기를 전하고 있어요…" : "월화에게 먼저 읽혀보기"}
+            월화에게 먼저 읽혀보기
           </button>
         </div>
         <p className="mx-auto mt-2.5 max-w-md px-6 text-center text-[0.7rem] font-light text-ivory-dim/75">
-          결제 전, 월화가 먼저 읽은 마음을 짧게 보여드려요.
+          무료 미리보기 · 약 30초 · 결제는 미리보기를 본 뒤에
         </p>
         {errorMsg && (
           <p className="mx-auto mt-1 max-w-md px-6 text-center text-[0.75rem] text-thread">
