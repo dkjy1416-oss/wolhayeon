@@ -7,6 +7,7 @@ import LogoutButton from "@/components/admin/LogoutButton";
 const ITEMS: { href: string; label: string }[] = [
   { href: "/admin", label: "대시보드" },
   { href: "/admin/orders", label: "주문" },
+  { href: "/admin/customers", label: "고객" },
   { href: "/admin/marketing", label: "마케팅" },
   { href: "/admin/promo", label: "홍보" },
   { href: "/admin/reviews", label: "후기" },
