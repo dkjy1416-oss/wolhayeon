@@ -9,6 +9,7 @@
  * - 결과 링크/상태는 OTP 통과 후 발급되는 CS 토큰 세션에서만.
  */
 import "server-only";
+import { bookDownloadPath, productHasBook } from "@/lib/book/book-service";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import type { RitualOrderRow } from "@/lib/supabase/types";
 import {
@@ -364,6 +365,12 @@ export interface CsStatus {
   continuePath: string | null;
   /** full 세션에서만 채워짐 — 결과 원문 접근은 강한 본인확인 전용 */
   resultPath: string | null;
+  /** 상품 (message / book / bundle) */
+  product: string;
+  /** 개인화 책 상태 — 책이 없는 주문은 none */
+  book: "none" | "ready" | "making" | "failed";
+  /** full 세션에서만 — 책 PDF 받기 경로 */
+  bookPath: string | null;
 }
 
 export async function getCsStatus(
@@ -380,7 +387,7 @@ export async function getCsStatus(
       .from("ritual_results")
       .select("result_token, reviewed_content, approved_at")
       .eq("order_id", order.id)
-      .order("version", { ascending: false })
+      .order("result_version", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (r?.result_token && r.reviewed_content && r.approved_at) {
@@ -410,7 +417,24 @@ export async function getCsStatus(
     }
   }
 
+  const product = ((order as unknown as { product?: string | null }).product ?? "message") || "message";
+  const bookStatus = (order as unknown as { book_status?: string | null }).book_status ?? null;
+  const book: CsStatus["book"] = !productHasBook(product)
+    ? "none"
+    : bookStatus === "ready"
+      ? "ready"
+      : bookStatus === "failed"
+        ? "failed"
+        : "making";
+  const bookPath =
+    level === "full" && book === "ready" && order.payment_status === "paid"
+      ? bookDownloadPath(order.order_number)
+      : null;
+
   return {
+    product,
+    book,
+    bookPath,
     payment: (order.payment_status as CsStatus["payment"]) ?? "pending",
     generation,
     delivery: (order.delivery_status as CsStatus["delivery"]) ?? "waiting",
