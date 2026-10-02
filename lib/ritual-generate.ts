@@ -22,12 +22,18 @@ import {
   buildCoreUserPrompt,
   buildActionUserPrompt,
   buildJourneyUserPrompt,
+  buildPlaybookUserPrompt,
 } from "@/lib/wolhwa-prompt";
+import { z } from "zod";
+import type { CoreKey } from "@/lib/wolhwa-prompt";
 import {
   parseRitualResultObject,
+  normalizeRitualPartial,
+  containsDevKeys,
   RitualCoreStructSchema,
   RitualActionStructSchema,
   RitualJourneyStructSchema,
+  RitualPlaybookStructSchema,
   RitualResultSchema,
 } from "@/lib/ritual-result-schema";
 import { PreviewCoreSchema } from "@/lib/ritual-preview-schema";
@@ -48,7 +54,6 @@ export function getModelId(): string {
 /* 병렬 두 호출의 그룹별 출력 상한.
    기존 전체 결과가 한 호출 약 10~14k 토큰이었고 각 그룹은 그 절반 수준이라
    9000이면 JSON 절단 없이 충분한 여유 (stop_reason=max_tokens 시 실패 처리). */
-const CORE_MAX_TOKENS = 9000;
 const ACTION_MAX_TOKENS = 6000;
 const JOURNEY_MAX_TOKENS = 6000;
 
@@ -134,99 +139,143 @@ export async function generateRitualForOrder(
       return { status: "generation_failed", code: "config_missing" };
     }
 
-    /* 2-b) GROUP A(관계/감정 핵심) + GROUP B(실행 가이드) +
-       GROUP C(21일 여정)를 3-way 병렬 호출.
-       가장 긴 21일 배열을 분리해 전체 대기시간을 줄인다. */
+    /* 2-b) 6-way 병렬 생성.
+       관계/감정 핵심을 4개 호출로 쪼개고(편지·관계 / 마음·패턴 / 원하는 것·연락 전략 /
+       리추얼·마지막 편지) 실행 가이드·21일 여정과 함께 동시에 만든다.
+       - 가장 긴 호출의 길이가 곧 대기시간 → 잘게 나눌수록 빨라진다.
+       - 각 그룹은 '그 그룹 스키마'로 바로 검증하고, 어긋나면 그 그룹만 다시 만든다
+         (최대 3회). 한 파트가 비었다고 전체 결과를 버리지 않는다. */
     const genStartedAt = Date.now();
-    const client = new Anthropic({ apiKey });
+    const client = new Anthropic({ apiKey, timeout: 110_000, maxRetries: 1 });
 
-    const callGroup = async (
-      label: "core" | "action" | "journey",
-      prompt: string,
-      schema:
-        | typeof RitualCoreStructSchema
-        | typeof RitualActionStructSchema
-        | typeof RitualJourneyStructSchema,
-      maxTokens: number
-    ): Promise<string> => {
-      const t0 = Date.now();
-      const message = await client.messages.create({
-        model: getModelId(),
-        max_tokens: maxTokens,
-        system: WOLHWA_SYSTEM_PROMPT,
-        messages: [{ role: "user", content: prompt }],
-        /* 구조화 출력: 그룹 스키마에 맞는 JSON만 생성하도록 API 차원 강제 */
-        output_config: { format: zodOutputFormat(schema) },
-      });
-      if (message.stop_reason === "max_tokens") {
-        throw { code: `output_truncated_${label}` };
+    type Group = {
+      label: string;
+      prompt: string;
+      struct: z.ZodTypeAny;
+      check: z.ZodTypeAny;
+      maxTokens: number;
+    };
+    const corePick = (keys: CoreKey[]) =>
+      Object.fromEntries(keys.map((k) => [k, true])) as Record<CoreKey, true>;
+    const coreGroup = (label: string, keys: CoreKey[], maxTokens: number): Group => ({
+      label,
+      prompt: buildCoreUserPrompt(order, letterOpening, introLines, keys),
+      struct: RitualCoreStructSchema.pick(corePick(keys)),
+      check: RitualResultSchema.pick(corePick(keys)),
+      maxTokens,
+    });
+    const groups: Group[] = [
+      coreGroup("core_a", ["part_01_letter", "part_02_relationship_story"], 6000),
+      coreGroup("core_b", ["part_03_current_emotion", "part_04_repeated_pattern"], 6000),
+      coreGroup("core_c", ["part_05_true_wish", "part_06_controllable_now"], 6500),
+      coreGroup("core_d", ["part_07_ritual", "part_14_final_letter"], 4000),
+      {
+        label: "action",
+        prompt: buildActionUserPrompt(order, introLines),
+        struct: RitualActionStructSchema,
+        check: RitualResultSchema.pick({
+          part_08_preparation: true,
+          part_09_ritual_steps: true,
+          part_10_personal_words: true,
+          part_11_24h_guide: true,
+          part_12_7day_guide: true,
+          bonus_journal_questions: true,
+        }),
+        maxTokens: ACTION_MAX_TOKENS,
+      },
+      {
+        label: "journey",
+        prompt: buildJourneyUserPrompt(order, introLines),
+        struct: RitualJourneyStructSchema,
+        check: RitualResultSchema.pick({ part_13_21day_plan: true }),
+        maxTokens: JOURNEY_MAX_TOKENS,
+      },
+    ];
+
+    const MAX_ATTEMPTS = 3;
+    const runGroup = async (g: Group): Promise<Record<string, unknown>> => {
+      let lastCode = "unknown";
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        /* 서버 실행 한도(300초) 안에서만 재시도 */
+        if (attempt > 1 && Date.now() - genStartedAt > 170_000) break;
+        const t0 = Date.now();
+        try {
+          const message = await client.messages.create({
+            model: getModelId(),
+            max_tokens: g.maxTokens,
+            system: WOLHWA_SYSTEM_PROMPT,
+            messages: [{ role: "user", content: g.prompt }],
+            /* 구조화 출력: 그룹 스키마에 맞는 JSON만 생성하도록 API 차원 강제 */
+            output_config: { format: zodOutputFormat(g.struct as never) },
+          });
+          if (message.stop_reason === "max_tokens") {
+            lastCode = `output_truncated_${g.label}`;
+          } else if (message.stop_reason === "refusal") {
+            lastCode = `model_refusal_${g.label}`;
+          } else {
+            const text = message.content
+              .filter((b): b is Anthropic.TextBlock => b.type === "text")
+              .map((b) => b.text)
+              .join("");
+            let json: unknown;
+            try {
+              json = JSON.parse(text.trim());
+            } catch {
+              json = null;
+            }
+            if (!json) {
+              lastCode = `json_parse_${g.label}`;
+            } else {
+              const normalized = normalizeRitualPartial(json);
+              const ok = g.check.safeParse(normalized);
+              if (ok.success && !containsDevKeys(ok.data)) {
+                console.error(`[perf] ${g.label}_ms=${Date.now() - t0} attempt=${attempt}`);
+                return ok.data as Record<string, unknown>;
+              }
+              lastCode = ok.success
+                ? `dev_key_leak_${g.label}`
+                : `schema_invalid:${ok.error.issues
+                    .slice(0, 4)
+                    .map((i) => i.path.join("."))
+                    .join(",")}`;
+            }
+          }
+        } catch (e) {
+          lastCode =
+            e instanceof Anthropic.APIError ? `api_${e.status}_${g.label}` : `api_error_${g.label}`;
+        }
+        console.error(`[gen:${requestId}] retry ${g.label} attempt=${attempt} code=${lastCode}`);
       }
-      if (message.stop_reason === "refusal") {
-        throw { code: `model_refusal_${label}` };
-      }
-      const text = message.content
-        .filter((b): b is Anthropic.TextBlock => b.type === "text")
-        .map((b) => b.text)
-        .join("");
-      console.error(`[perf] ${label}_ms=${Date.now() - t0}`);
-      return text;
+      throw { code: lastCode };
     };
 
-    let coreText = "";
-    let actionText = "";
-    let journeyText = "";
+    /* 선택 그룹 — 실전 노트. 실패해도 결과 전체는 그대로 진행 */
+    const playbookGroup: Group = {
+      label: "playbook",
+      prompt: buildPlaybookUserPrompt(order, introLines),
+      struct: RitualPlaybookStructSchema,
+      check: RitualResultSchema.pick({ bonus_playbook: true }).required(),
+      maxTokens: 5000,
+    };
+    const playbookPromise = runGroup(playbookGroup).catch((e) => {
+      console.error(`[gen:${requestId}] playbook_skipped code=${(e as { code?: string })?.code ?? "unknown"}`);
+      return {} as Record<string, unknown>;
+    });
+
+    let merged: Record<string, unknown> = {};
     try {
-      [coreText, actionText, journeyText] = await Promise.all([
-        callGroup(
-          "core",
-          buildCoreUserPrompt(order, letterOpening, introLines),
-          RitualCoreStructSchema,
-          CORE_MAX_TOKENS
-        ),
-        callGroup(
-          "action",
-          buildActionUserPrompt(order, introLines),
-          RitualActionStructSchema,
-          ACTION_MAX_TOKENS
-        ),
-        callGroup(
-          "journey",
-          buildJourneyUserPrompt(order, introLines),
-          RitualJourneyStructSchema,
-          JOURNEY_MAX_TOKENS
-        ),
-      ]);
+      const parts = await Promise.all(groups.map(runGroup));
+      merged = Object.assign({}, ...parts, await playbookPromise);
     } catch (e) {
-      /* 한쪽이라도 실패하면 부분 결과를 저장하지 않고 failed 처리 */
+      /* 3회 재시도 후에도 실패한 그룹이 있을 때만 failed 처리 */
       const thrownCode = (e as { code?: string })?.code;
-      const code =
-        typeof thrownCode === "string"
-          ? thrownCode
-          : e instanceof Anthropic.APIError
-            ? `api_${e.status}`
-            : "api_error";
-      await markFailed(code);
+      const code = typeof thrownCode === "string" ? thrownCode : "api_error";
+      await markFailed(code.startsWith("schema_invalid") ? `validation_${code}` : code);
       return { status: "generation_failed", code };
     }
 
-    /* 3) 두 그룹 병합 후 전체 구조 검증 — 실패 시 부분 저장 없이 failed */
+    /* 3) 그룹 병합 후 전체 구조 검증 — 실패 시 부분 저장 없이 failed */
     const mergeStartedAt = Date.now();
-    let coreJson: unknown;
-    let actionJson: unknown;
-    let journeyJson: unknown;
-    try {
-      coreJson = JSON.parse(coreText.trim());
-      actionJson = JSON.parse(actionText.trim());
-      journeyJson = JSON.parse(journeyText.trim());
-    } catch {
-      await markFailed("json_parse_error");
-      return { status: "generation_failed", code: "invalid_result" };
-    }
-    const merged = {
-      ...(coreJson as Record<string, unknown>),
-      ...(actionJson as Record<string, unknown>),
-      ...(journeyJson as Record<string, unknown>),
-    };
     const parsed = parseRitualResultObject(merged);
     if (!parsed.ok) {
       await markFailed(`validation_${parsed.reason}`);

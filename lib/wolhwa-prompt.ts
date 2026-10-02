@@ -491,11 +491,6 @@ JSON만 출력하세요.`);
  * 병렬 생성용 그룹 프롬프트 (동일 컨텍스트 + 자기 그룹 파트만 생성)
  * ================================================================ */
 
-const CORE_ONLY_RULE = `이 요청에서는 위 8개 key만 생성합니다.
-part_08~part_13, bonus_journal_questions 등 다른 key는 절대 포함하지 마세요.
-(실행 가이드는 같은 컨텍스트로 별도 흐름에서 함께 작성되고 있습니다 —
-이 사실을 고객 문장에 언급하지는 마세요)`;
-
 const ACTION_ONLY_RULE = `이 요청에서는 part_08~part_12와 bonus_journal_questions만 생성합니다.
 part_01~part_07, part_13, part_14 등 다른 key는 절대 포함하지 마세요.
 (편지·해석 파트와 21일 여정은 같은 신청 맥락으로 별도 흐름에서 함께 작성되고 있습니다 —
@@ -506,44 +501,69 @@ const JOURNEY_ONLY_RULE = `이 요청에서는 part_13_21day_plan 하나만 생�
 (다른 결과 파트는 같은 신청 맥락으로 별도 흐름에서 함께 작성되고 있습니다 —
 이 사실을 고객 문장에 언급하지는 마세요)`;
 
-/** GROUP A — 관계/감정 핵심 (part_01~07, part_14) */
+/** GROUP A 파트별 JSON 형태 */
+const CORE_SHAPES: Record<CoreKey, string> = {
+  part_01_letter: `"part_01_letter": { "title": "", "content": "" }`,
+  part_02_relationship_story: `"part_02_relationship_story": { "title": "", "content": "" }`,
+  part_03_current_emotion: `"part_03_current_emotion": { "title": "", "content": "" }`,
+  part_04_repeated_pattern: `"part_04_repeated_pattern": { "title": "", "content": "" }`,
+  part_05_true_wish: `"part_05_true_wish": { "title": "", "content": "" }`,
+  part_06_controllable_now: `"part_06_controllable_now": { "title": "", "content": "" }`,
+  part_07_ritual: `"part_07_ritual": { "title": "", "meaning": "" }`,
+  part_14_final_letter: `"part_14_final_letter": { "title": "", "content": "" }`,
+};
+
+export type CoreKey =
+  | "part_01_letter"
+  | "part_02_relationship_story"
+  | "part_03_current_emotion"
+  | "part_04_repeated_pattern"
+  | "part_05_true_wish"
+  | "part_06_controllable_now"
+  | "part_07_ritual"
+  | "part_14_final_letter";
+
+const ALL_CORE_KEYS = Object.keys(CORE_SHAPES) as CoreKey[];
+
+/** GROUP A — 관계/감정 핵심 (part_01~07, part_14).
+ *  keys를 주면 그 파트만 생성 (병렬 분할 생성 — 대기시간 단축·부분 재시도용). */
 export function buildCoreUserPrompt(
   order: RitualOrderRow,
   letterOpening?: string[] | null,
-  introLines?: string[] | null
+  introLines?: string[] | null,
+  keys: CoreKey[] = ALL_CORE_KEYS
 ): string {
   const sections = buildContextSections(order, introLines);
-  const hasOpening = !!letterOpening && letterOpening.length > 0;
+  const hasOpening =
+    keys.includes("part_01_letter") && !!letterOpening && letterOpening.length > 0;
   if (hasOpening) sections.push(OPENING_SECTION(letterOpening!));
 
+  const only = keys.join(", ");
   sections.push(`[출력할 JSON 구조 — key 이름과 구조를 정확히 지키세요]
 {
-  "part_01_letter": { "title": "", "content": "" },
-  "part_02_relationship_story": { "title": "", "content": "" },
-  "part_03_current_emotion": { "title": "", "content": "" },
-  "part_04_repeated_pattern": { "title": "", "content": "" },
-  "part_05_true_wish": { "title": "", "content": "" },
-  "part_06_controllable_now": { "title": "", "content": "" },
-  "part_07_ritual": { "title": "", "meaning": "" },
-  "part_14_final_letter": { "title": "", "content": "" }
+  ${keys.map((k) => CORE_SHAPES[k]).join(",\n  ")}
 }
 
-각 파트 안내:
+각 파트 안내 (전체 결과의 흐름을 알 수 있도록 모든 파트 안내를 함께 둡니다.
+이번 요청에서 실제로 쓰는 것은 위 JSON의 key뿐입니다):
 ${corePartGuide(order, hasOpening)}
-- part_07: 리추얼의 이름과 의미 (짧은 한자 상징명 + 우리말 풀이)
+- part_07: 리추얼의 이름과 의미 (짧은 한자 상징명 + 우리말 풀이). title은 6~30자,
+  meaning은 3~4문장으로 이 리추얼이 ${order.applicant_name}님의 지금에 왜 필요한지 씁니다.
 - part_14: 마무리 편지 — 위로로만 끝내지 않고, 오늘부터 지킬 가장 중요한 행동
   한 가지를 다시 짚으며 끝냅니다.
 
-[분량 지침 — 반복 없이 밀도 있게]
-- part_01, part_05, part_14는 각각 2~4개의 짧은 문단으로 씁니다.
-- part_02, part_03, part_04, part_06은 유료 결과의 핵심이므로 3~5개 문단으로,
-  구체적인 근거·기간·기준을 담아 씁니다.
+[분량 지침 — 반복 없이 밀도 있게, 충분히 길게]
+- 모든 title은 2~40자의 짧은 제목입니다. 빈 문자열은 절대 안 됩니다.
+- part_01, part_05, part_14는 각각 3~5개의 문단으로 씁니다.
+- part_02, part_03, part_04, part_06은 유료 결과의 핵심이므로 4~6개 문단으로,
+  구체적인 근거·기간·기준·예시 문장을 담아 씁니다.
 - 같은 신청 내용을 파트마다 다시 길게 요약하지 않습니다.
-  예: part_02에서 관계 배경을 충분히 다뤘다면 part_03에서 동일한 이별
-  상황을 다시 장황하게 설명하지 않습니다.
 - 각 파트는 서로 다른 새로운 통찰 하나에 집중합니다.
 
-${CORE_ONLY_RULE}
+이 요청에서는 ${only} 만 생성합니다. 다른 key는 절대 포함하지 마세요.
+모든 key의 모든 값을 반드시 내용으로 채웁니다.
+(다른 파트는 같은 신청 맥락으로 별도 흐름에서 함께 작성되고 있습니다 —
+이 사실을 고객 문장에 언급하지는 마세요)
 
 JSON만 출력하세요.`);
   return sections.join("\n\n");
@@ -627,6 +647,70 @@ part_13_21day_plan:
 - 21일 전체가 연결되는 흐름은 유지하되 군더더기를 줄입니다.
 
 ${JOURNEY_ONLY_RULE}
+
+JSON만 출력하세요.`);
+  return sections.join("\n\n");
+}
+
+/** GROUP E — 월화의 실전 노트 (상황별 대처 · 지켜볼 신호 · 흔들리는 밤 카드) */
+export function buildPlaybookUserPrompt(
+  order: RitualOrderRow,
+  introLines?: string[] | null
+): string {
+  const sections = buildContextSections(order, introLines);
+  const restricted =
+    order.safety_concerns.some((v) => HIGH_RISK_SAFETY_VALUES.includes(v)) ||
+    BLOCKED_CONTACT_VALUES.includes(order.contact_status);
+  const name = order.applicant_name;
+
+  sections.push(`[출력할 JSON 구조 — key 이름과 구조를 정확히 지키세요]
+{
+  "bonus_playbook": {
+    "scenes_title": "",
+    "scenes_intro": "",
+    "scenes": [ { "when": "", "do_this": "", "avoid": "", "why": "" } ],
+    "signals_good": ["문자열"],
+    "signals_caution": ["문자열"],
+    "sos_cards": ["문자열"]
+  }
+}
+
+'월화의 실전 노트' — ${name}님이 앞으로 2~3주 동안 실제로 마주칠 순간마다 꺼내 보는
+상황별 대처 노트입니다. 편지·해석 파트와 겹치지 않게, 바로 쓰는 실전 내용만 씁니다.
+
+- scenes_title: 노트의 짧은 제목 (예: "이런 순간이 오면")
+- scenes_intro: 1~2문장의 여는 말
+- scenes: ${name}님의 사연에서 실제로 일어날 가능성이 높은 순간 5~6개.
+  ${
+    restricted
+      ? `연락이 차단되었거나 안전을 지켜야 하는 상황이므로, 상대에게 연락하거나 접근하는
+  행동은 절대 제안하지 않습니다. 순간은 '새벽에 연락하고 싶어질 때', '지인에게 소식을
+  들었을 때', '함께 가던 장소를 지나갈 때'처럼 ${name}님 혼자 겪는 순간으로 고르고,
+  do_this에는 ${name}님이 스스로 할 행동(메모장에 쓰기, 믿을 만한 사람에게 말하기 등)을 씁니다.`
+      : `예: '반가운 답장이 왔을 때', '단답만 왔을 때', '읽고 답이 없을 때', '상대가 먼저
+  안부를 물어 왔을 때', '스토리·SNS에서 소식을 봤을 때', '술 마신 밤 보내고 싶어질 때' —
+  이 예시를 그대로 쓰지 말고 사연에 맞게 고릅니다. 연락 기간·조건은 [연락 타이밍 기준선]과
+  반드시 일치해야 합니다. 보낼 문장 예시가 필요하면 do_this 안에 따옴표로 짧게 넣습니다
+  (관계를 묻거나 감정을 쏟는 문장 금지).`
+  }
+  각 항목: when(그 순간, 25자 이내), do_this(이렇게 하세요 — 1~3문장, 구체적으로),
+  avoid(이건 피해요 — 1문장), why(왜 그런지 — 1~2문장).
+- signals_good: ${
+    restricted
+      ? `${name}님 스스로의 마음이 회복되고 있다는 신호 3~5개`
+      : `관계가 조금씩 열리고 있다고 볼 수 있는 상대의 행동 신호 3~5개 (단정 금지, "~라면 ~로 볼 수 있어요" 형태)`
+  }
+- signals_caution: ${
+    restricted
+      ? `${name}님이 다시 무리하고 있다는 경고 신호 3~5개와 그때 할 일`
+      : `지금은 더 기다려야 한다는 신호 3~5개와 그때 ${name}님이 할 일`
+  }
+- sos_cards: 흔들리는 밤에 꺼내 읽을 짧은 문장 카드 5~6개. 한 장에 한 문장(40자 이내),
+  ${name}님 사연의 구체적인 장면이나 감정을 담아 위로보다 '지금 멈추게 하는' 문장으로 씁니다.
+
+재회를 보장하거나 상대의 마음을 단정하지 않습니다. 상대를 추적·압박·통제하는 행동은 금지합니다.
+이 요청에서는 bonus_playbook 하나만 생성합니다. 모든 값을 반드시 내용으로 채웁니다.
+(다른 결과 파트는 별도 흐름에서 함께 작성되고 있습니다 — 이 사실을 고객 문장에 언급하지 마세요)
 
 JSON만 출력하세요.`);
   return sections.join("\n\n");

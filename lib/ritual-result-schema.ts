@@ -54,6 +54,27 @@ export const RitualResultStructSchema = z.object({
   }),
 });
 
+/** 추가 생성 — '월화의 실전 노트' (상황별 대처·지켜볼 신호·흔들리는 밤 카드).
+ *  결과 페이지를 책과 다른, 지금 상황에 바로 쓰는 실전 도구로 채운다.
+ *  선택 항목: 실패해도 결과 전체를 막지 않는다. */
+export const RitualPlaybookStructSchema = z.object({
+  bonus_playbook: z.object({
+    scenes_title: z.string(),
+    scenes_intro: z.string(),
+    scenes: z.array(
+      z.object({
+        when: z.string(),
+        do_this: z.string(),
+        avoid: z.string(),
+        why: z.string(),
+      })
+    ),
+    signals_good: sLines,
+    signals_caution: sLines,
+    sos_cards: sLines,
+  }),
+});
+
 /* ---------- 1-b) 병렬 생성용 그룹 스키마 ---------- */
 
 /** GROUP A — 관계/감정 핵심 (편지·해석·리추얼 의미) */
@@ -124,6 +145,27 @@ export const RitualResultSchema = z.object({
       ),
   }),
   part_14_final_letter: titledContent,
+  /* 월화의 실전 노트 (선택 — 이전 결과에는 없음) */
+  bonus_playbook: z
+    .object({
+      scenes_title: title,
+      scenes_intro: text,
+      scenes: z
+        .array(
+          z.object({
+            when: z.string().trim().min(2).max(80),
+            do_this: z.string().trim().min(5),
+            avoid: z.string().trim().min(3),
+            why: z.string().trim().min(5),
+          })
+        )
+        .min(3)
+        .max(8),
+      signals_good: z.array(line).min(2).max(8),
+      signals_caution: z.array(line).min(2).max(8),
+      sos_cards: z.array(line).min(3).max(10),
+    })
+    .optional(),
   /* 월화의 마음 기록장: 제목 + 여는 글 + 기록 항목 7~10개 */
   bonus_journal_questions: z.object({
     title,
@@ -186,10 +228,61 @@ export function parseRitualResultObject(
 
 /** 결과의 모든 문자열 값에서 개발 용어 검출 (고객 노출 방지) */
 const DEV_KEY_RE = /part[_\s-]?\d{1,2}|\bjson\b|\bschema\b|섹션\s*키/i;
-function containsDevKeys(value: unknown): boolean {
+export function containsDevKeys(value: unknown): boolean {
   if (typeof value === "string") return DEV_KEY_RE.test(value);
   if (Array.isArray(value)) return value.some(containsDevKeys);
   if (value && typeof value === "object")
     return Object.values(value).some(containsDevKeys);
   return false;
+}
+
+/**
+ * 모델 출력의 사소한 형식 차이를 저장 전에 바로잡는다 (내용은 바꾸지 않음).
+ *  - 문자열 앞뒤 공백 정리, 너무 긴 제목은 잘라 냄
+ *  - 배열은 최대 개수까지만, 빈 항목 제거
+ *  - 21일 플랜: 21개를 넘으면 앞 21개, DAY 번호는 1..21로 다시 매김
+ *  - 기록장 질문은 최대 10개
+ */
+export function normalizeRitualPartial(input: unknown): unknown {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return input;
+  const out: Record<string, unknown> = {};
+  const clip = (v: unknown, n: number) =>
+    typeof v === "string" ? (v.trim().length > n ? v.trim().slice(0, n - 1).trim() + "…" : v.trim()) : v;
+  const cleanList = (v: unknown, max: number) =>
+    Array.isArray(v)
+      ? v.filter((x) => typeof x === "string" && x.trim()).map((x) => (x as string).trim()).slice(0, max)
+      : v;
+  for (const [key, raw] of Object.entries(input as Record<string, unknown>)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      out[key] = raw;
+      continue;
+    }
+    const v = { ...(raw as Record<string, unknown>) };
+    for (const f of ["content", "meaning", "intro"]) if (typeof v[f] === "string") v[f] = (v[f] as string).trim();
+    if ("title" in v) v.title = clip(v.title, 80);
+    for (const f of ["items", "steps", "lines"]) if (f in v) v[f] = cleanList(v[f], 20);
+    if (key === "bonus_journal_questions" && "questions" in v) v.questions = cleanList(v.questions, 10);
+    if (key === "bonus_playbook") {
+      for (const f of ["scenes_intro"]) if (typeof v[f] === "string") v[f] = (v[f] as string).trim();
+      if ("scenes_title" in v) v.scenes_title = clip(v.scenes_title, 80);
+      for (const f of ["signals_good", "signals_caution"]) if (f in v) v[f] = cleanList(v[f], 8);
+      if ("sos_cards" in v) v.sos_cards = cleanList(v.sos_cards, 10);
+      if (Array.isArray(v.scenes)) v.scenes = (v.scenes as unknown[]).slice(0, 8);
+    }
+    if (key === "part_13_21day_plan" && Array.isArray(v.days)) {
+      const days = (v.days as Record<string, unknown>[]).slice(0, 21);
+      v.days =
+        days.length === 21
+          ? days.map((d, i) => ({
+              ...d,
+              day: i + 1,
+              title: clip(d?.title, 60),
+              action: typeof d?.action === "string" ? d.action.trim() : d?.action,
+              reflection: typeof d?.reflection === "string" ? d.reflection.trim() : d?.reflection,
+            }))
+          : days;
+    }
+    out[key] = v;
+  }
+  return out;
 }
