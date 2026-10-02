@@ -41,14 +41,21 @@ type Scene = {
   when: string;
 };
 
+/** 장면 밖 추가 순간들 (자막 없는 원본 · 무음) */
+const MOMENTS = [
+  { src: "/book/v3/typing.mp4", poster: "/book/v3/typing.webp", label: "보낼 메시지를 쓰고 지우는 손" },
+  { src: "/book/v3/call.mp4", poster: "/book/v3/call.webp", label: "새벽에 전화를 걸까 망설이는 모습" },
+  { src: "/book/v3/check.mp4", poster: "/book/v3/check.webp", label: "답장을 확인하다 놀라는 모습" },
+];
+
 const SCENES: Scene[] = [
   {
     tag: "장면 1 · 싸우다 끝났을 때",
     title: "“너 만나면 숨 막혀!”\n그 말이 마지막이었다면",
     lead: "지금 보내고 싶은 사과에는, 아마 ‘근데’가 붙어 있을 거예요.",
     videos: [
-      { src: "/book/reels/fight-a.mp4", poster: "/book/reels/fight-a.webp", sound: true, label: "길에서 다투는 연인" },
-      { src: "/book/reels/fight-b.mp4", poster: "/book/reels/fight-b.webp", sound: true, label: "주차장에서 다투는 연인" },
+      { src: "/book/v3/fight.mp4", poster: "/book/v3/fight.webp", label: "주차장에서 울며 다투는 연인" },
+      { src: "/book/v3/fight2.mp4", poster: "/book/v3/fight2.webp", label: "서로 언성을 높이는 연인" },
     ],
     where: "PART 03 · 3장 「마지막 연락이 싸움이었을 때」",
     insight:
@@ -65,8 +72,8 @@ const SCENES: Scene[] = [
     title: "“오빠, 제발 가지 마…”\n매달린 뒤 답이 끊겼다면",
     lead: "지금 필요한 건 한 통 더가 아니라, 멈춤이에요.",
     videos: [
-      { src: "/book/reels/dontgo.mp4", poster: "/book/reels/dontgo.webp", sound: true, label: "가지 말라며 우는 모습" },
-      { src: "/book/reels/grab.mp4", poster: "/book/reels/grab.webp", sound: true, label: "떠나는 사람의 팔을 붙잡는 모습" },
+      { src: "/book/v3/cry.mp4", poster: "/book/v3/cry.webp", label: "비 오는 밤거리에서 떠나는 사람 앞에 우는 모습" },
+      { src: "/book/v3/grab.mp4", poster: "/book/v3/grab.webp", label: "떠나는 사람을 붙잡는 모습" },
     ],
     where: "PART 03 · 6장 「매달린 뒤 연락이 끊겼을 때」",
     insight:
@@ -83,8 +90,8 @@ const SCENES: Scene[] = [
     title: "소주 한 병,\n새벽 2시의 카톡 창",
     lead: "연락 충동이 가장 강해지는 건 밤 10시 이후, 그리고 술을 마셨을 때예요.",
     videos: [
-      { src: "/book/reels/drink.mp4", poster: "/book/reels/drink.webp", label: "혼자 술을 마시는 모습" },
-      { src: "/book/reels/alone.mp4", poster: "/book/reels/alone.webp", label: "술병 앞에서 우는 모습" },
+      { src: "/book/v3/drink.mp4", poster: "/book/v3/drink.webp", label: "혼자 술을 마시는 모습" },
+      { src: "/book/v3/alone.mp4", poster: "/book/v3/alone.webp", label: "술병 앞에서 우는 모습" },
     ],
     where: "PART 05 「보내면 안 되는 메시지 7가지」",
     insight:
@@ -101,8 +108,8 @@ const SCENES: Scene[] = [
     title: "“우리 2주년이잖아.”\n“일하느라 바빴다니까.”",
     lead: "싸움의 횟수보다 중요한 건, 같은 주제로 몇 번 돌아왔느냐예요.",
     videos: [
-      { src: "/book/reels/anniv.mp4", poster: "/book/reels/anniv.webp", sound: true, label: "기념일에 다투는 연인" },
-      { src: "/book/reels/busy.mp4", poster: "/book/reels/busy.webp", sound: true, label: "바빴다며 자리를 뜨는 연인" },
+      { src: "/book/v3/again.mp4", poster: "/book/v3/again.webp", label: "같은 이유로 또 다투는 연인" },
+      { src: "/book/v3/again2.mp4", poster: "/book/v3/again2.webp", label: "눈물로 따지는 모습" },
     ],
     where: "PART 06 「반복적으로 싸웠던 주제 찾기」",
     insight:
@@ -321,11 +328,9 @@ export default async function BookPage({
           {/* ===== 0. 첫 화면 — 월화가 붙잡는 장면 (영상) ===== */}
           <section className="relative">
             <LoopVideo
-              src="/book/reels/stop.mp4"
-              poster="/book/reels/stop.webp"
-              label="월화가 울며 다투는 사람을 붙잡는 장면"
-              sound
-              soundTop="top-[4.6rem]"
+              src="/book/v3/stop.mp4"
+              poster="/book/v3/stop.webp"
+              label="떠나는 사람을 향해 손을 뻗으며 우는 장면"
               className="block aspect-[9/12] w-full object-cover object-top"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-ink/50 via-transparent via-55% to-ink" />
@@ -406,7 +411,6 @@ export default async function BookPage({
                       src={s.videos[0].src}
                       poster={s.videos[0].poster}
                       label={s.videos[0].label}
-                      sound={s.videos[0].sound}
                       className="block aspect-[9/13] w-full object-cover object-top"
                     />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
@@ -465,9 +469,9 @@ export default async function BookPage({
             <div className="mt-14">
               <p className="px-6 text-center text-[0.72rem] tracking-[0.3em] text-gold/80">그리고 이런 순간들</p>
               <div className="mt-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 pb-2">
-                {SCENES.map((s) => s.videos[1]).filter(Boolean).map((v) => (
+                {[...SCENES.map((s) => s.videos[1]).filter(Boolean), ...MOMENTS].map((v) => (
                   <div key={v.src} className="w-[44%] shrink-0 snap-center overflow-hidden rounded-xl bg-ink-soft">
-                    <LoopVideo src={v.src} poster={v.poster} label={v.label} sound={v.sound} className="block aspect-[9/16] w-full object-cover" />
+                    <LoopVideo src={v.src} poster={v.poster} label={v.label} className="block aspect-[9/16] w-full object-cover" />
                   </div>
                 ))}
               </div>
@@ -523,10 +527,10 @@ export default async function BookPage({
           {/* ===== 3. 보내면 안 되는 메시지 7가지 (실제 본문 미리보기) ===== */}
           <div className="relative">
             <LoopVideo
-              src="/wolhwa/shorts/02.mp4"
-              poster="/wolhwa/shorts/02-poster.webp"
-              label="붉은 실이 감긴 휴대폰이 탁자 위에 놓인 장면"
-              className="block aspect-[4/3] w-full object-cover"
+              src="/book/v3/w-phone.mp4"
+              poster="/book/v3/w-phone.webp"
+              label="붉은 실이 감긴 휴대폰과 월화"
+              className="block aspect-[4/5] w-full object-cover object-top"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink" />
             <p className="font-display absolute inset-x-0 bottom-6 px-6 text-center text-[1.05rem] leading-[1.8] text-ivory">
@@ -575,10 +579,10 @@ export default async function BookPage({
           {/* ===== 4. 실제 책을 넘겨 보세요 ===== */}
           <section className="relative">
             <LoopVideo
-              src="/wolhwa/wolhwa-reading-loop.mp4"
-              poster="/wolhwa/reading-poster.webp"
+              src="/book/v3/w-reading.mp4"
+              poster="/book/v3/w-reading.webp"
               label="이야기를 읽는 월화"
-              className="block aspect-[4/3.6] w-full object-cover"
+              className="block aspect-[4/5] w-full object-cover object-top"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-ink/30 via-transparent to-ink" />
             <svg aria-hidden viewBox="0 0 400 60" className="absolute inset-x-0 bottom-20 w-full">
@@ -611,13 +615,13 @@ export default async function BookPage({
           <section className="py-6" aria-label="월화의 밤 영상">
             <p className="px-6 text-center text-[0.72rem] tracking-[0.3em] text-gold/80">월화의 밤</p>
             <div className="mt-5 flex snap-x snap-mandatory gap-2 overflow-x-auto px-6 pb-2">
-              {["01", "03", "04", "05"].map((n) => (
+              {["w-thread", "w-cups", "w-mirror"].map((n) => (
                 <div key={n} className="w-[46%] shrink-0 snap-center overflow-hidden rounded-xl bg-ink-soft">
                   <LoopVideo
-                    src={`/wolhwa/shorts/${n}.mp4`}
-                    poster={`/wolhwa/shorts/${n}-poster.webp`}
+                    src={`/book/v3/${n}.mp4`}
+                    poster={`/book/v3/${n}.webp`}
                     label="월화 영상"
-                    className="block aspect-[9/16] w-full object-cover"
+                    className="block aspect-[9/16] w-full object-cover object-top"
                   />
                 </div>
               ))}
@@ -763,10 +767,10 @@ export default async function BookPage({
           {/* ===== 11. 마지막 구매 ===== */}
           <div className="relative">
             <LoopVideo
-              src="/wolhwa/hero-loop-mobile.mp4"
-              poster="/wolhwa/hero-poster.webp"
+              src="/book/v3/w-final.mp4"
+              poster="/book/v3/w-final.webp"
               label="월화"
-              className="block aspect-[4/4.6] w-full object-cover object-[50%_30%]"
+              className="block aspect-[4/5] w-full object-cover object-top"
             />
             <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-ink to-transparent" />
             <p className="font-display absolute inset-x-0 bottom-5 px-6 text-center text-[1.05rem] leading-[1.8] text-ivory">
