@@ -362,7 +362,15 @@ export function priceSentence(now: number = Date.now()): string {
 /* ---------- 상품 (메시지 / 개인화 책 / 패키지) ---------- */
 export type Product = "message" | "book" | "bundle";
 export const BOOK_PRICE_KRW = 29000;
+/** 패키지 특가 — 메시지 특가와 같은 날(PROMO_END_MS) 마감 */
 export const BUNDLE_PRICE_KRW = 39900;
+/** 패키지 정가 — 특가 마감 후 (따로 사면 45,900원보다 3,000원 저렴) */
+export const BUNDLE_REGULAR_PRICE_KRW = 42900;
+
+/** 지금 패키지 가격 (특가 기간이면 39,900원, 이후 42,900원) */
+export function bundlePrice(now: number = Date.now()): number {
+  return isPromoActive(now) ? BUNDLE_PRICE_KRW : BUNDLE_REGULAR_PRICE_KRW;
+}
 
 export const PRODUCTS: Record<
   Product,
@@ -411,7 +419,7 @@ export function productPrice(
   now: number = Date.now()
 ): number {
   if (product === "book") return BOOK_PRICE_KRW;
-  if (product === "bundle") return BUNDLE_PRICE_KRW;
+  if (product === "bundle") return bundlePrice(now);
   return resolveOrderPrice(storedAmount, now);
 }
 
@@ -421,7 +429,8 @@ export function isAllowedPrice(amount: unknown): amount is number {
     amount === APOLOGY_PRICE_KRW ||
     amount === RITUAL_REGULAR_PRICE_KRW ||
     amount === BOOK_PRICE_KRW ||
-    amount === BUNDLE_PRICE_KRW
+    amount === BUNDLE_PRICE_KRW ||
+    amount === BUNDLE_REGULAR_PRICE_KRW
   );
 }
 

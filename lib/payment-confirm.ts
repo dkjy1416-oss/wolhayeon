@@ -151,12 +151,15 @@ export async function confirmOrderPayment(params: {
       !isAllowedPrice(row.payment_amount) ||
       amountNumber !== row.payment_amount ||
       /* 특가·쿠폰 마감 후엔 정가만 (마감 직후 30분 유예) */
-      row.payment_amount !==
-        productPrice(
-          (row as { product?: string | null }).product ?? "message",
-          row.payment_amount,
-          Date.now() - PROMO_GRACE_MS
-        )
+      /* 지금 가격 또는 30분 전 가격이면 통과 (마감 직후 특가 유예 + 정가 결제 모두 허용) */
+      ![Date.now(), Date.now() - PROMO_GRACE_MS].some(
+        (t) =>
+          productPrice(
+            (row as { product?: string | null }).product ?? "message",
+            row.payment_amount,
+            t
+          ) === row.payment_amount
+      )
     ) {
       console.error(`[pay:${requestId}] amount_mismatch`);
       await sendOpsAlert("payment_error", { orderNumber, code: "amount_mismatch" });
