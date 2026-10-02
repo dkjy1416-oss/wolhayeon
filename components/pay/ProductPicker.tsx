@@ -2,7 +2,10 @@ import Link from "next/link";
 import {
   PRODUCTS,
   BOOK_PRICE_KRW,
-  BUNDLE_PRICE_KRW,
+  BUNDLE_REGULAR_PRICE_KRW,
+  PROMO_DEADLINE_TEXT,
+  bundlePrice,
+  isPromoActive,
   RITUAL_REGULAR_PRICE_KRW,
   type Product,
 } from "@/lib/ritual-types";
@@ -24,13 +27,16 @@ export default function ProductPicker({
   basePath?: string;
   extraQuery?: string;
 }) {
-  const items: Array<{ key: Product; price: number; note?: string; badge?: string }> = [
+  const promo = isPromoActive();
+  const bundle = bundlePrice();
+  const items: Array<{ key: Product; price: number; note?: string; badge?: string; deadline?: string }> = [
     {
       key: "bundle",
-      price: BUNDLE_PRICE_KRW,
-      badge: "가장 많이 골라요",
+      price: bundle,
+      badge: "월화의 추천",
+      deadline: promo ? `패키지 특가 ${PROMO_DEADLINE_TEXT} · 이후 ${BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원` : undefined,
       note:
-        messagePrice + BOOK_PRICE_KRW > BUNDLE_PRICE_KRW
+        messagePrice + BOOK_PRICE_KRW > bundle
           ? `따로 사면 ${(messagePrice + BOOK_PRICE_KRW).toLocaleString()}원`
           : undefined,
     },
@@ -40,6 +46,10 @@ export default function ProductPicker({
       note:
         messagePrice < RITUAL_REGULAR_PRICE_KRW
           ? `정가 ${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원`
+          : undefined,
+      deadline:
+        messagePrice < RITUAL_REGULAR_PRICE_KRW && promo
+          ? `특가 ${PROMO_DEADLINE_TEXT} · 이후 ${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원`
           : undefined,
     },
     { key: "book", price: BOOK_PRICE_KRW },
@@ -78,6 +88,9 @@ export default function ProductPicker({
                   )}
                 </div>
                 <p className="mt-1 pl-6 text-[0.76rem] font-light text-ivory-dim">{p.tagline}</p>
+                {it.deadline && (
+                  <p className="mt-1 pl-6 text-[0.7rem] text-thread">{it.deadline}</p>
+                )}
               </div>
               <div className="shrink-0 text-right">
                 <p className="font-display text-[1.05rem] font-semibold text-gold">
