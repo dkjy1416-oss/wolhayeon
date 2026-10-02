@@ -3,15 +3,9 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { RESULT_TOKEN_RE, canShowResult } from "@/lib/result-access";
 import { CONTENT_VIEW_LINE, formatViewWindow } from "@/lib/content-access-policy";
 import { RitualResultSchema } from "@/lib/ritual-result-schema";
-import ResultHero from "@/components/result/ResultHero";
-import LetterSection from "@/components/result/LetterSection";
-import ReadingSection from "@/components/result/ReadingSection";
-import RitualSection from "@/components/result/RitualSection";
-import GuideSection from "@/components/result/GuideSection";
-import TwentyOneDayJourney from "@/components/result/TwentyOneDayJourney";
-import JournalSection from "@/components/result/JournalSection";
-import ResultFooter from "@/components/result/ResultFooter";
-import ResultOpenTracker from "@/components/result/ResultOpenTracker";
+import type SummaryCard from "@/components/result/SummaryCard";
+import ResultBody from "@/components/result/ResultBody";
+import { PreviewSchema, NOW_STANCE_LABELS } from "@/lib/ritual-preview-schema";
 import { reviewPath } from "@/lib/review-auth";
 
 /** 항상 동적 서버 조회 — 정적 생성/공용 캐시 금지 */
@@ -57,6 +51,9 @@ export default async function ResultPage({
   let name = "";
   let reviewHref: string | null = null;
   let viewWindow: string | null = null;
+  let hasBook = false;
+  let maskedEmail: string | null = null;
+  let summary: React.ComponentProps<typeof SummaryCard> | null = null;
   let content: ReturnType<typeof RitualResultSchema.safeParse>["data"] | null =
     null;
 
@@ -73,7 +70,7 @@ export default async function ResultPage({
 
     const o = await supabase
       .from("ritual_orders")
-      .select("applicant_name, payment_status, generation_status, review_status, paid_at, order_number")
+      .select("applicant_name, payment_status, generation_status, review_status, paid_at, order_number, product, email, preview_content")
       .eq("id", r.data.order_id)
       .maybeSingle();
     if (o.error || !o.data) return <NotAvailable />;
@@ -93,6 +90,22 @@ export default async function ResultPage({
     reviewHref = o.data.order_number ? reviewPath(o.data.order_number as string) : null;
     content = parsed.data;
     viewWindow = formatViewWindow(o.data.paid_at);
+    hasBook = o.data.product === "bundle" || o.data.product === "book";
+    const em = typeof o.data.email === "string" ? o.data.email : "";
+    const at = em.indexOf("@");
+    if (at > 0) maskedEmail = `${em.slice(0, Math.min(3, at))}***${em.slice(at)}`;
+    const pv = PreviewSchema.safeParse(o.data.preview_content);
+    if (pv.success) {
+      summary = {
+        name: o.data.applicant_name,
+        stateLabel: pv.data.relationship_state.label,
+        modes: pv.data.partner_reading.modes,
+        stanceLabel: NOW_STANCE_LABELS[pv.data.now_plan.stance],
+        period: pv.data.now_plan.period,
+        decideRule: pv.data.now_plan.decide_rule,
+        cautions: pv.data.cautions.map((x) => x.action).slice(0, 3),
+      };
+    }
   } catch {
     console.error("[result] lookup_failed");
     return <NotAvailable />;
@@ -105,93 +118,15 @@ export default async function ResultPage({
     : CONTENT_VIEW_LINE;
 
   return (
-    <main id="top" className="min-h-[100svh] bg-ink">
-      <ResultOpenTracker token={token} />
-      <ResultHero name={name} />
-      <p className="px-6 text-center text-[0.7rem] font-light tracking-wide text-ivory-dim/70">
-        {viewPeriodLine}
-      </p>
-
-      {/* 01 · 14와 같은 번호는 표시용 우리말 제목 — 개발 key는 절대 노출하지 않음 */}
-      <div id="letters" className="scroll-mt-6">
-        <LetterSection
-          no="하나"
-          title={c.part_01_letter.title}
-          content={c.part_01_letter.content}
-        />
-      </div>
-
-      <div id="reading" className="mt-4 scroll-mt-6">
-        <ReadingSection
-          no="둘 · 두 사람의 관계 이야기"
-          title={c.part_02_relationship_story.title}
-          content={c.part_02_relationship_story.content}
-        />
-        <ReadingSection
-          no="셋 · 지금 내 마음 들여다보기"
-          title={c.part_03_current_emotion.title}
-          content={c.part_03_current_emotion.content}
-        />
-        <ReadingSection
-          no="넷 · 반복되어 온 흐름"
-          title={c.part_04_repeated_pattern.title}
-          content={c.part_04_repeated_pattern.content}
-        />
-        <ReadingSection
-          no="다섯 · 내가 정말 원하는 것"
-          title={c.part_05_true_wish.title}
-          content={c.part_05_true_wish.content}
-        />
-        <ReadingSection
-          no="여섯 · 지금 내가 할 수 있는 것"
-          title={c.part_06_controllable_now.title}
-          content={c.part_06_controllable_now.content}
-        />
-      </div>
-
-      <RitualSection
-        ritual={c.part_07_ritual}
-        items={c.part_08_preparation.items}
-        steps={c.part_09_ritual_steps.steps}
-        lines={c.part_10_personal_words.lines}
-      />
-
-      <GuideSection
-        hours24={c.part_11_24h_guide.items}
-        days7={c.part_12_7day_guide.items}
-      />
-
-      <TwentyOneDayJourney days={c.part_13_21day_plan.days} />
-
-      <LetterSection
-        no="마지막"
-        title={c.part_14_final_letter.title}
-        content={c.part_14_final_letter.content}
-      />
-
-      <JournalSection
-        title={c.bonus_journal_questions.title}
-        intro={c.bonus_journal_questions.intro}
-        questions={c.bonus_journal_questions.questions}
-      />
-
-      {reviewHref && (
-        <section className="mx-auto max-w-md px-6 pb-4 pt-10 text-center">
-          <p className="text-[0.84rem] font-light leading-[1.95] text-ivory-dim">
-            읽어 보시고, 월화에게 한마디 남겨 주시겠어요?
-            <br />
-            좋았던 점도 아쉬웠던 점도 그대로 들려주세요.
-          </p>
-          <Link
-            href={reviewHref}
-            className="mt-4 inline-flex h-11 items-center justify-center rounded-full border border-gold/40 px-6 text-[0.84rem] text-gold"
-          >
-            후기 남기기
-          </Link>
-        </section>
-      )}
-
-      <ResultFooter />
-    </main>
+    <ResultBody
+      token={token}
+      name={name}
+      viewPeriodLine={viewPeriodLine}
+      c={c}
+      hasBook={hasBook}
+      maskedEmail={maskedEmail}
+      summary={summary}
+      reviewHref={reviewHref}
+    />
   );
 }
