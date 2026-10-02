@@ -6,7 +6,7 @@ import "server-only";
  * 처리(send):
  *  1) 이메일별로 사연이 담긴 주문 1건(결제 완료 주문 우선, 없으면 가장 최근 주문)을 고른다.
  *  2) 그 신청 내용을 화이트리스트 정제·재검증해 '책 쿠폰 주문'(26,000원, product=book)을 만든다.
- *     같은 이메일엔 1건만 (submission_id 고정값으로 중복 방지).
+ *     같은 이메일엔 1건만 (결제 대기 책 주문이 있으면 재사용).
  *  3) 메일 1통: 책 소개 + 쿠폰 버튼(사연 다시 쓰지 않고 바로 결제).
  *     아직 메시지를 결제하지 않은 분에겐 메시지 사과 쿠폰(9,900원, 10/4까지) 링크도 함께.
  * 광고성 정보이므로 제목에 (광고), 본문 끝에 수신거부 방법과 사업자 정보를 표기한다.
@@ -15,7 +15,7 @@ import { createHash } from "crypto";
 import { Resend } from "resend";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { createRemindToken } from "@/lib/remind-auth";
-import { sanitizeAndValidateApplication } from "@/lib/ritual-validation";
+import { cloneOrderForBook } from "@/lib/book/clone-order";
 import { sanitizeSiteUrl } from "@/lib/delivery-rules";
 import {
   APOLOGY_PRICE_KRW,
@@ -36,10 +36,6 @@ function esc(v: string): string {
 function maskEmail(e: string): string {
   const [local, domain] = e.split("@");
   return domain ? `${local.slice(0, 2)}***@${domain}` : "***";
-}
-function submissionIdFor(email: string): string {
-  const h = createHash("sha256").update(`book-coupon-v1:${email.toLowerCase()}`).digest("hex");
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-b${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 
 export function buildBookCouponEmail(opts: {
@@ -228,42 +224,15 @@ export async function runBookCoupon(orderNumbers: string[], mode: "preview" | "s
   let created = 0;
   for (const [email, t] of targets) {
     try {
-      /* 1) 책 쿠폰 주문 (이메일당 1건) */
-      const sid = submissionIdFor(email);
-      let bookOrder: string | null = null;
-      const existing = await supabase
-        .from("ritual_orders")
-        .select("order_number, payment_status")
-        .eq("submission_id", sid)
-        .maybeSingle();
-      if (existing.data) {
-        bookOrder = existing.data.order_number as string;
-      } else {
-        const full = await supabase.from("ritual_orders").select("*").eq("id", t.source.id).maybeSingle();
-        const { data } = sanitizeAndValidateApplication(full.data);
-        if (!data) {
-          failed += 1;
-          continue;
-        }
-        const ins = await supabase
-          .from("ritual_orders")
-          .insert({
-            ...data,
-            submission_id: sid,
-            product: "book",
-            payment_amount: BOOK_COUPON_PRICE_KRW,
-            preview_content: full.data?.preview_content ?? null,
-          })
-          .select("order_number")
-          .single();
-        if (ins.error || !ins.data) {
-          console.error(`[book-coupon] insert_failed code=${ins.error?.code ?? "unknown"}`);
-          failed += 1;
-          continue;
-        }
-        bookOrder = ins.data.order_number as string;
-        created += 1;
+      /* 1) 책 쿠폰 주문 (이메일당 1건 — 결제 대기 책 주문이 있으면 재사용) */
+      const cl = await cloneOrderForBook(t.source.id, BOOK_COUPON_PRICE_KRW, true);
+      if (!cl.ok) {
+        console.error(`[book-coupon] clone_failed reason=${cl.reason} code=${cl.code ?? "-"}`);
+        failed += 1;
+        continue;
       }
+      const bookOrder = cl.orderNumber;
+      if (cl.created) created += 1;
 
       /* 2) 메시지 미결제자 — 기존 사과 쿠폰 주문으로 이어 보기 링크 */
       let messageUrl: string | null = null;
