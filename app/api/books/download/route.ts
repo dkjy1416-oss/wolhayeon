@@ -15,6 +15,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const order = url.searchParams.get("order") ?? "";
   const token = url.searchParams.get("t");
+  /* view=1 → 브라우저에서 바로 열기(저장 대화상자 없이) */
+  const view = url.searchParams.get("view") === "1";
   if (!ORDER_NUMBER_RE.test(order) || !verifyBookToken(order, token)) {
     return new NextResponse("링크가 올바르지 않거나 만료되었어요. 고객센터로 문의해 주세요.", {
       status: 403,
@@ -35,9 +37,11 @@ export async function GET(request: Request) {
   }
   const signed = await supabase.storage
     .from(BOOK_BUCKET)
-    .createSignedUrl(row.data.book_path, 600, {
-      download: `헤어진-뒤-연락하지-말아야-할-때-${order}.pdf`,
-    });
+    .createSignedUrl(
+      row.data.book_path,
+      600,
+      view ? undefined : { download: `헤어진-뒤-연락하지-말아야-할-때-${order}.pdf` }
+    );
   if (signed.error || !signed.data?.signedUrl) {
     return new NextResponse("잠시 후 다시 시도해 주세요.", {
       status: 502,
