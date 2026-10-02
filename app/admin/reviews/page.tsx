@@ -15,7 +15,10 @@ export default async function AdminReviewsPage() {
       <p className="mb-6 mt-2 text-[0.74rem] leading-relaxed text-ivory-dim">
         결제한 손님만 남길 수 있어요 (결과 화면 아래와 책 완성 메일의 &lsquo;후기 남기기&rsquo;).
         <br />
-        &lsquo;공개&rsquo;를 누르고, 손님이 공개에 동의한 후기만 책 소개 페이지에 보여요. 후기 글은 고칠 수 없어요(있는 그대로만 공개).
+        &lsquo;공개&rsquo;를 누른 후기 중 손님이 공개에 동의한 것만 홈·책 소개 페이지에 보여요.
+        <br />
+        수정은 오타·개인정보(실명, 연락처 등) 가리기처럼 뜻을 바꾸지 않는 범위에서만 해 주세요. 손님 후기의 뜻을 바꾸거나 지어낸 후기를 올리면
+        표시·광고법 위반이 될 수 있어요.
       </p>
       {list === null ? (
         <p className="rounded-xl border border-thread/40 bg-thread/5 px-5 py-4 text-sm">
