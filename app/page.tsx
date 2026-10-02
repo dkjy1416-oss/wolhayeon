@@ -7,6 +7,7 @@ import { getPublicReviews } from "@/lib/reviews";
 import HeroSection from "@/components/home/HeroSection";
 import MomentsSection from "@/components/home/MomentsSection";
 import WhatYouGetSection from "@/components/home/WhatYouGetSection";
+import SampleAnswerSection from "@/components/home/SampleAnswerSection";
 import ProductsSection from "@/components/home/ProductsSection";
 import WolhwaNightsSection from "@/components/home/WolhwaNightsSection";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
@@ -38,6 +39,7 @@ export default async function Home() {
           <HeroSection video={media.heroVideo} poster={media.heroPoster} clips={HERO_CLIPS} />
           <MomentsSection />
           <WhatYouGetSection />
+          <SampleAnswerSection />
           <ProductsSection />
           <WolhwaNightsSection />
           <RealReviewsSection reviews={reviews} />
