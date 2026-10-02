@@ -1,6 +1,7 @@
 import TrackedCtaLink from "@/components/TrackedCtaLink";
 import Image from "next/image";
 import Reveal from "@/components/home/Reveal";
+import HeroMontage, { type MontageClip } from "@/components/home/HeroMontage";
 
 /**
  * SECTION 01 — HERO (모바일 전용)
@@ -10,14 +11,19 @@ import Reveal from "@/components/home/Reveal";
 export default function HeroSection({
   video,
   poster,
+  clips = [],
 }: {
   video: string | null;
   poster: string | null;
+  /** 있으면 여러 원본 영상을 교차 재생 */
+  clips?: MontageClip[];
 }) {
   return (
     <section className="relative min-h-[100svh] overflow-hidden">
       <div className="absolute inset-0" aria-hidden>
-        {video ? (
+        {clips.length > 0 ? (
+          <HeroMontage clips={clips} />
+        ) : video ? (
           <video
             className="h-full w-full object-cover object-[50%_22%]"
             src={video}
@@ -84,6 +90,12 @@ export default function HeroSection({
           <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/80">
             결제 전, 지금 내 관계 상태부터 무료로 보여드려요
           </p>
+          <a
+            href="#products"
+            className="mt-4 block text-center text-[0.78rem] text-gold/90 underline decoration-gold/30 underline-offset-[6px]"
+          >
+            혼자 펼쳐 보는 책도 있어요 ↓
+          </a>
         </Reveal>
       </div>
     </section>

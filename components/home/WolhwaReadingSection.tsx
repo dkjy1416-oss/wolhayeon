@@ -18,7 +18,7 @@ export default function WolhwaReadingSection({
       <div className="absolute inset-0" aria-hidden>
         {video ? (
           <video
-            className="h-full w-full object-cover object-[50%_30%]"
+            className="h-full w-full object-cover object-top"
             src={video}
             poster={poster ?? undefined}
             autoPlay
