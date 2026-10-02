@@ -50,7 +50,7 @@ export default function ProductsSection() {
               </div>
             </div>
             <p className="mt-2 text-[0.8rem] font-light leading-[1.85] text-ivory-dim">
-              상대가 왜 이러는지, 지금 연락해도 되는지, 첫 메시지와 반응별 대응, 24시간·7일·21일 가이드까지.
+              첫 편지 · 관계 읽기 5편 · 24시간·7일 가이드 · 21일 플랜 · 리추얼. 결제 전 미리보기는 무료예요.
             </p>
             <TrackedCtaLink
               event="home_cta_click"

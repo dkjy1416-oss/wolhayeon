@@ -46,56 +46,31 @@ export default function HeroSection({
         ) : (
           <div className="h-full w-full bg-gradient-to-b from-[#141019] via-ink-soft to-ink" />
         )}
-        {/* 카피 가독성용 어두운 그라데이션 */}
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/45 via-transparent to-ink" />
-        <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-ink via-ink/70 to-transparent" />
+        {/* 영상이 보이도록 하단만 어둡게 */}
+        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-ink/70 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-ink via-ink/80 to-transparent" />
       </div>
 
-      <div className="relative flex min-h-[100svh] flex-col justify-end px-6 pb-14 pt-24">
+      <div className="relative flex min-h-[100svh] flex-col justify-end px-6 pb-10 pt-24">
         <Reveal>
-          <p className="text-[0.78rem] font-light leading-[1.8] tracking-wide text-gold/90">
-            지금 이 마음이 100이라는 것, 알고 있어요.
-          </p>
-        </Reveal>
-        <Reveal delay={100}>
-          <h1 className="font-display mt-5 text-[2.15rem] font-semibold leading-[1.42] text-ivory">
+          <h1 className="font-display text-[2.15rem] font-semibold leading-[1.38] text-ivory drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
             연락해야 할까.
             <br />
             기다려야 할까.
           </h1>
         </Reveal>
-        <Reveal delay={200}>
-          <p className="mt-6 text-[0.95rem] font-light leading-[2.05] text-ivory-dim">
-            잊으라는 말도,
-            <br />
-            그만 좋아하라는 말도 하지 않을게요.
-            <br />
-            <span className="text-ivory">
-              재회를 원한다면, 지금부터는
-              <br />그 마음을 망치지 않는 순서를
-              <br />
-              월화와 함께 찾아봐요.
-            </span>
-          </p>
-        </Reveal>
-        <Reveal delay={300}>
+        <Reveal delay={150}>
           <TrackedCtaLink
             event="home_cta_click"
             placement="hero"
             href="/apply"
-            className="cta-glow mt-9 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.98rem] font-medium text-ivory transition-opacity active:opacity-85"
+            className="cta-glow mt-7 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.98rem] font-medium text-ivory transition-opacity active:opacity-85"
           >
-            내 이야기 먼저 들려주기
+            무료로 내 관계 먼저 보기
           </TrackedCtaLink>
-          <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/80">
-            결제 전, 지금 내 관계 상태부터 무료로 보여드려요
+          <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/85">
+            사연 3분 · 결제 전 미리보기 무료
           </p>
-          <a
-            href="#products"
-            className="mt-4 block text-center text-[0.78rem] text-gold/90 underline decoration-gold/30 underline-offset-[6px]"
-          >
-            혼자 펼쳐 보는 책도 있어요 ↓
-          </a>
         </Reveal>
       </div>
     </section>

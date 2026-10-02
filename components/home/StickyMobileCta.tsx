@@ -49,7 +49,7 @@ export default function StickyMobileCta() {
         tabIndex={visible ? 0 : -1}
         className="flex h-12 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-medium text-ivory shadow-[0_4px_24px_rgba(0,0,0,0.5)]"
       >
-        내 이야기 먼저 들려주기
+        무료로 내 관계 먼저 보기
       </TrackedCtaLink>
     </div>
   );

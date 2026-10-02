@@ -48,27 +48,17 @@ export default function MomentsSection() {
       </div>
 
       <Reveal>
-        <div className="mt-8 rounded-2xl border border-thread/30 bg-thread/5 px-5 py-5 text-center">
-          <p className="font-display text-[1.02rem] leading-[1.8] text-ivory">
-            보낸 메시지는 지울 수 있어도,
-            <br />
-            <span className="text-gold">읽힌 마음은 되돌릴 수 없어요.</span>
-          </p>
-          <p className="mt-3 text-[0.82rem] font-light leading-[1.95] text-ivory-dim">
-            그 한 줄이 ‘다시 생각해 볼 사람’이 될지,
-            <br />
-            ‘또 시작이네’가 될지는 보내기 전에 정해져요.
-          </p>
-          <TrackedCtaLink
-            event="home_cta_click"
-            placement="moments"
-            href="/apply"
-            className="cta-glow mt-5 inline-flex h-12 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-medium text-ivory active:opacity-85"
-          >
-            보내기 전에, 월화에게 먼저 보여주기
-          </TrackedCtaLink>
-          <p className="mt-2.5 text-[0.7rem] font-light text-ivory-dim/80">사연을 들려주면 무료 미리보기부터 보여드려요</p>
-        </div>
+        <p className="font-display mt-8 text-center text-[1.02rem] leading-[1.8] text-ivory">
+          보내기 전에, <span className="text-gold">월화에게 먼저 보여주세요.</span>
+        </p>
+        <TrackedCtaLink
+          event="home_cta_click"
+          placement="moments"
+          href="/apply"
+          className="mt-4 flex h-12 w-full items-center justify-center rounded-full border border-gold/45 text-[0.9rem] text-gold active:opacity-85"
+        >
+          지금 연락해도 되는지 무료로 보기
+        </TrackedCtaLink>
       </Reveal>
     </section>
   );
