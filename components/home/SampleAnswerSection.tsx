@@ -108,7 +108,53 @@ function PaidTab() {
         </ul>
       </Box>
 
-      <Box tag="04 · 24시간 · 7일 가이드">
+      <div className="overflow-hidden rounded-xl border border-thread/35 bg-gradient-to-b from-[#20120f] to-ink/60 px-4 py-4">
+        <p className="text-[0.66rem] tracking-[0.18em] text-thread">
+          04 · 월화의 실전 노트 <span className="ml-1 rounded bg-thread/20 px-1.5 py-0.5 text-[0.58rem]">NEW</span>
+        </p>
+        <p className="mt-1.5 text-[0.95rem] text-ivory">이런 순간이 오면</p>
+        <div className="mt-3 space-y-2">
+          {[
+            ["반가운 답장이 왔을 때", "반가움은 한 문장만. “나도 반가웠어, 요즘은 좀 어때?” 정도로 한 번만 더 주고받기", "그날 싸움 이야기를 다시 꺼내기"],
+            ["술 마신 밤, 보내고 싶을 때", "메모장에 쓰고 휴대폰은 다른 방에. 아침에 다시 읽고 정하기", "새벽 장문 · 전화"],
+          ].map(([when, doThis, avoid]) => (
+            <div key={when} className="rounded-lg border border-gold-dim/20 bg-ink/50 px-3 py-2.5 text-[0.8rem] leading-[1.75]">
+              <p className="text-ivory">{when}</p>
+              <p className="mt-1">
+                <span className="mr-1 rounded bg-gold/15 px-1 text-[0.64rem] text-gold">이렇게</span>
+                <span className="text-ivory-dim">{doThis}</span>
+              </p>
+              <p>
+                <span className="mr-1 rounded bg-thread/15 px-1 text-[0.64rem] text-thread">피해요</span>
+                <span className="text-ivory-dim">{avoid}</span>
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2.5 grid grid-cols-2 gap-2 text-[0.74rem] leading-[1.65]">
+          <div className="rounded-lg border border-gold/25 bg-gold/5 px-2.5 py-2">
+            <p className="text-[0.62rem] text-gold">열리는 신호</p>
+            <p className="mt-0.5 text-ivory-dim">민준 님이 먼저 안부를 묻는다면</p>
+          </div>
+          <div className="rounded-lg border border-thread/25 bg-thread/5 px-2.5 py-2">
+            <p className="text-[0.62rem] text-thread">기다릴 신호</p>
+            <p className="mt-0.5 text-ivory-dim">읽고 하루 넘게 답이 없다면 → 일주일 더</p>
+          </div>
+        </div>
+        <div className="mt-2.5 flex gap-2 overflow-hidden">
+          {["지금 보내면, 내일의 내가 후회해요.", "그 사람의 속도를 지키는 게 지금의 사랑이에요."].map((l) => (
+            <p
+              key={l}
+              className="font-display w-[62%] shrink-0 rounded-xl border border-gold/30 bg-gradient-to-b from-[#2a1416] to-ink px-3 py-4 text-[0.86rem] leading-[1.7] text-ivory"
+            >
+              {l}
+            </p>
+          ))}
+        </div>
+        <p className="mt-1.5 text-[0.66rem] text-ivory-dim/70">↑ 흔들리는 밤, 꺼내 읽는 카드</p>
+      </div>
+
+      <Box tag="05 · 24시간 · 7일 가이드">
         <ul className="space-y-1.5">
           <li>· 오늘 밤: 보내고 싶은 말은 메모장에만 쓰고, 휴대폰은 다른 방에</li>
           <li>· 3일째: 그날 싸움을 ‘후회되는 말 / 억울한 것’ 두 칸으로 나눠 적기</li>
@@ -116,7 +162,7 @@ function PaidTab() {
         </ul>
       </Box>
 
-      <Box tag="05 · 21일 하루 플랜">
+      <Box tag="06 · 21일 하루 플랜">
         <ul className="space-y-1.5">
           <li><span className="text-gold">DAY 1</span> 연락 충동이 온 시간대를 적어 두기</li>
           <li><span className="text-gold">DAY 8</span> 그날 내가 정말 하고 싶었던 말 한 문장 찾기</li>
@@ -125,7 +171,7 @@ function PaidTab() {
       </Box>
 
       <div className="relative overflow-hidden rounded-xl border border-gold-dim/20 bg-ink/60 px-4 py-4">
-        <p className="text-[0.66rem] tracking-[0.18em] text-gold/80">06 · 붉은 실 리추얼 · 07 · 마지막 편지 · 마음 기록장</p>
+        <p className="text-[0.66rem] tracking-[0.18em] text-gold/80">07 · 붉은 실 리추얼 · 08 · 마지막 편지 · 마음 기록장</p>
         <p aria-hidden className="mt-2 select-none text-[0.82rem] font-light leading-[1.9] text-ivory-dim blur-[5px]">
           흔들리는 밤에는 붉은 실을 손가락에 한 번 감고, 오늘 보내지 않은 말을 종이에 적어 접어 두세요. 그리고 나에게 이렇게
           말해 주세요. 나는 지금 기다리는 중이지, 멈춰 있는 게 아니라고.

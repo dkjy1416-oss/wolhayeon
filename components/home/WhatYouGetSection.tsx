@@ -5,7 +5,7 @@ import TrackedCtaLink from "@/components/TrackedCtaLink";
 /**
  * 무엇을 받는지 — 결제 전 무료 / 결제 후 전체 (실제 미리보기·결과 구성과 일치)
  * 미리보기: lib/ritual-preview (관계 상태·상대 읽기·조심할 행동·지금 할 일)
- * 전체 결과: lib/ritual-result-schema (편지·관계 읽기 5편·리추얼·24h/7일·21일·기록장)
+ * 전체 결과: lib/ritual-result-schema + 결과 화면(요약 카드·실전 노트)
  */
 const FREE = [
   { k: "판정", t: "지금 연락해도 되는지", d: "기다릴지 · 가볍게 연락할지 · 거리를 둘지, 그리고 그 기간" },
@@ -14,13 +14,15 @@ const FREE = [
 ];
 
 const PAID = [
-  { n: "01", t: "월화의 첫 편지", d: "당신 이야기로 쓴 한 통" },
-  { n: "02", t: "관계 읽기 4편", d: "두 사람의 흐름 · 지금 내 마음 · 반복된 패턴 · 진짜 원하는 것" },
-  { n: "03", t: "연락 전략", d: "언제 · 어떤 방식으로 · 사연에 맞춘 첫 메시지 예시 · 반가운 답 / 단답 / 무응답일 때 다음 행동" },
-  { n: "04", t: "24시간 · 7일 가이드", d: "오늘 밤부터 일주일, 무엇을 하고 하지 말지" },
-  { n: "05", t: "21일 하루 플랜", d: "DAY 1~21, 하루 하나의 행동과 질문" },
-  { n: "06", t: "붉은 실 리추얼", d: "흔들리는 밤에 마음을 정돈하는 5분" },
-  { n: "07", t: "마지막 편지 · 마음 기록장", d: "다 읽은 뒤 남는 말과 스스로 답해 볼 질문들" },
+  { n: "01", t: "한눈에 보는 지금", d: "지금 관계 · 상대의 결 · 지금 할 일과 기간 · 멈출 것을 한 장으로" },
+  { n: "02", t: "월화의 첫 편지", d: "당신 이야기로 쓴 한 통" },
+  { n: "03", t: "관계 읽기 4편", d: "두 사람의 흐름 · 지금 내 마음 · 반복된 패턴 · 진짜 원하는 것" },
+  { n: "04", t: "연락 전략", d: "언제 · 어떤 방식으로 · 사연에 맞춘 첫 메시지 예시 · 반가운 답 / 단답 / 무응답일 때 다음 행동" },
+  { n: "05", t: "월화의 실전 노트", d: "답장이 왔을 때, 단답일 때, 술 마신 밤 — 순간마다 ‘이렇게 / 피해요’ · 열리는 신호와 기다릴 신호 · 흔들리는 밤 카드", isNew: true },
+  { n: "06", t: "24시간 · 7일 가이드", d: "오늘 밤부터 일주일, 무엇을 하고 하지 말지" },
+  { n: "07", t: "21일 하루 플랜", d: "DAY 1~21, 하루 하나의 행동과 질문" },
+  { n: "08", t: "붉은 실 리추얼", d: "흔들리는 밤에 마음을 정돈하는 5분" },
+  { n: "09", t: "마지막 편지 · 마음 기록장", d: "다 읽은 뒤 남는 말과 스스로 답해 볼 질문들" },
 ];
 
 export default function WhatYouGetSection() {
@@ -76,13 +78,20 @@ export default function WhatYouGetSection() {
                 <li key={p.n} className="flex gap-3 py-2.5">
                   <span className="font-display w-6 shrink-0 text-[0.8rem] text-thread">{p.n}</span>
                   <div className="min-w-0">
-                    <p className="text-[0.9rem] text-ivory">{p.t}</p>
+                    <p className="text-[0.9rem] text-ivory">
+                      {p.t}
+                      {"isNew" in p && p.isNew && (
+                        <span className="ml-1.5 rounded bg-thread/20 px-1.5 py-0.5 align-middle text-[0.6rem] text-thread">NEW</span>
+                      )}
+                    </p>
                     <p className="text-[0.74rem] font-light leading-[1.65] text-ivory-dim">{p.d}</p>
                   </div>
                 </li>
               ))}
             </ol>
             <p className="mt-2 text-[0.7rem] font-light leading-[1.7] text-ivory-dim/70">
+              결제 후 1~3분이면 웹 화면으로 바로 열리고, 메일로도 보내 드려요 (30일 열람).
+              <br />
               차단·안전 문제가 있는 사연엔 연락 전략 대신 거리를 지키는 방법을 담아요.
             </p>
           </div>
@@ -93,7 +102,7 @@ export default function WhatYouGetSection() {
             {[
               ["사연 쓰기", "3분"],
               ["무료 미리보기", "바로"],
-              ["전체 결과", "결제 후 수 분"],
+              ["전체 결과", "결제 후 1~3분"],
             ].map(([t, s], i) => (
               <li key={t} className="rounded-xl border border-gold-dim/20 px-1 py-2.5">
                 <p className="font-display text-[0.8rem] text-gold">{i + 1}</p>
