@@ -12,6 +12,7 @@ export default function LoopVideo({
   label,
   sound = false,
   soundTop = "top-3",
+  fit = "cover",
 }: {
   src: string;
   poster?: string;
@@ -20,6 +21,8 @@ export default function LoopVideo({
   sound?: boolean;
   /** 소리 버튼 세로 위치 (고정 헤더와 겹치지 않게) */
   soundTop?: string;
+  /** contain: 9:16 원본을 자르지 않고 전체를 보여 줌 (빈 곳은 흐린 포스터로 채움) */
+  fit?: "cover" | "contain";
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const id = useId();
@@ -90,6 +93,32 @@ export default function LoopVideo({
       onClick={sound ? toggle : undefined}
     />
   );
+  if (fit === "contain") {
+    return (
+      <div className={`relative overflow-hidden bg-ink ${className ?? ""}`}>
+        {poster && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={poster}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full scale-125 object-cover opacity-55 blur-2xl"
+          />
+        )}
+        <video
+          ref={ref}
+          src={src}
+          poster={poster}
+          muted
+          loop
+          playsInline
+          preload="none"
+          aria-label={label}
+          className="relative block h-full w-full object-contain"
+        />
+      </div>
+    );
+  }
   if (!sound) return video;
   return (
     <div className="relative">
