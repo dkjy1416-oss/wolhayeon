@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { BUNDLE_PRICE_KRW, BOOK_PRICE_KRW } from "@/lib/ritual-types";
+import {
+  BOOK_PRICE_KRW,
+  BUNDLE_REGULAR_PRICE_KRW,
+  PROMO_DEADLINE_TEXT,
+  bundlePrice,
+  isPromoActive,
+} from "@/lib/ritual-types";
 import { STAGES, BOOK_ONLY_SHORT } from "@/lib/book/book-contents";
 
 /** 미리보기 결제 버튼 아래 — 월화가 함께 건네는 책(패키지) 소개 */
@@ -18,7 +24,8 @@ export default function BookPackageCard({
   bundleHref: string;
   onBundleClick?: () => void;
 }) {
-  const save = price + BOOK_PRICE_KRW - BUNDLE_PRICE_KRW;
+  const bundle = bundlePrice();
+  const save = price + BOOK_PRICE_KRW - bundle;
   return (
     <div className="mx-auto mt-14 max-w-md overflow-hidden rounded-2xl border border-gold-dim/30 bg-gradient-to-b from-[#1a1210] to-ink text-left">
       <div className="relative">
@@ -95,9 +102,14 @@ export default function BookPackageCard({
           <li className="flex justify-between gap-3 text-ivory">
             <span>지금 패키지로</span>
             <span className="font-display text-[1.05rem] font-semibold text-gold">
-              {BUNDLE_PRICE_KRW.toLocaleString()}원
+              {bundle.toLocaleString()}원
             </span>
           </li>
+          {isPromoActive() && (
+            <li className="text-right text-[0.72rem] text-thread">
+              패키지 특가 {PROMO_DEADLINE_TEXT} · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원
+            </li>
+          )}
           <li className="border-t border-gold-dim/15 pt-2 text-[0.74rem] text-ivory-dim/80">
             메시지만 먼저 받으면, 연락이 온 뒤엔 책을 {BOOK_PRICE_KRW.toLocaleString()}원에 따로 받아야 해요.
             결제 후 1~3분이면 PDF로 도착하고 메일로도 보내드려요.
@@ -108,7 +120,7 @@ export default function BookPackageCard({
           onClick={onBundleClick}
           className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-[0.9rem] text-gold transition-opacity active:opacity-85"
         >
-          책까지 함께 받기 · {BUNDLE_PRICE_KRW.toLocaleString()}원
+          책까지 함께 받기 · {bundle.toLocaleString()}원
         </Link>
         <Link
           href={`/book?order=${encodeURIComponent(orderNumber)}`}

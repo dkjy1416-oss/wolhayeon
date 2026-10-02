@@ -25,7 +25,8 @@ import {
   PROMO_DEADLINE_TEXT,
   isPromoActive,
   BOOK_PRICE_KRW,
-  BUNDLE_PRICE_KRW,
+  BUNDLE_REGULAR_PRICE_KRW,
+  bundlePrice,
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
@@ -402,15 +403,18 @@ export default function PreviewExperience({
   if (!preview) return null;
   const leadText = preview.cta_lead_text;
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
+  /* 메시지 결제는 항상 product=message 를 명시 (책·패키지를 봤다가 돌아와도 메시지 가격으로) */
+  const messageHref = `${payHref}&product=message`;
+  const bundleNow = bundlePrice();
 
   const priceText = `${price.toLocaleString()}원`;
-  const wantPrice = want === "book" ? BOOK_PRICE_KRW : want === "bundle" ? BUNDLE_PRICE_KRW : price;
-  const mainHref = want ? `${payHref}&product=${want}` : payHref;
+  const wantPrice = want === "book" ? BOOK_PRICE_KRW : want === "bundle" ? bundleNow : price;
+  const mainHref = want ? `${payHref}&product=${want}` : messageHref;
   const mainLabel =
     want === "book"
       ? `${name ? `${name}님의 ` : "나의 "}책 받기 · ${BOOK_PRICE_KRW.toLocaleString()}원`
       : want === "bundle"
-        ? `메시지 + 책 함께 받기 · ${BUNDLE_PRICE_KRW.toLocaleString()}원`
+        ? `메시지 + 책 함께 받기 · ${bundleNow.toLocaleString()}원`
         : null;
   const isApologyCoupon = price === APOLOGY_PRICE_KRW;
   const ctaLabel = `내 전체 이야기 이어서 보기 · ${priceText}`;
@@ -628,6 +632,11 @@ export default function PreviewExperience({
             <p className="mt-4 text-[0.78rem] text-ivory-dim">
               {want === "book" ? "고르신 상품 · 개인화 PDF 책" : "고르신 상품 · 메시지 + 책 패키지"}
               <span className="ml-2 text-thread">{wantPrice.toLocaleString()}원</span>
+              {want === "bundle" && isPromoActive() && (
+                <span className="mt-1 block text-[0.74rem] text-gold/90">
+                  패키지 특가 {PROMO_DEADLINE_TEXT} · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원
+                </span>
+              )}
             </p>
           ) : (
           <p className="mt-4 text-[0.78rem] text-ivory-dim">
@@ -666,7 +675,7 @@ export default function PreviewExperience({
             </Link>
             {want && (
               <Link
-                href={payHref}
+                href={messageHref}
                 className="mx-auto mt-3 block max-w-md text-[0.76rem] text-ivory-dim underline underline-offset-4"
               >
                 메시지만 받기 · {priceText}
@@ -692,8 +701,8 @@ export default function PreviewExperience({
                   <span className="block text-[0.7rem] tracking-wider text-gold/80">함께 받으면 더 좋은 책</span>
                   <span className="mt-1 block text-[0.86rem] text-ivory">
                     연락이 왔을 때·다시 만날 때까지 담은 한 권
-                    {price + BOOK_PRICE_KRW - BUNDLE_PRICE_KRW > 0
-                      ? ` · ${(price + BOOK_PRICE_KRW - BUNDLE_PRICE_KRW).toLocaleString()}원 아껴요`
+                    {price + BOOK_PRICE_KRW - bundleNow > 0
+                      ? ` · ${(price + BOOK_PRICE_KRW - bundleNow).toLocaleString()}원 아껴요`
                       : ""}
                   </span>
                 </span>
