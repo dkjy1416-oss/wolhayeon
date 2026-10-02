@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { loadCsOrderLite, getCsStatus } from "@/lib/cs-actions";
 import { processPaidOrder } from "@/lib/ritual-process";
+import { processBookOrder } from "@/lib/book/book-service";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -26,12 +27,20 @@ export async function POST(req: Request) {
   }
 
   const before = await getCsStatus(ctx.order, "lite");
-  if (before.hasResult) {
+  /* 책이 포함된 주문이면 책 제작도 함께 이어서 확인 (이미 완성이면 바로 끝남) */
+  const bookTask = before.book === "making" || before.book === "failed"
+    ? processBookOrder(ctx.order.order_number).catch(() => null)
+    : Promise.resolve(null);
+  if (before.hasResult || before.product === "book") {
+    await bookTask;
+    const f = await loadCsOrderLite(body?.orderNumber ?? "", token);
+    const a = f ? await getCsStatus(f.order, "lite") : before;
     return NextResponse.json({
       status: "ok",
-      generation: before.generation,
-      delivery: before.delivery,
-      hasResult: true,
+      generation: a.generation,
+      delivery: a.delivery,
+      hasResult: a.hasResult,
+      book: a.book,
     });
   }
 
@@ -52,7 +61,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    await processPaidOrder(ctx.order.order_number);
+    await Promise.all([processPaidOrder(ctx.order.order_number), bookTask]);
   } catch {
     /* 아래 fresh 상태 조회로 결과 판단 */
   }
@@ -65,5 +74,6 @@ export async function POST(req: Request) {
     generation: after.generation,
     delivery: after.delivery,
     hasResult: after.hasResult,
+    book: after.book,
   });
 }
