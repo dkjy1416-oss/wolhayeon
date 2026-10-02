@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { verifyProcessToken } from "@/lib/customer-process-auth";
 import { processBookOrder } from "@/lib/book/book-service";
+import { bookAddon, bookByResult } from "@/lib/book/book-result-actions";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -18,6 +19,10 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ ok: false, error: "invalid_json" }, { status: 400 });
   }
+  /* 결과 페이지에서 오는 요청 (result_token 인증) */
+  if (b.action === "status") return bookByResult(b);
+  if (b.action === "addon") return bookAddon(b);
+
   const orderNumber = b.orderNumber;
   if (typeof orderNumber !== "string" || !ORDER_NUMBER_RE.test(orderNumber)) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
