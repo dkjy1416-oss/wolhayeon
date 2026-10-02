@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { after } from "next/server";
+import { processPaidOrder } from "@/lib/ritual-process";
+import { processBookOrder } from "@/lib/book/book-service";
 import { confirmOrderPayment } from "@/lib/payment-confirm";
 import { createProcessToken } from "@/lib/customer-process-auth";
 import AutoResultProcessing from "@/components/payment/AutoResultProcessing";
@@ -6,6 +9,9 @@ import BookProcessing from "@/components/payment/BookProcessing";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PreviewCoreSchema } from "@/lib/ritual-preview-schema";
 import { getWaitingVideos } from "@/lib/home-media";
+
+/* 결제 직후 서버에서도 결과·책 제작을 바로 시작 (손님이 창을 닫아도 계속 진행) */
+export const maxDuration = 300;
 
 async function SuccessView({ orderNumber }: { orderNumber: string }) {
   /* 서버가 결제를 success/already_paid로 확인한 경우에만 이 뷰가 렌더되며,
@@ -148,6 +154,14 @@ export default async function PaymentSuccessPage({
   /* success URL 도착만으로 paid 처리하지 않음 —
      서버 검증 + 토스 승인 API를 거친 결과로만 화면을 결정 */
   const result = await confirmOrderPayment(params);
+
+  if (result.status === "success") {
+    const on = result.orderNumber;
+    /* 응답을 보낸 뒤 서버에서 이어서 실행 — 화면의 요청과 겹쳐도 원자적 선점으로 1번만 생성 */
+    after(async () => {
+      await Promise.allSettled([processPaidOrder(on), processBookOrder(on)]);
+    });
+  }
 
   switch (result.status) {
     case "success":
