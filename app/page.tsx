@@ -22,7 +22,7 @@ const HERO_CLIPS = [
   { src: "/book/v3/w-final.mp4", poster: "/book/v3/w-final.webp", position: "object-top" },
   { src: "/book/v3/stop.mp4", poster: "/book/v3/stop.webp" },
   { src: "/book/v3/cry.mp4", poster: "/book/v3/cry.webp" },
-  { src: "/book/v3/call.mp4", poster: "/book/v3/call.webp" },
+  { src: "/book/v3/night.mp4", poster: "/book/v3/night.webp" },
   { src: "/book/v3/alone.mp4", poster: "/book/v3/alone.webp" },
 ];
 
