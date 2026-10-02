@@ -318,6 +318,8 @@ export default function PreviewExperience({
   }, [phase, orderNumber, name]);
   const stickyStartRef = useRef<HTMLDivElement>(null);
   const mainCtaRef = useRef<HTMLDivElement>(null);
+  /* 책 소개가 보이는 동안엔 하단 고정 버튼(메시지 결제)을 숨겨 책 버튼을 가리지 않게 */
+  const bookRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (phase !== "ready" || !PAYMENTS_OPEN) return;
     const onScroll = () => {
@@ -325,7 +327,9 @@ export default function PreviewExperience({
       const m = mainCtaRef.current?.getBoundingClientRect();
       const pastStart = !!s0 && s0.top < 0;
       const ctaVisible = !!m && m.top < window.innerHeight && m.bottom > 0;
-      setShowSticky(pastStart && !ctaVisible);
+      const bk = bookRef.current?.getBoundingClientRect();
+      const bookVisible = !!bk && bk.top < window.innerHeight && bk.bottom > 0;
+      setShowSticky(pastStart && !ctaVisible && !bookVisible);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -729,6 +733,7 @@ export default function PreviewExperience({
 
             {/* ---------- 월화가 함께 건네는 책 (패키지 소개) ---------- */}
             {BOOK_SALES_OPEN && (
+              <div ref={bookRef}>
               <BookPackageCard
                 orderNumber={orderNumber}
                 name={name}
@@ -740,6 +745,7 @@ export default function PreviewExperience({
                   logPayEvent(orderNumber, "preview_cta_click");
                 }}
               />
+              </div>
             )}
           </>
         ) : (
