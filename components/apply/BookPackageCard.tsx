@@ -16,12 +16,15 @@ export default function BookPackageCard({
   name,
   price,
   bundleHref,
+  bookHref,
   onBundleClick,
 }: {
   orderNumber: string;
   name?: string | null;
   price: number;
   bundleHref: string;
+  /** 책만 결제 (주문·사연 그대로 이어서) */
+  bookHref?: string;
   onBundleClick?: () => void;
 }) {
   const bundle = bundlePrice();
@@ -39,6 +42,40 @@ export default function BookPackageCard({
         <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#1a1210] to-transparent" />
       </div>
       <div className="px-6 pb-7 pt-1">
+        {/* 미리보기 vs 책 — 오늘 밤 바로 쓸 수 있는 것 */}
+        <p className="text-[0.7rem] tracking-[0.25em] text-thread">오늘 밤부터 바로 펼치는 책</p>
+        <p className="font-display mt-2 text-[1.22rem] leading-[1.6] text-ivory">
+          미리보기는 &lsquo;방향&rsquo;까지예요.
+          <br />
+          <span className="text-gold">오늘 밤 바로 쓸 날짜와 문장은 책에 있어요.</span>
+        </p>
+        <ul className="mt-4 space-y-2.5 rounded-xl border border-gold/30 bg-gold/5 px-4 py-4">
+          {[
+            ["기다릴 날짜", `${name ? `${name}님` : "당신"}의 상황 장에 ‘몇 월 며칠까지’가 적혀 있어요`],
+            ["보내기 직전 체크", "지금 쓰고 있는 메시지를 그 자리에서 점검하는 체크리스트"],
+            ["대신 보낼 문장", "보내면 안 되는 7가지와, 그 자리에 보낼 한 줄"],
+            ["연락이 왔을 때", "‘보고 싶다’ · 술 마시고 온 연락 · ‘친구로 지내자’에 답하는 문장"],
+            ["오늘부터 7일 · 21일", "결제한 날부터 날짜가 적힌 하루 한 장 기록장"],
+          ].map(([t, d]) => (
+            <li key={t} className="flex gap-2.5">
+              <span aria-hidden className="mt-[0.2rem] text-[0.8rem] text-gold">✓</span>
+              <span>
+                <span className="block text-[0.88rem] text-ivory">{t}</span>
+                <span className="block text-[0.76rem] font-light leading-[1.7] text-ivory-dim">{d}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 grid grid-cols-3 gap-1.5">
+          {["p03", "p06", "p08"].map((pg) => (
+            <Link key={pg} href={`/book?order=${encodeURIComponent(orderNumber)}`} className="block overflow-hidden rounded-md border border-gold-dim/25 bg-[#f5efe3]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/book/pages/${pg}.webp`} alt="실제 책 페이지" loading="lazy" className="block aspect-[1/1.41] w-full object-cover object-top" />
+            </Link>
+          ))}
+        </div>
+        <p className="mt-1.5 text-center text-[0.68rem] text-ivory-dim/70">실제 책 페이지 · 눌러서 더 보기</p>
+
         {save > 0 && (
           <span className="inline-block rounded-full bg-thread/15 px-3 py-1 text-[0.7rem] text-thread">
             지금 함께 받으면 {save.toLocaleString()}원 아껴요
@@ -118,16 +155,28 @@ export default function BookPackageCard({
         <Link
           href={bundleHref}
           onClick={onBundleClick}
-          className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-full border border-gold/45 bg-gold/10 text-[0.9rem] text-gold transition-opacity active:opacity-85"
+          className="cta-glow mt-5 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
         >
-          책까지 함께 받기 · {bundle.toLocaleString()}원
+          메시지 + 책 함께 받기 · {bundle.toLocaleString()}원
         </Link>
+        {bookHref && (
+          <Link
+            href={bookHref}
+            onClick={onBundleClick}
+            className="mt-2.5 inline-flex h-12 w-full items-center justify-center rounded-full border border-gold-dim/40 text-[0.88rem] text-ivory"
+          >
+            책만 받기 · {BOOK_PRICE_KRW.toLocaleString()}원
+          </Link>
+        )}
         <Link
           href={`/book?order=${encodeURIComponent(orderNumber)}`}
-          className="mt-3 block text-center text-[0.76rem] text-ivory-dim underline underline-offset-4"
+          className="mt-3 flex h-11 w-full items-center justify-center rounded-full text-[0.84rem] text-gold underline decoration-gold/30 underline-offset-[6px]"
         >
-          책 차례와 실제 페이지 보기
+          책 자세히 보기 · 차례와 실제 페이지 →
         </Link>
+        <p className="text-center text-[0.68rem] text-ivory-dim/70">
+          책 페이지에서 결제해도 지금 쓴 사연 그대로 이어져요
+        </p>
         <p className="mt-4 text-center text-[0.68rem] leading-[1.7] text-ivory-dim/60">
           재회를 보장하지 않아요. 차단·안전 문제가 있는 사연엔 연락 문장 대신 거리를 지키는 방법을 담아요.
         </p>

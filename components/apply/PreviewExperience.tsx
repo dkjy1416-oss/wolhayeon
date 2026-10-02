@@ -33,6 +33,7 @@ import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import BookPackageCard from "@/components/apply/BookPackageCard";
 import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import SceneBreak from "@/components/apply/SceneBreak";
+import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
@@ -302,7 +303,6 @@ export default function PreviewExperience({
 
   /* 하단 고정 결제 버튼 — 02번 카드를 지나고, 본문 결제 버튼이 안 보일 때만 */
   const [showSticky, setShowSticky] = useState(false);
-  const [bookOpen, setBookOpen] = useState(false);
   /* 책 소개 페이지에서 책·패키지를 고르고 온 손님 → 그 상품으로 결제 이어가기 */
   const [want, setWant] = useState<WantProduct | null>(null);
   useEffect(() => {
@@ -310,9 +310,12 @@ export default function PreviewExperience({
     const w = loadWant();
     if (w) {
       setWant(w);
-      setBookOpen(true);
     }
   }, []);
+  /* 미리보기까지 마친 주문을 이 기기에 기억 → /book·홈에서 다시 와도 사연 그대로 결제 */
+  useEffect(() => {
+    if (phase === "ready") rememberOrder(orderNumber, name);
+  }, [phase, orderNumber, name]);
   const stickyStartRef = useRef<HTMLDivElement>(null);
   const mainCtaRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -725,30 +728,13 @@ export default function PreviewExperience({
             </div>
 
             {/* ---------- 월화가 함께 건네는 책 (패키지 소개) ---------- */}
-            {BOOK_SALES_OPEN && !bookOpen && (
-              <button
-                type="button"
-                onClick={() => setBookOpen(true)}
-                className="mx-auto mt-8 flex w-full max-w-md items-center justify-between gap-3 rounded-2xl border border-gold-dim/30 bg-ink-soft px-5 py-4 text-left"
-              >
-                <span>
-                  <span className="block text-[0.7rem] tracking-wider text-gold/80">함께 받으면 더 좋은 책</span>
-                  <span className="mt-1 block text-[0.86rem] text-ivory">
-                    연락이 왔을 때·다시 만날 때까지 담은 한 권
-                    {price + BOOK_PRICE_KRW - bundleNow > 0
-                      ? ` · ${(price + BOOK_PRICE_KRW - bundleNow).toLocaleString()}원 아껴요`
-                      : ""}
-                  </span>
-                </span>
-                <span aria-hidden className="shrink-0 text-gold">▸</span>
-              </button>
-            )}
-            {BOOK_SALES_OPEN && bookOpen && (
+            {BOOK_SALES_OPEN && (
               <BookPackageCard
                 orderNumber={orderNumber}
                 name={name}
                 price={price}
                 bundleHref={`${payHref}&product=bundle`}
+                bookHref={`${payHref}&product=book`}
                 onBundleClick={() => {
                   trackEvent("payment_cta_click", { order: orderNumber });
                   logPayEvent(orderNumber, "preview_cta_click");
