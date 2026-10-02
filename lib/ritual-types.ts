@@ -367,6 +367,11 @@ export const BUNDLE_PRICE_KRW = 39900;
 /** 패키지 정가 — 특가 마감 후 (따로 사면 45,900원보다 3,000원 저렴) */
 export const BUNDLE_REGULAR_PRICE_KRW = 42900;
 
+/** 책 출간 기념 쿠폰가 — 사과 쿠폰 고객에게 메일로 만든 책 주문에만 DB에서 적용 */
+export const BOOK_COUPON_PRICE_KRW = 26000;
+export const BOOK_COUPON_END_MS = Date.parse("2026-10-11T23:59:59+09:00");
+export const BOOK_COUPON_DEADLINE_TEXT = "10월 11일(일)까지";
+
 /** 지금 패키지 가격 (특가 기간이면 39,900원, 이후 42,900원) */
 export function bundlePrice(now: number = Date.now()): number {
   return isPromoActive(now) ? BUNDLE_PRICE_KRW : BUNDLE_REGULAR_PRICE_KRW;
@@ -418,7 +423,12 @@ export function productPrice(
   storedAmount: unknown,
   now: number = Date.now()
 ): number {
-  if (product === "book") return BOOK_PRICE_KRW;
+  if (product === "book") {
+    /* 책 쿠폰 주문은 마감(10/11) 전까지 쿠폰가 유지 */
+    return storedAmount === BOOK_COUPON_PRICE_KRW && now <= BOOK_COUPON_END_MS
+      ? BOOK_COUPON_PRICE_KRW
+      : BOOK_PRICE_KRW;
+  }
   if (product === "bundle") return bundlePrice(now);
   return resolveOrderPrice(storedAmount, now);
 }
@@ -429,6 +439,7 @@ export function isAllowedPrice(amount: unknown): amount is number {
     amount === APOLOGY_PRICE_KRW ||
     amount === RITUAL_REGULAR_PRICE_KRW ||
     amount === BOOK_PRICE_KRW ||
+    amount === BOOK_COUPON_PRICE_KRW ||
     amount === BUNDLE_PRICE_KRW ||
     amount === BUNDLE_REGULAR_PRICE_KRW
   );
