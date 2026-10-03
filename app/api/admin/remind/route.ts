@@ -73,8 +73,9 @@ function buildEmail(name: string, openUrl: string, fromEmail: string) {
     `더 받고 싶지 않으시면 이 메일에 "수신거부"라고 회신해 주세요.`,
   ].join("\n");
 
-  const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background:#0a0908;">
-  <div style="max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
+  const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background-color:#0a0908;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0908" style="background-color:#0a0908;"><tr><td align="center" bgcolor="#0a0908" style="background-color:#0a0908;">
+  <div style="background-color:#0a0908;text-align:left;max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
     <p style="font-size:11px;letter-spacing:0.3em;color:#c9a96e;margin:0 0 28px;">月下緣 · 월하연</p>
     <p style="font-size:16px;line-height:2;margin:0 0 20px;">${esc}님,</p>
     <p style="font-size:15px;line-height:2.1;color:#d8d2c6;margin:0 0 20px;">
@@ -86,7 +87,7 @@ function buildEmail(name: string, openUrl: string, fromEmail: string) {
       무료 미리보기부터 다시 이어집니다.
     </p>
     <a href="${openUrl}"
-       style="display:block;text-align:center;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:16px 20px;font-size:15px;">
+       style="display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:16px 20px;font-size:15px;">
       ${esc}님의 이야기 이어서 읽기
     </a>
     <p style="font-size:12px;color:#8d8779;line-height:1.9;margin:36px 0 0;">
@@ -94,7 +95,7 @@ function buildEmail(name: string, openUrl: string, fromEmail: string) {
       더 받고 싶지 않으시면 이 메일(${escapeHtml(fromEmail)})에
       "수신거부"라고 회신해 주세요.
     </p>
-  </div></body></html>`;
+  </div></td></tr></table></body></html>`;
 
   return { subject, text, html };
 }
