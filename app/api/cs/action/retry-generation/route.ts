@@ -32,7 +32,12 @@ export async function POST(req: Request) {
     ? processBookOrder(ctx.order.order_number).catch(() => null)
     : Promise.resolve(null);
   if (before.hasResult || before.product === "book") {
-    await bookTask;
+    /* 결과는 있는데 메일이 안 갔으면 메일도 다시 (processPaidOrder가 승인·발송 단계부터 이어서 처리) */
+    const mailTask =
+      before.hasResult && before.product !== "book" && before.delivery !== "sent"
+        ? processPaidOrder(ctx.order.order_number).catch(() => null)
+        : Promise.resolve(null);
+    await Promise.all([bookTask, mailTask]);
     const f = await loadCsOrderLite(body?.orderNumber ?? "", token);
     const a = f ? await getCsStatus(f.order, "lite") : before;
     return NextResponse.json({
@@ -52,6 +57,7 @@ export async function POST(req: Request) {
 
   /* 정상 생성 중이면 중복 AI 생성을 시작하지 않고 상태만 반환 */
   if (ctx.order.generation_status === "generating" && !staleGenerating) {
+    await bookTask;
     return NextResponse.json({
       status: "ok",
       generation: "generating",
