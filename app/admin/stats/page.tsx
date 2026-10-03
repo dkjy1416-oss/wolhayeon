@@ -240,6 +240,7 @@ export default async function AdminStatsPage() {
       .from("payment_events")
       .select("order_number, event, code")
       .gt("created_at", since)
+      .not("event", "like", "sweep%") /* 자동 재처리 내부 기록 제외 */
       .limit(10000);
     if (!ev.error) {
       const list = (
