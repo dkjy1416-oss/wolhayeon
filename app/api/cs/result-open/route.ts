@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { RESULT_TOKEN_RE, canShowResult } from "@/lib/result-access";
+import { safeRoute } from "@/lib/route-safe";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body=(await req.json().catch(()=>null)) as {token?:string}|null; const token=body?.token??"";
   if(!RESULT_TOKEN_RE.test(token)) return new NextResponse(null,{status:204});
   try {
@@ -17,3 +18,5 @@ export async function POST(req: Request) {
   } catch {}
   return new NextResponse(null,{status:204});
 }
+
+export const POST = safeRoute("cs_result_open", handlePOST);
