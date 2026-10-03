@@ -161,9 +161,14 @@ export async function confirmOrderPayment(params: {
           ) === row.payment_amount
       )
     ) {
-      console.error(`[pay:${requestId}] amount_mismatch`);
-      await sendOpsAlert("payment_error", { orderNumber, code: "amount_mismatch" });
-      await logPayEventServer(orderNumber, "amount_mismatch");
+      console.error(`[pay:${requestId}] amount_mismatch url=${amountNumber} db=${row.payment_amount}`);
+      /* 예전 결제 화면·예전 결제 완료 주소를 다시 연 경우가 대부분 — 토스 승인 전이라 고객 돈은 빠져나가지 않음 */
+      await sendOpsAlert("payment_error", {
+        orderNumber,
+        code: "amount_mismatch",
+        detail: `결제 시도 금액 ${amountNumber}원 / 현재 주문 금액 ${row.payment_amount}원. 토스 승인 전 단계에서 막았으므로 고객에게 청구되지 않았습니다(예전 결제 화면이나 예전 결제 완료 주소를 다시 연 경우가 대부분). 고객이 다시 결제하면 현재 금액으로 정상 진행됩니다.`,
+      });
+      await logPayEventServer(orderNumber, "amount_mismatch", `url${amountNumber}_db${row.payment_amount}`);
       return { status: "amount_mismatch" };
     }
 
