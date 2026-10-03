@@ -57,6 +57,7 @@ export async function processBookOrder(orderNumber: string): Promise<BookOutcome
   if (order.book_status === "ready" && order.book_path) {
     return { status: "ready", downloadPath: path };
   }
+  /* 실패로 끝난 주문은 제한 횟수 안에서 자동 재시도(스위퍼)가 다시 부른다 */
   const started = order.book_started_at ? Date.parse(order.book_started_at) : 0;
   if (order.book_status === "generating" && Date.now() - started < STALE_MS) {
     return { status: "processing" };
@@ -83,8 +84,13 @@ export async function processBookOrder(orderNumber: string): Promise<BookOutcome
     const cached = BookPersonalSchema.safeParse(order.book_personal);
     if (cached.success) personal = cached.data;
     if (!personal) {
-      personal = await generateBookPersonal(order);
-      if (!personal) personal = await generateBookPersonal(order);
+      /* 서버 실행 한도(300초) 안에 PDF·저장·메일까지 끝나도록 AI 작성 시간을 제한 */
+      const t0 = Date.now();
+      personal = await generateBookPersonal(order, 120_000);
+      const spent = Date.now() - t0;
+      if (!personal && spent < 110_000) {
+        personal = await generateBookPersonal(order, Math.min(100_000, 200_000 - spent));
+      }
       if (!personal) throw new Error("personal_failed");
       await supabase.from("ritual_orders").update({ book_personal: personal }).eq("id", order.id);
     }
@@ -106,28 +112,22 @@ export async function processBookOrder(orderNumber: string): Promise<BookOutcome
       .upload(objectPath, pdf, { contentType: "application/pdf", upsert: true });
     if (up.error) throw new Error(`upload_failed:${up.error.message}`);
 
-    await supabase
-      .from("ritual_orders")
-      .update({
-        book_status: "ready",
-        book_path: objectPath,
-        book_generated_at: new Date().toISOString(),
-      })
-      .eq("id", order.id);
-
-    const site = sanitizeSiteUrl(process.env.SITE_URL);
-    if (site && order.email) {
-      await sendBookReadyEmail({
-        to: order.email,
-        name: order.applicant_name,
-        orderNumber,
-        downloadUrl: `${site}${path}`,
-        reviewUrl: (() => {
-          const rp = reviewPath(orderNumber);
-          return rp ? `${site}${rp}` : null;
-        })(),
-      });
+    let saved = false;
+    for (let i = 0; i < 3 && !saved; i++) {
+      const done = await supabase
+        .from("ritual_orders")
+        .update({
+          book_status: "ready",
+          book_path: objectPath,
+          book_generated_at: new Date().toISOString(),
+        })
+        .eq("id", order.id);
+      saved = !done.error;
+      if (!saved) await new Promise((r) => setTimeout(r, 500 * (i + 1)));
     }
+    if (!saved) throw new Error("ready_update_failed");
+
+    await sendBookEmailOnce(order, path, orderNumber);
     return { status: "ready", downloadPath: path };
   } catch (e) {
     console.error(`[book] failed ${e instanceof Error ? e.message.slice(0, 80) : "unknown"}`);
@@ -139,4 +139,47 @@ export async function processBookOrder(orderNumber: string): Promise<BookOutcome
     await supabase.from("ritual_orders").update({ book_status: "failed" }).eq("id", order.id);
     return { status: "failed" };
   }
+}
+
+/** 책 완성 메일 — 보낸 기록(payment_events: book_email_sent)이 없을 때만 보낸다 */
+export async function sendBookEmailOnce(
+  order: Pick<RitualOrderRow, "email" | "applicant_name"> & { order_number?: string | null },
+  downloadPath: string,
+  orderNumberArg?: string
+): Promise<boolean> {
+  const orderNumber = orderNumberArg ?? order.order_number ?? "";
+  if (!orderNumber) return false;
+  const supabase = getSupabaseAdmin();
+  const sent = await supabase
+    .from("payment_events")
+    .select("id")
+    .eq("order_number", orderNumber)
+    .eq("event", "book_email_sent")
+    .limit(1);
+  if (!sent.error && sent.data && sent.data.length > 0) return true;
+  const site = sanitizeSiteUrl(process.env.SITE_URL);
+  if (!site || !order.email) {
+    await sendOpsAlert("book_failed", {
+      orderNumber,
+      code: "book_email_config",
+      detail: "책은 완성됐지만 메일을 보낼 수 없었습니다(사이트 주소 또는 고객 이메일 없음).",
+    });
+    return false;
+  }
+  const ok = await sendBookReadyEmail({
+    to: order.email,
+    name: order.applicant_name,
+    orderNumber,
+    downloadUrl: `${site}${downloadPath}`,
+    reviewUrl: (() => {
+      const rp = reviewPath(orderNumber);
+      return rp ? `${site}${rp}` : null;
+    })(),
+  });
+  if (ok) {
+    await supabase.from("payment_events").insert({ order_number: orderNumber, event: "book_email_sent" });
+  } else {
+    console.error("[book] email_failed");
+  }
+  return ok;
 }

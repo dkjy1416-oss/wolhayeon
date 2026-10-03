@@ -9,6 +9,7 @@ import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
 
 const FONT_BASE = "https://raw.githubusercontent.com/google/fonts/main/ofl/";
+const FONT_MIRROR = "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/";
 const FONTS: Array<{ family: string; weight: number; file: string }> = [
   { family: "Gowun Batang", weight: 400, file: "gowunbatang/GowunBatang-Regular.ttf" },
   { family: "Gowun Batang", weight: 700, file: "gowunbatang/GowunBatang-Bold.ttf" },
@@ -50,9 +51,23 @@ function loadFontCss(): Promise<string> {
   if (!fontCss) {
     fontCss = Promise.all(
       FONTS.map(async (f) => {
-        const r = await fetch(FONT_BASE + f.file);
-        if (!r.ok) throw new Error(`font_fetch_${r.status}`);
-        const b64 = Buffer.from(await r.arrayBuffer()).toString("base64");
+        /* GitHub 원본 → 안 되면 jsDelivr 사본에서 (각 20초 제한) */
+        let buf: ArrayBuffer | null = null;
+        let lastErr = "font_fetch";
+        for (const base of [FONT_BASE, FONT_MIRROR]) {
+          try {
+            const r = await fetch(base + f.file, { signal: AbortSignal.timeout(20_000) });
+            if (r.ok) {
+              buf = await r.arrayBuffer();
+              break;
+            }
+            lastErr = `font_fetch_${r.status}`;
+          } catch {
+            lastErr = "font_fetch_timeout";
+          }
+        }
+        if (!buf) throw new Error(lastErr);
+        const b64 = Buffer.from(buf).toString("base64");
         return `@font-face{font-family:'${f.family}';font-weight:${f.weight};font-style:normal;src:url(data:font/ttf;base64,${b64}) format('truetype');}`;
       })
     )

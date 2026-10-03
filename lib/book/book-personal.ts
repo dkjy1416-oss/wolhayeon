@@ -156,7 +156,8 @@ closing_letter 각 문단 250자 이내.
 모든 값은 한국어. JSON 구조만 출력합니다.`;
 
 export async function generateBookPersonal(
-  order: RitualOrderRow
+  order: RitualOrderRow,
+  timeoutMs: number = 120_000
 ): Promise<BookPersonal | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) return null;
@@ -173,7 +174,7 @@ export async function generateBookPersonal(
       "[안전 우선] 안전/경계 위험 신호가 있습니다. verdict는 no, messages는 []. 재회 전략 대신 안전한 거리와 자기 보호를 중심으로 씁니다."
     );
 
-  const client = new Anthropic({ apiKey, maxRetries: 1 });
+  const client = new Anthropic({ apiKey, maxRetries: 0 });
   const t0 = Date.now();
   try {
     const msg = await client.messages.create(
@@ -189,7 +190,7 @@ export async function generateBookPersonal(
         ],
         output_config: { format: zodOutputFormat(Struct) },
       },
-      { timeout: 150_000 }
+      { timeout: Math.max(20_000, timeoutMs) }
     );
     if (msg.stop_reason === "max_tokens" || msg.stop_reason === "refusal") {
       console.error(`[book] ai_stop=${msg.stop_reason} ms=${Date.now() - t0}`);
