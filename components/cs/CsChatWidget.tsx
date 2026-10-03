@@ -407,7 +407,12 @@ export default function CsChatWidget() {
     say("assistant", "결과 생성을 다시 확인하고 있어요. 다시 결제하실 필요는 없어요.");
     const r = await doAction("/api/cs/action/retry-generation");
     setBusy(false);
-    if (r?.hasResult) {
+    const bookOnly = status?.product === "book";
+    if (bookOnly && r?.book === "ready") {
+      say("assistant", "책이 완성됐어요. 아래 '내 책 PDF 받기' 버튼이나 이메일로 받으실 수 있어요.");
+    } else if (bookOnly && r?.status !== "not_paid") {
+      say("assistant", "책을 이어서 만들고 있어요. 완성되면 등록하신 이메일로 보내드리니 이 화면을 닫으셔도 괜찮아요.");
+    } else if (r?.hasResult) {
       say(
         "assistant",
         csToken
@@ -845,7 +850,7 @@ export default function CsChatWidget() {
                               내 책 PDF 받기 🔒
                             </button>
                           ))}
-                        {status?.payment === "paid" && (status?.book === "making" || status?.book === "failed") && status?.product === "book" && (
+                        {status?.payment === "paid" && (status?.book === "making" || status?.book === "failed") && (
                           <button type="button" onClick={actRetryGeneration} disabled={busy} className={`${btnCls} shrink-0`}>
                             책 제작 다시 확인
                           </button>
