@@ -109,6 +109,16 @@ export async function POST(req: Request) {
   if (action !== "approve" && action !== "hide" && action !== "pending") {
     return NextResponse.json({ ok: false, error: "bad_request" }, { status: 400 });
   }
+  /* 공개 동의가 없는 후기는 공개할 수 없음 (손님 동의 없이 게시 방지) */
+  if (action === "approve") {
+    const cur = await supabase.from("reviews").select("consent_public").eq("id", id).maybeSingle();
+    if (!cur.data?.consent_public) {
+      return NextResponse.json(
+        { ok: false, error: "공개 동의가 없는 후기라 공개할 수 없어요. (수정에서 손님이 동의한 경우에만 켜 주세요)" },
+        { status: 400 }
+      );
+    }
+  }
   const patch =
     action === "approve"
       ? { status: "approved", approved_at: now, updated_at: now }
