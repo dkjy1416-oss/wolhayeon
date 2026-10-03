@@ -108,6 +108,8 @@ export function fallbackForGroup(label: string, order: RitualOrderRow): Record<s
         },
       };
     case "action":
+    case "action_a":
+    case "action_b":
       return {
         part_08_preparation: { items: ["붉은 실 한 가닥", "흰 종이 한 장", "펜 한 자루", "물 한 잔"] },
         part_09_ritual_steps: {

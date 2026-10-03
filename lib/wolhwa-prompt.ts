@@ -570,41 +570,68 @@ JSON만 출력하세요.`);
 }
 
 /** GROUP B — 실행/리추얼 가이드 (part_08~12, bonus) */
+export type ActionKey =
+  | "part_08_preparation"
+  | "part_09_ritual_steps"
+  | "part_10_personal_words"
+  | "part_11_24h_guide"
+  | "part_12_7day_guide"
+  | "bonus_journal_questions";
+
 export function buildActionUserPrompt(
   order: RitualOrderRow,
-  introLines?: string[] | null
+  introLines?: string[] | null,
+  keys: ActionKey[] = [
+    "part_08_preparation",
+    "part_09_ritual_steps",
+    "part_10_personal_words",
+    "part_11_24h_guide",
+    "part_12_7day_guide",
+    "bonus_journal_questions",
+  ]
 ): string {
   const sections = buildContextSections(order, introLines);
+  const safetyFirst =
+    order.safety_concerns.some((v) => HIGH_RISK_SAFETY_VALUES.includes(v)) ||
+    BLOCKED_CONTACT_VALUES.includes(order.contact_status);
+
+  const shape: Record<ActionKey, string> = {
+    part_08_preparation: `  "part_08_preparation": { "items": ["문자열"] }`,
+    part_09_ritual_steps: `  "part_09_ritual_steps": { "steps": ["문자열"] }`,
+    part_10_personal_words: `  "part_10_personal_words": { "lines": ["문자열"] }`,
+    part_11_24h_guide: `  "part_11_24h_guide": { "items": ["문자열"] }`,
+    part_12_7day_guide: `  "part_12_7day_guide": { "items": ["문자열"] }`,
+    bonus_journal_questions: `  "bonus_journal_questions": { "title": "", "intro": "", "questions": ["문자열"] }`,
+  };
+  const guide: Record<ActionKey, string> = {
+    part_08_preparation: "- part_08: 준비물 4~7개, 각 한 줄 (붉은 실, 종이, 펜, 물 중심 — 구매 유도 금지)",
+    part_09_ritual_steps:
+      "- part_09: 약 5분의 리추얼 진행 순서 4~7단계, 각 단계 1~3문장 (시작과 끝의 작은 여닫는 의식 포함)",
+    part_10_personal_words: "- part_10: 리추얼 중 소리 내어 읽을 개인 문장 3~6줄, 각 한 문장 (사연 반영)",
+    part_11_24h_guide:
+      "- part_11: 리추얼 이후 24시간 가이드 5~8개, 각 1~2문장 — 오늘 하루의 즉각적인 행동 안전장치만 담습니다.\n  (예: 오늘 밤 보내고 싶은 메시지가 떠오를 때 할 일, SNS 확인 충동이 올 때의 대체 행동)",
+    part_12_7day_guide: `- part_12: 7일 행동 가이드 5~8개, 각 1~2문장 — 앞으로 일주일 동안 유지할 관계·감정 관리의 원칙.\n  ${
+      safetyFirst
+        ? "연락 관련 원칙은 '연락을 시도하지 않고 상대의 경계를 존중한다'는 방향으로만 씁니다."
+        : "연락에 관한 원칙은 [연락 타이밍 기준선]의 기간·조건과 정확히 일치해야 하며,\n  7일 동안 관찰할 것과 7일 뒤 다음 행동을 정할 기준을 한 항목 이상 포함합니다."
+    }`,
+    bonus_journal_questions:
+      "- bonus: '월화의 마음 기록장' — title, 두세 문장의 intro, 개인화된 기록 항목 7~10개(각 한 문장).",
+  };
 
   sections.push(`[출력할 JSON 구조 — key 이름과 구조를 정확히 지키세요]
 {
-  "part_08_preparation": { "items": ["문자열"] },
-  "part_09_ritual_steps": { "steps": ["문자열"] },
-  "part_10_personal_words": { "lines": ["문자열"] },
-  "part_11_24h_guide": { "items": ["문자열"] },
-  "part_12_7day_guide": { "items": ["문자열"] },
-  "bonus_journal_questions": { "title": "", "intro": "", "questions": ["문자열"] }
+${keys.map((k) => shape[k]).join(",\n")}
 }
 
 각 파트 안내:
-- part_08: 준비물 (붉은 실, 종이, 펜, 물 중심 — 구매 유도 금지)
-- part_09: 약 5분의 리추얼 진행 순서 (4~7단계, 시작과 끝의 작은 여닫는 의식 포함)
-- part_10: 리추얼 중 소리 내어 읽을 개인 문장 3~6줄 (사연 반영)
-- part_11: 리추얼 이후 24시간 가이드 — 오늘 하루의 즉각적인 행동 안전장치만 담습니다.
-  (예: 오늘 밤 보내고 싶은 메시지가 떠오를 때 할 일, SNS 확인 충동이 올 때의 대체 행동)
-- part_12: 7일 행동 가이드 — 앞으로 일주일 동안 유지할 관계·감정 관리의 원칙을 씁니다.
-  ${
-    order.safety_concerns.some((v) => HIGH_RISK_SAFETY_VALUES.includes(v)) ||
-    BLOCKED_CONTACT_VALUES.includes(order.contact_status)
-      ? "연락 관련 원칙은 '연락을 시도하지 않고 상대의 경계를 존중한다'는 방향으로만 씁니다."
-      : "연락에 관한 원칙은 [연락 타이밍 기준선]의 기간·조건과 정확히 일치해야 하며,\n  7일 동안 관찰할 것과 7일 뒤 다음 행동을 정할 기준을 한 항목 이상 포함합니다."
-  }
-- bonus: '월화의 마음 기록장' — title, 짧은 intro, 개인화된 기록 항목 7~10개.
+${keys.map((k) => guide[k]).join("\n")}
 
-[분량 지침]
+[분량 지침 — 꼭 지키세요]
+- 위에 적힌 개수와 길이를 넘기지 않습니다. 항목 하나는 최대 2문장입니다.
 - 각 항목은 짧고 구체적으로 씁니다. "조금 기다려보세요"처럼 기간·이유·기준이
   없는 항목은 쓰지 않습니다.
-- 같은 행동을 part_11과 part_12에서 반복하지 않습니다.
+- 같은 행동을 여러 항목에서 반복하지 않습니다.
 - 긴 에세이보다 바로 실행할 수 있는 문장을 우선합니다.
 
 ${ACTION_ONLY_RULE}

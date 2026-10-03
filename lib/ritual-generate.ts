@@ -55,8 +55,8 @@ export function getModelId(): string {
 /* 병렬 두 호출의 그룹별 출력 상한.
    기존 전체 결과가 한 호출 약 10~14k 토큰이었고 각 그룹은 그 절반 수준이라
    9000이면 JSON 절단 없이 충분한 여유 (stop_reason=max_tokens 시 실패 처리). */
-const ACTION_MAX_TOKENS = 6000;
-const JOURNEY_MAX_TOKENS = 6000;
+const ACTION_MAX_TOKENS = 8000;
+const JOURNEY_MAX_TOKENS = 9000;
 
 export type GenerateOutcome =
   | { status: "success"; orderNumber: string; resultVersion: number }
@@ -170,18 +170,43 @@ export async function generateRitualForOrder(
       maxTokens,
     });
     const groups: Group[] = [
-      coreGroup("core_a", ["part_01_letter", "part_02_relationship_story"], 6000),
-      coreGroup("core_b", ["part_03_current_emotion", "part_04_repeated_pattern"], 6000),
-      coreGroup("core_c", ["part_05_true_wish", "part_06_controllable_now"], 6500),
-      coreGroup("core_d", ["part_07_ritual", "part_14_final_letter"], 4000),
+      coreGroup("core_a", ["part_01_letter", "part_02_relationship_story"], 8000),
+      coreGroup("core_b", ["part_03_current_emotion", "part_04_repeated_pattern"], 8000),
+      coreGroup("core_c", ["part_05_true_wish", "part_06_controllable_now"], 8000),
+      coreGroup("core_d", ["part_07_ritual", "part_14_final_letter"], 6000),
+      /* 실행 가이드는 둘로 나눠 만든다 — 한 번에 만들면 길이 한도(토큰)를 넘겨 잘리는 일이 있었음 */
       {
-        label: "action",
-        prompt: buildActionUserPrompt(order, introLines),
-        struct: RitualActionStructSchema,
+        label: "action_a",
+        prompt: buildActionUserPrompt(order, introLines, [
+          "part_08_preparation",
+          "part_09_ritual_steps",
+          "part_10_personal_words",
+        ]),
+        struct: RitualActionStructSchema.pick({
+          part_08_preparation: true,
+          part_09_ritual_steps: true,
+          part_10_personal_words: true,
+        }),
         check: RitualResultSchema.pick({
           part_08_preparation: true,
           part_09_ritual_steps: true,
           part_10_personal_words: true,
+        }),
+        maxTokens: ACTION_MAX_TOKENS,
+      },
+      {
+        label: "action_b",
+        prompt: buildActionUserPrompt(order, introLines, [
+          "part_11_24h_guide",
+          "part_12_7day_guide",
+          "bonus_journal_questions",
+        ]),
+        struct: RitualActionStructSchema.pick({
+          part_11_24h_guide: true,
+          part_12_7day_guide: true,
+          bonus_journal_questions: true,
+        }),
+        check: RitualResultSchema.pick({
           part_11_24h_guide: true,
           part_12_7day_guide: true,
           bonus_journal_questions: true,
@@ -212,7 +237,15 @@ export async function generateRitualForOrder(
               model: getModelId(),
               max_tokens: g.maxTokens,
               system: WOLHWA_SYSTEM_PROMPT,
-              messages: [{ role: "user", content: g.prompt }],
+              messages: [
+                {
+                  role: "user",
+                  /* 직전 시도가 길이 한도로 잘렸으면 더 짧게 쓰도록 안내 */
+                  content: lastCode.startsWith("output_truncated")
+                    ? `${g.prompt}\n\n[중요] 직전 작성이 길이 한도를 넘어 잘렸습니다. 개수는 최소 기준만 채우고, 모든 문장을 절반 길이로 짧게 쓰세요.`
+                    : g.prompt,
+                },
+              ],
               /* 구조화 출력: 그룹 스키마에 맞는 JSON만 생성하도록 API 차원 강제 */
               output_config: { format: zodOutputFormat(g.struct as never) },
             },
@@ -279,7 +312,7 @@ export async function generateRitualForOrder(
       prompt: buildPlaybookUserPrompt(order, introLines),
       struct: RitualPlaybookStructSchema,
       check: RitualResultSchema.pick({ bonus_playbook: true }).required(),
-      maxTokens: 5000,
+      maxTokens: 7000,
     };
     const playbookPromise = runGroup(playbookGroup).catch((e) => {
       console.error(`[gen:${requestId}] playbook_skipped code=${(e as { code?: string })?.code ?? "unknown"}`);
