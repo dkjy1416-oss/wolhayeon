@@ -199,7 +199,7 @@ export async function POST(req: Request) {
               s.book === "ready"
                 ? "완성(이메일의 '내 책 PDF 받기' 또는 화면 버튼으로 받기 가능)"
                 : s.book === "failed"
-                  ? "제작 재시도 필요(화면의 '결과 생성 다시 확인' 버튼으로 이어서 제작)"
+                  ? "제작 재시도 필요(상담창의 '책 제작 다시 확인' 버튼으로 이어서 제작, 자동 재시도도 진행됨)"
                   : "제작 중(완성되면 이메일로 전송)"
             }`;
       statusBlock = `\n\n[확인된 주문 상태 — 이 내용만 사실로 언급 가능]\n상품: ${productLabel}\n결제: ${pay}${bookLine}\n결과: ${s.product === "book" ? "해당 없음(책 단품)" : gen}\n이메일: ${mail}\n결과 열람: ${
