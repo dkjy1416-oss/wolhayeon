@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { RESULT_TOKEN_RE, canShowResult } from "@/lib/result-access";
 import { CONTENT_VIEW_LINE, formatViewWindow } from "@/lib/content-access-policy";
-import { RitualResultSchema } from "@/lib/ritual-result-schema";
+import { RitualResultSchema, normalizeRitualPartial } from "@/lib/ritual-result-schema";
+import { sendOpsAlert } from "@/lib/ops-alert";
 import type SummaryCard from "@/components/result/SummaryCard";
 import ResultBody from "@/components/result/ResultBody";
 import { PreviewSchema, NOW_STANCE_LABELS } from "@/lib/ritual-preview-schema";
@@ -79,10 +80,22 @@ export default async function ResultPage({
     if (!canShowResult(r.data, o.data)) return <NotAvailable />;
 
     /* 고객 제공본은 reviewed_content 하나뿐 — generated_content 폴백 금지 */
-    const parsed = RitualResultSchema.safeParse(r.data.reviewed_content);
+    let parsed = RitualResultSchema.safeParse(r.data.reviewed_content);
     if (!parsed.success) {
-      // 승인본 파손: 사유는 로그 코드로만 (토큰/콘텐츠 미기록)
+      /* 예전 기준으로 승인된 결과 — 길이·형식만 다듬어서 다시 검사 */
+      parsed = RitualResultSchema.safeParse(normalizeRitualPartial(r.data.reviewed_content));
+    }
+    if (!parsed.success) {
+      // 승인본 파손: 사유는 로그 코드로만 (토큰/콘텐츠 미기록) + 운영자 알림
       console.error("[result] approved_content_invalid");
+      await sendOpsAlert("process_error", {
+        orderNumber: (o.data.order_number as string | null) ?? null,
+        code: "result_page_invalid",
+        detail: `결제 고객의 결과 화면이 열리지 않습니다(형식 문제: ${parsed.error.issues
+          .slice(0, 3)
+          .map((i) => i.path.join("."))
+          .join(", ")}). 관리자 검수 화면에서 해당 부분을 고쳐 주세요.`,
+      });
       return <NotAvailable />;
     }
 
