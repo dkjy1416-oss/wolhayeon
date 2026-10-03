@@ -94,8 +94,10 @@ export default async function CompletePage({
          금액은 항상 서버가 상품 규칙으로 정한다. */
       if (row && row.payment_status === "pending" && isAllowedPrice(row.payment_amount)) {
         const current: Product = isProduct(row.product) ? row.product : "message";
+        /* 책 쿠폰(26,000원) 주문은 책 전용 — 상품을 바꾸면 쿠폰이 사라지므로 바꾸지 않는다 */
+        const couponLocked = current === "book" && row.payment_amount === BOOK_COUPON_PRICE_KRW;
         const target: Product =
-          bookSales && isProduct(productParam) ? productParam : current;
+          bookSales && !couponLocked && isProduct(productParam) ? productParam : current;
         /* 책·패키지에서 메시지로 돌아오면 저장 금액이 책값이므로 메시지 기본가로 계산 */
         const base =
           current !== "message" && target === "message"
@@ -264,7 +266,7 @@ export default async function CompletePage({
               </p>
             </div>
           ) : null}
-          {bookSales && (
+          {bookSales && !(product === "book" && row.payment_amount === BOOK_COUPON_PRICE_KRW) && (
           <div className="mt-9">
             <p className="mb-3 text-center text-[0.72rem] tracking-[0.25em] text-gold/80">
               받아볼 구성을 골라주세요
