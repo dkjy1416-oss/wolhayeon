@@ -103,9 +103,13 @@ export default async function CompletePage({
             : row.payment_amount;
         const want = productPrice(target, base);
         if (want !== row.payment_amount || target !== current) {
+          /* 메시지 → 책·패키지로 바꿀 때 원래 메시지 금액(사과 쿠폰 9,900원 등)을 기억해 두었다가
+             다시 메시지로 돌아오면 그대로 적용 */
+          const patch: Record<string, unknown> = { payment_amount: want, product: target };
+          if (current === "message" && target !== "message") patch.message_amount = row.payment_amount;
           const upd = await supabase
             .from("ritual_orders")
-            .update({ payment_amount: want, product: target })
+            .update(patch)
             .eq("order_number", orderNumber)
             .eq("payment_status", "pending");
           if (!upd.error) row = { ...row, payment_amount: want, product: target };
