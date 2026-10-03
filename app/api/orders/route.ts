@@ -21,6 +21,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sanitizeAndValidateApplication } from "@/lib/ritual-validation";
 import { createPreviewToken } from "@/lib/preview-auth";
 import { sendOpsAlert } from "@/lib/ops-alert";
+import { kickSweep } from "@/lib/sweep-kick";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,8 @@ const FRIENDLY_ERROR =
   "신청을 저장하는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
 
 export async function POST(request: Request) {
+  /* 멈춘 주문 자동 재처리 깨우기 (응답 뒤, 실패해도 무관) */
+  after(() => kickSweep());
   const requestId = randomUUID().slice(0, 8);
 
   /* 1) body 파싱 */
