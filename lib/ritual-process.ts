@@ -105,6 +105,15 @@ export async function processPaidOrder(
       });
       return { status: "delayed" };
     }
+    if (approve.status === "not_ready" && (approve.reason === "invalid_content" || approve.reason === "no_token")) {
+      /* 기다려도 저절로 풀리지 않는 경우 — 바로 알림 */
+      await sendOpsAlert("process_error", {
+        orderNumber,
+        code: `auto_approve_${approve.reason}`,
+        detail: "결과는 만들어졌지만 자동 승인 조건(형식)을 통과하지 못했습니다. 관리자 검수 화면에서 결과를 확인하고 최종 승인해 주세요.",
+      });
+      return { status: "delayed" };
+    }
     if (approve.status === "not_ready") {
       /* 생성 직후 상태 전파 지연 등 — 재요청 시 이어서 처리 */
       console.error(`[process] approve_not_ready reason=${approve.reason}`);

@@ -8,14 +8,14 @@
  *   관리자 세션 토큰으로 이 검증을 통과할 수도 없음.
  * - 토큰 = "만료시각.서명(hex)". 주문번호는 요청 body로 함께 와야 하며
  *   서명에 묶여 있어 다른 주문번호에 재사용 불가.
- * - 유효시간 30분. timingSafeEqual 비교. 비밀키 미설정 시 fail-closed.
+ * - 유효시간 24시간 (결제 완료 주문의 처리 요청만 가능 — 결과 열람 권한 아님). timingSafeEqual 비교. 비밀키 미설정 시 fail-closed.
  * - 비밀키 자체는 절대 클라이언트로 전달하지 않음(서명 결과만 전달).
  */
 import "server-only";
 import { createHmac, createHash, timingSafeEqual } from "crypto";
 
 const DOMAIN = "wolhayeon-customer-process-v1";
-const TTL_MS = 30 * 60 * 1000;
+const TTL_MS = 24 * 60 * 60 * 1000; // 결제 완료 화면을 오래 열어 둔 손님도 "다시 확인" 가능 (결제 완료 주문 처리만 허용)
 
 function getSecret(): string | null {
   const s = process.env.RITUAL_ADMIN_SECRET?.trim();

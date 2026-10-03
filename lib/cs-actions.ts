@@ -419,7 +419,7 @@ export async function getCsStatus(
 
   const product = ((order as unknown as { product?: string | null }).product ?? "message") || "message";
   const bookStatus = (order as unknown as { book_status?: string | null }).book_status ?? null;
-  const book: CsStatus["book"] = !productHasBook(product)
+  const book: CsStatus["book"] = !productHasBook(product) || order.payment_status !== "paid"
     ? "none"
     : bookStatus === "ready"
       ? "ready"

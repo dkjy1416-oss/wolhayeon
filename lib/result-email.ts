@@ -127,7 +127,7 @@ export async function sendApprovedResultEmail(
     const o = await supabase
       .from("ritual_orders")
       .select(
-        "id, applicant_name, email, payment_status, generation_status, review_status, delivery_status, delivery_attempt_count"
+        "id, applicant_name, email, payment_status, generation_status, review_status, delivery_status, delivery_attempt_count, delivery_attempted_at"
       )
       .eq("order_number", orderNumber)
       .maybeSingle();
@@ -157,8 +157,23 @@ export async function sendApprovedResultEmail(
 
     /* 발송 상태 확인: sent면 절대 재발송 안 함 */
     if (order.delivery_status === "sent") return { status: "already_sent" };
-    if (order.delivery_status === "sending")
-      return { status: "sending_in_progress" };
+    if (order.delivery_status === "sending") {
+      /* 발송 도중 서버가 끊기면 sending에 영원히 남는다 → 10분 지난 sending은 failed로 되돌려 다시 발송 */
+      const at = Date.parse((order as { delivery_attempted_at?: string | null }).delivery_attempted_at ?? "");
+      /* 23시간이 넘은 건 메일 중복 방지 기록(24시간)이 끝나 이중 발송 위험 → 자동 재발송하지 않음 */
+      if (!Number.isFinite(at) || Date.now() - at < 10 * 60 * 1000 || Date.now() - at > 23 * 60 * 60 * 1000) {
+        return { status: "sending_in_progress" };
+      }
+      const reset = await supabase
+        .from("ritual_orders")
+        .update({ delivery_status: "failed", delivery_error_code: "stale_sending" })
+        .eq("id", order.id)
+        .eq("delivery_status", "sending")
+        .select("id")
+        .maybeSingle();
+      if (reset.error || !reset.data) return { status: "sending_in_progress" };
+      console.error("[delivery] stale_sending_recovered");
+    }
 
     /* 원자적 선점: waiting/failed → sending (동시 요청 중 한쪽만 성공) */
     const claim = await supabase

@@ -45,7 +45,13 @@ const ADVICE: Partial<Record<OpsAlertKind, string>> = {
 
 export async function sendOpsAlert(
   kind: OpsAlertKind,
-  opts: { orderNumber?: string | null; code?: string | null; detail?: string | null } = {}
+  opts: {
+    orderNumber?: string | null;
+    code?: string | null;
+    detail?: string | null;
+    /** info = 자동으로 처리됨(참고용), 기본값 action = 사장님 확인 필요 */
+    level?: "action" | "info";
+  } = {}
 ): Promise<void> {
   try {
     const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -61,15 +67,20 @@ export async function sendOpsAlert(
     const now = new Date();
     const hour = now.toISOString().slice(0, 13);
 
-    const subject = `⚠️ [월하연 오류] ${LABEL[kind]}${order ? ` — ${order}` : ""}`;
+    const info = opts.level === "info";
+    const subject = info
+      ? `ℹ️ [월하연 참고·조치 불필요] ${LABEL[kind]}${order ? ` — ${order}` : ""}`
+      : `⚠️ [월하연 오류] ${LABEL[kind]}${order ? ` — ${order}` : ""}`;
     const text = [
-      `${LABEL[kind]}이(가) 발생했습니다.`,
+      info
+        ? `자동으로 처리된 일입니다. 따로 하실 일은 없어요(기록용).`
+        : `${LABEL[kind]}이(가) 발생했습니다. 확인이 필요해요.`,
       ``,
       order ? `주문번호: ${order}` : `주문번호: (전체 영향)`,
       code ? `오류 코드: ${code}` : null,
       opts.detail ? `내용: ${opts.detail.slice(0, 300)}` : null,
       `시각: ${now.toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}`,
-      ADVICE[kind] ? `\n할 일: ${ADVICE[kind]}` : null,
+      !info && ADVICE[kind] ? `\n할 일: ${ADVICE[kind]}` : null,
       ``,
       order ? `주문 보기: ${site}/admin/orders/${order}` : `관리자: ${site}/admin`,
     ]
@@ -78,7 +89,7 @@ export async function sendOpsAlert(
 
     await new Resend(apiKey).emails.send(
       { from: `월하연 알림 <${from}>`, to, subject, text },
-      { idempotencyKey: `ops-v1-${kind}-${order ?? "all"}-${hour}` }
+      { idempotencyKey: `ops-v2-${kind}-${code || "x"}-${order ?? "all"}-${hour}`.slice(0, 250) }
     );
   } catch {
     /* 알림 실패는 무시 */

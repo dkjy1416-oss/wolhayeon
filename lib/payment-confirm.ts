@@ -20,9 +20,15 @@ import "server-only";
 import { randomUUID } from "crypto";
 import { Resend } from "resend";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { confirmTossPayment } from "@/lib/toss";
+import { confirmTossPayment, getTossPayment, getTossPaymentByOrderId } from "@/lib/toss";
 import {
   RITUAL_PRICE_KRW,
+  RITUAL_REGULAR_PRICE_KRW,
+  APOLOGY_PRICE_KRW,
+  BOOK_PRICE_KRW,
+  BOOK_COUPON_PRICE_KRW,
+  BUNDLE_PRICE_KRW,
+  BUNDLE_REGULAR_PRICE_KRW,
   isAllowedPrice,
   productPrice,
   PROMO_GRACE_MS,
@@ -79,6 +85,8 @@ export type PaymentConfirmOutcome =
   | { status: "not_found" }
   | { status: "invalid_request" }
   | { status: "amount_mismatch" }
+  | { status: "promo_expired"; orderNumber: string }
+  | { status: "confirm_pending"; orderNumber: string }
   | { status: "confirm_failed"; message: string }
   | { status: "server_error" };
 
@@ -142,115 +150,267 @@ export async function confirmOrderPayment(params: {
     if (!validKey || !Number.isInteger(amountNumber)) {
       return { status: "invalid_request" };
     }
+    const key = paymentKey as string;
+    const product = (row as { product?: string | null }).product ?? "message";
+    const applicantName = (row as { applicant_name?: string | null }).applicant_name;
 
-    /* 3) DB 금액이 허용 가격(정상가 또는 사과 쿠폰가)인가
-       4) URL amount가 DB 금액과 정확히 같은가.
-       쿠폰가는 서버(DB)에서만 정해지므로 브라우저 조작으로 할인 불가.
-       하나라도 다르면 변조 가능성 → 승인 자체를 하지 않음 */
-    if (
-      !isAllowedPrice(row.payment_amount) ||
-      amountNumber !== row.payment_amount ||
-      /* 특가·쿠폰 마감 후엔 정가만 (마감 직후 30분 유예) */
-      /* 지금 가격 또는 30분 전 가격이면 통과 (마감 직후 특가 유예 + 정가 결제 모두 허용) */
-      ![Date.now(), Date.now() - PROMO_GRACE_MS].some(
-        (t) =>
-          productPrice(
-            (row as { product?: string | null }).product ?? "message",
-            row.payment_amount,
-            t
-          ) === row.payment_amount
-      )
-    ) {
+    /** 토스 쪽에서 이미 결제 완료(DONE)된 "이 주문"의 결제인가 (주문번호·허용 금액까지 대조) */
+    const tossDone = async (): Promise<{ method: string | null; amount: number } | null> => {
+      const t = await getTossPayment(key);
+      if (
+        t &&
+        t.status === "DONE" &&
+        t.orderId === orderNumber &&
+        typeof t.totalAmount === "number" &&
+        isAllowedPrice(t.totalAmount)
+      ) {
+        return { method: t.method, amount: t.totalAmount };
+      }
+      return null;
+    };
+
+    const markPaid = (method: string | null, amountPaid: number) =>
+      markOrderPaid({ id: row.id, orderNumber, paymentKey: key, method, amountPaid, requestId });
+
+    const afterPaid = async (method: string | null, amountPaid: number) => {
+      await notifyOperatorPaid({ orderNumber, applicantName, amount: amountPaid, method });
+      await logPayEventServer(orderNumber, "pay_success", method);
+      try {
+        await track("payment_success");
+      } catch {
+        /* analytics 실패가 결제 성공 응답에 영향을 주면 안 됨 */
+      }
+    };
+
+    /* 3) DB 금액이 허용 가격인가  4) URL amount가 DB 금액과 같은가
+          5) 특가·쿠폰 기한 안의 가격인가 (마감 직후 30분 유예).
+       쿠폰가는 서버(DB)에서만 정해지므로 브라우저 조작으로 할인 불가. */
+    const amountOk = isAllowedPrice(row.payment_amount) && amountNumber === row.payment_amount;
+    const priceStillValid = [Date.now(), Date.now() - PROMO_GRACE_MS].some(
+      (t) => productPrice(product, row.payment_amount, t) === row.payment_amount
+    );
+    if (!amountOk || !priceStillValid) {
+      /* 혹시 예전에 이미 돈이 빠져나간 이 주문의 결제인지 토스에 직접 확인 */
+      const done = await tossDone();
+      if (done) {
+        const r = await markPaid(done.method, done.amount);
+        await sendOpsAlert("payment_error", {
+          orderNumber,
+          code: "late_paid_recovered",
+          level: r === "failed" ? "action" : "info",
+          detail: `토스에서는 ${done.amount}원 결제 완료였는데 주문이 결제 대기로 남아 있어서 자동으로 결제 완료 처리했습니다${
+            r === "failed" ? "(저장 실패 — 확인 필요)" : ""
+          }. 결과는 자동으로 만들어집니다.`,
+        });
+        if (r === "updated") await afterPaid(done.method, done.amount);
+        return r === "failed" ? { status: "server_error" } : { status: "already_paid", orderNumber };
+      }
+      /* 청구 없음 — 예전 결제 화면·예전 결제 주소. 알림 메일 없이 기록만 */
       console.error(`[pay:${requestId}] amount_mismatch url=${amountNumber} db=${row.payment_amount}`);
-      /* 예전 결제 화면·예전 결제 완료 주소를 다시 연 경우가 대부분 — 토스 승인 전이라 고객 돈은 빠져나가지 않음 */
-      await sendOpsAlert("payment_error", {
-        orderNumber,
-        code: "amount_mismatch",
-        detail: `결제 시도 금액 ${amountNumber}원 / 현재 주문 금액 ${row.payment_amount}원. 토스 승인 전 단계에서 막았으므로 고객에게 청구되지 않았습니다(예전 결제 화면이나 예전 결제 완료 주소를 다시 연 경우가 대부분). 고객이 다시 결제하면 현재 금액으로 정상 진행됩니다.`,
-      });
+      if (amountOk && !priceStillValid) {
+        await logPayEventServer(orderNumber, "amount_mismatch", `expired_${row.payment_amount}`);
+        return { status: "promo_expired", orderNumber };
+      }
       await logPayEventServer(orderNumber, "amount_mismatch", `url${amountNumber}_db${row.payment_amount}`);
       return { status: "amount_mismatch" };
     }
 
-    /* 5) 토스 승인 — 금액은 DB 값 사용 */
+    /* 6) 토스 승인 — 금액은 DB 값 사용 */
     const confirm = await confirmTossPayment({
-      paymentKey: paymentKey as string,
+      paymentKey: key,
       orderId: orderNumber,
       amount: row.payment_amount,
     });
 
-    if (!confirm.ok) {
-      /* 6) 이미 승인된 결제의 재전송 → 성공 처리 후 DB 상태 보정 */
-      if (confirm.code === "ALREADY_PROCESSED_PAYMENT") {
-        await supabase
-          .from("ritual_orders")
-          .update({
-            payment_status: "paid",
-            payment_key: paymentKey,
-            paid_at: new Date().toISOString(),
-          })
-          .eq("id", row.id)
-          .eq("payment_status", "pending");
-        await notifyOperatorPaid({
+    if (confirm.ok) {
+      /* 토스가 승인한 주문·금액이 이 주문과 정확히 같은지 한 번 더 대조 */
+      if (
+        confirm.orderId !== orderNumber ||
+        confirm.totalAmount !== row.payment_amount
+      ) {
+        console.error(`[pay:${requestId}] confirm_mismatch`);
+        await sendOpsAlert("payment_error", {
           orderNumber,
-          applicantName: (row as { applicant_name?: string | null })
-            .applicant_name,
-          amount: row.payment_amount,
+          code: "confirm_mismatch",
+          detail: "토스 승인 응답의 주문번호/금액이 주문과 달라 결제 완료 처리하지 않았습니다. 토스 관리자에서 해당 결제를 확인해 주세요.",
         });
-        return { status: "already_paid", orderNumber };
+        return { status: "invalid_request" };
       }
-      console.error(`[pay:${requestId}] confirm_failed code=${confirm.code}`);
-      await logPayEventServer(orderNumber, "confirm_failed", confirm.code);
-      return {
-        status: "confirm_failed",
-        message:
-          confirm.code === "INVALID_UNREGISTERED_SUBMALL"
-            ? "현대카드는 지금 카드사 심사가 진행 중이라 결제가 되지 않아요. 현대카드가 아닌 다른 카드로 결제해 주세요. 카카오페이·네이버페이 같은 간편결제도 현대카드가 아닌 결제수단을 골라 주세요."
-            : confirm.message ??
-              "결제 승인에 실패했습니다. 다시 시도하시거나 잠시 후 이용해주세요.",
-      };
+      /* 승인 성공 후에만 paid 반영. 저장이 끝내 실패해도 고객 돈은 승인됐으므로 성공으로 안내(운영자 알림 발송됨) */
+      const r = await markPaid(confirm.method ?? null, row.payment_amount);
+      if (r !== "already") await afterPaid(confirm.method ?? null, row.payment_amount);
+      return { status: "success", orderNumber };
     }
 
-    /* 승인 성공 후에만 paid 반영 — pending 조건부 갱신이라 동시 요청에도 1회만 */
-    const upd = await supabase
+    /* 이미 승인된 결제의 재전송 → 토스에서 이 주문·금액의 결제가 맞는지 확인한 뒤 DB 보정 */
+    if (confirm.code === "ALREADY_PROCESSED_PAYMENT") {
+      const done = await tossDone();
+      if (done && done.amount === row.payment_amount) {
+        const r = await markPaid(done.method, done.amount);
+        if (r === "updated") await afterPaid(done.method, done.amount);
+        return r === "failed" ? { status: "server_error" } : { status: "already_paid", orderNumber };
+      }
+      await logPayEventServer(orderNumber, "confirm_failed", "ALREADY_PROCESSED_NOT_THIS_ORDER");
+      return { status: "invalid_request" };
+    }
+
+    /* 응답을 못 받았거나(네트워크·토스 서버 오류) 알 수 없는 오류 → 실제로 결제됐는지 토스에 확인 (최대 3번) */
+    const uncertain =
+      confirm.code === "NETWORK_ERROR" ||
+      /^HTTP_5\d\d$/.test(confirm.code ?? "") ||
+      confirm.code === "PROVIDER_ERROR" ||
+      confirm.code === "FAILED_INTERNAL_SYSTEM_PROCESSING" ||
+      confirm.code === "UNKNOWN_PAYMENT_ERROR";
+    for (let i = 0; i < (uncertain ? 3 : 1); i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 2_000));
+      const done = await tossDone();
+      if (done && done.amount === row.payment_amount) {
+        const r = await markPaid(done.method, done.amount);
+        if (r === "updated") await afterPaid(done.method, done.amount);
+        return r === "failed" ? { status: "server_error" } : { status: "success", orderNumber };
+      }
+    }
+    /* 동시에 열린 다른 요청이 이미 결제 완료 처리했는지 */
+    const again = await supabase
       .from("ritual_orders")
-      .update({
-        payment_status: "paid",
-        payment_key: paymentKey,
-        payment_method: confirm.method ?? null,
-        paid_at: new Date().toISOString(),
-      })
+      .select("payment_status")
       .eq("id", row.id)
-      .eq("payment_status", "pending");
-    if (upd.error) {
-      // 승인은 성공했으므로 사용자에게는 성공으로 안내, 내부에만 코드 기록
-      console.error(`[pay:${requestId}] db_update_failed code=${upd.error.code}`);
+      .maybeSingle();
+    if (again.data?.payment_status === "paid") return { status: "already_paid", orderNumber };
+
+    if (uncertain) {
+      /* 결과를 모르는 상태 — 다시 결제하면 두 번 빠질 수 있으니 재결제 버튼 대신 안내.
+         자동 재확인(스위퍼)이 토스 결제 상태를 다시 조회해 처리한다. */
+      console.error(`[pay:${requestId}] confirm_uncertain code=${confirm.code}`);
+      await logPayEventServer(orderNumber, "confirm_pending", confirm.code);
       await sendOpsAlert("payment_error", {
         orderNumber,
-        code: `db_update_failed_${upd.error.code}`,
-        detail: "토스 결제는 승인됐지만 주문 상태 저장에 실패했습니다. 결과가 자동으로 만들어지지 않을 수 있어요.",
+        code: `confirm_uncertain_${confirm.code}`,
+        level: "info",
+        detail: "토스 승인 응답을 받지 못했습니다. 몇 분 안에 자동으로 토스 결제 상태를 다시 확인해, 결제됐으면 결과까지 자동으로 이어집니다.",
       });
+      return { status: "confirm_pending", orderNumber };
     }
 
-    await notifyOperatorPaid({
-      orderNumber,
-      applicantName: (row as { applicant_name?: string | null })
-        .applicant_name,
-      amount: row.payment_amount,
-      method: confirm.method ?? null,
-    });
-    await logPayEventServer(orderNumber, "pay_success", confirm.method ?? null);
-
-    try {
-      await track("payment_success");
-    } catch {
-      /* analytics 실패가 결제 성공 응답에 영향을 주면 안 됨 */
-    }
-
-    return { status: "success", orderNumber };
+    console.error(`[pay:${requestId}] confirm_failed code=${confirm.code}`);
+    await logPayEventServer(orderNumber, "confirm_failed", confirm.code);
+    return {
+      status: "confirm_failed",
+      message:
+        confirm.code === "INVALID_UNREGISTERED_SUBMALL"
+          ? "현대카드는 지금 카드사 심사가 진행 중이라 결제가 되지 않아요. 현대카드가 아닌 다른 카드로 결제해 주세요. 카카오페이·네이버페이 같은 간편결제도 현대카드가 아닌 결제수단을 골라 주세요."
+          : confirm.message ??
+            "결제 승인에 실패했습니다. 다시 시도하시거나 잠시 후 이용해주세요.",
+    };
   } catch {
     console.error(`[pay:${requestId}] server_error`);
     await sendOpsAlert("payment_error", { orderNumber, code: "server_error" });
     return { status: "server_error" };
+  }
+}
+
+/** 결제 금액으로 상품 판정 (결제 도중 다른 탭에서 상품을 바꿔도 실제 결제 금액 기준으로 저장) */
+function productForAmount(amount: number): "message" | "book" | "bundle" | null {
+  if (amount === APOLOGY_PRICE_KRW || amount === RITUAL_PRICE_KRW || amount === RITUAL_REGULAR_PRICE_KRW)
+    return "message";
+  if (amount === BOOK_PRICE_KRW || amount === BOOK_COUPON_PRICE_KRW) return "book";
+  if (amount === BUNDLE_PRICE_KRW || amount === BUNDLE_REGULAR_PRICE_KRW) return "bundle";
+  return null;
+}
+
+/** 결제 완료 반영 — pending일 때만, 실패하면 3번까지 다시 시도.
+ *  updated = 이번에 반영, already = 이미 다른 요청이 반영, failed = 저장 실패(운영자 알림) */
+async function markOrderPaid(p: {
+  id: string;
+  orderNumber: string;
+  paymentKey: string;
+  method: string | null;
+  amountPaid: number;
+  requestId: string;
+}): Promise<"updated" | "already" | "failed"> {
+  const supabase = getSupabaseAdmin();
+  const patch: Record<string, unknown> = {
+    payment_status: "paid",
+    payment_key: p.paymentKey,
+    payment_method: p.method,
+    payment_amount: p.amountPaid,
+    paid_at: new Date().toISOString(),
+  };
+  const prod = productForAmount(p.amountPaid);
+  if (prod) patch.product = prod;
+  for (let i = 0; i < 3; i++) {
+    const upd = await supabase
+      .from("ritual_orders")
+      .update(patch)
+      .eq("id", p.id)
+      .eq("payment_status", "pending")
+      .select("id");
+    if (!upd.error) {
+      if (upd.data && upd.data.length > 0) return "updated";
+      const again = await supabase
+        .from("ritual_orders")
+        .select("payment_status")
+        .eq("id", p.id)
+        .maybeSingle();
+      if (again.data?.payment_status === "paid") return "already";
+    }
+    await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+  }
+  console.error(`[pay:${p.requestId}] db_update_failed`);
+  await sendOpsAlert("payment_error", {
+    orderNumber: p.orderNumber,
+    code: "db_update_failed",
+    detail: "토스 결제는 승인됐지만 주문 상태 저장에 3번 실패했습니다. 관리자 화면에서 이 주문을 확인해 주세요.",
+  });
+  return "failed";
+}
+
+/**
+ * 승인 응답을 못 받은 주문 재확인 (자동 재처리에서 호출).
+ * 토스에 주문번호로 조회해서 이 주문의 결제가 DONE이고 허용 금액이면 결제 완료로 반영.
+ */
+export async function reconcilePendingOrder(orderNumber: string): Promise<"paid" | "not_paid" | "error"> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const found = await supabase
+      .from("ritual_orders")
+      .select("id, payment_status, applicant_name")
+      .eq("order_number", orderNumber)
+      .maybeSingle();
+    if (!found.data) return "error";
+    if (found.data.payment_status === "paid") return "paid";
+    if (found.data.payment_status !== "pending") return "not_paid";
+    const t = await getTossPaymentByOrderId(orderNumber);
+    if (
+      !t ||
+      t.status !== "DONE" ||
+      t.orderId !== orderNumber ||
+      !t.paymentKey ||
+      typeof t.totalAmount !== "number" ||
+      !isAllowedPrice(t.totalAmount)
+    ) {
+      return "not_paid";
+    }
+    const r = await markOrderPaid({
+      id: found.data.id as string,
+      orderNumber,
+      paymentKey: t.paymentKey,
+      method: t.method,
+      amountPaid: t.totalAmount,
+      requestId: "reconcile",
+    });
+    if (r === "failed") return "error";
+    if (r === "updated") {
+      await notifyOperatorPaid({
+        orderNumber,
+        applicantName: found.data.applicant_name as string | null,
+        amount: t.totalAmount,
+        method: t.method,
+      });
+      await logPayEventServer(orderNumber, "pay_success", t.method);
+    }
+    return "paid";
+  } catch {
+    return "error";
   }
 }

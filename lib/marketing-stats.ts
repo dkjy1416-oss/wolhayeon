@@ -160,6 +160,7 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
       .from("payment_events")
       .select("created_at, order_number, event, code")
       .gt("created_at", since)
+      .not("event", "like", "sweep%") /* 자동 재처리 내부 기록 제외 */
       .limit(20000),
     supabase.from("site_events").select("created_at").order("created_at", { ascending: true }).limit(1),
   ]);

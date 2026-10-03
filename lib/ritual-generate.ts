@@ -147,7 +147,11 @@ export async function generateRitualForOrder(
        - 각 그룹은 '그 그룹 스키마'로 바로 검증하고, 어긋나면 그 그룹만 다시 만든다
          (최대 3회). 한 파트가 비었다고 전체 결과를 버리지 않는다. */
     const genStartedAt = Date.now();
-    const client = new Anthropic({ apiKey, timeout: 110_000, maxRetries: 1 });
+    /* 서버 실행 한도 300초 — 결과 저장·자동 승인·메일까지 끝내려면 AI 작성은 200초 안에 마무리.
+       SDK 자체 재시도는 끄고(시간 계산이 어긋남) 아래에서 남은 시간 안에서만 다시 시도한다. */
+    const GEN_DEADLINE = genStartedAt + 200_000;
+    const remaining = () => GEN_DEADLINE - Date.now();
+    const client = new Anthropic({ apiKey, timeout: 110_000, maxRetries: 0 });
 
     type Group = {
       label: string;
@@ -198,18 +202,22 @@ export async function generateRitualForOrder(
     const runGroup = async (g: Group): Promise<Record<string, unknown>> => {
       let lastCode = "unknown";
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        /* 서버 실행 한도(300초) 안에서만 재시도 */
-        if (attempt > 1 && Date.now() - genStartedAt > 170_000) break;
+        /* 남은 시간 안에서만 시도 — 다시 시도는 최소 45초가 남았을 때만 */
+        const left = remaining();
+        if (left < (attempt === 1 ? 15_000 : 45_000)) break;
         const t0 = Date.now();
         try {
-          const message = await client.messages.create({
-            model: getModelId(),
-            max_tokens: g.maxTokens,
-            system: WOLHWA_SYSTEM_PROMPT,
-            messages: [{ role: "user", content: g.prompt }],
-            /* 구조화 출력: 그룹 스키마에 맞는 JSON만 생성하도록 API 차원 강제 */
-            output_config: { format: zodOutputFormat(g.struct as never) },
-          });
+          const message = await client.messages.create(
+            {
+              model: getModelId(),
+              max_tokens: g.maxTokens,
+              system: WOLHWA_SYSTEM_PROMPT,
+              messages: [{ role: "user", content: g.prompt }],
+              /* 구조화 출력: 그룹 스키마에 맞는 JSON만 생성하도록 API 차원 강제 */
+              output_config: { format: zodOutputFormat(g.struct as never) },
+            },
+            { timeout: Math.min(110_000, left) }
+          );
           if (message.stop_reason === "max_tokens") {
             lastCode = `output_truncated_${g.label}`;
           } else if (message.stop_reason === "refusal") {
@@ -245,6 +253,10 @@ export async function generateRitualForOrder(
         } catch (e) {
           lastCode =
             e instanceof Anthropic.APIError ? `api_${e.status}_${g.label}` : `api_error_${g.label}`;
+          /* AI 서버 혼잡(429·529·5xx)이면 잠깐 쉬었다가 다시 */
+          if (e instanceof Anthropic.APIError && (e.status === 429 || (e.status ?? 0) >= 500)) {
+            await new Promise((r) => setTimeout(r, Math.min(5_000, Math.max(0, remaining() - 45_000))));
+          }
         }
         console.error(`[gen:${requestId}] retry ${g.label} attempt=${attempt} code=${lastCode}`);
       }
@@ -277,7 +289,14 @@ export async function generateRitualForOrder(
     let merged: Record<string, unknown> = {};
     try {
       const parts = await Promise.all(groups.map(runGroup));
-      merged = Object.assign({}, ...parts, await playbookPromise);
+      /* 실전 노트(선택)가 늦으면 기다리지 않고 나머지로 결과를 연다 */
+      const playbook = await Promise.race([
+        playbookPromise,
+        new Promise<Record<string, unknown>>((r) =>
+          setTimeout(() => r({}), Math.max(0, remaining() + 5_000))
+        ),
+      ]);
+      merged = Object.assign({}, ...parts, playbook);
     } catch (e) {
       /* 3회 재시도 후에도 실패한 그룹이 있을 때만 failed 처리 */
       const thrownCode = (e as { code?: string })?.code;
@@ -290,6 +309,7 @@ export async function generateRitualForOrder(
       await sendOpsAlert("process_error", {
         orderNumber,
         code: `fallback_used:${fallbackUsed.join(",")}`.slice(0, 80),
+        level: "info",
         detail:
           "AI가 일부 파트를 3번 모두 만들지 못해 기본 원고로 채워 결과를 열었습니다. 손님은 결과를 정상적으로 받았습니다. 필요하면 검수 화면에서 해당 파트를 다듬어 주세요.",
       });
@@ -351,13 +371,15 @@ export async function generateRitualForOrder(
     }
 
     /* 5) 주문 상태: generated / 검수 대기 유지 (approved 아님) */
-    const upd = await supabase
-      .from("ritual_orders")
-      .update({ generation_status: "generated", review_status: "waiting" })
-      .eq("id", order.id)
-      .eq("generation_status", "generating");
-    if (upd.error) {
-      console.error(`[gen:${requestId}] status_update code=${upd.error.code}`);
+    for (let i = 0; i < 3; i++) {
+      const upd = await supabase
+        .from("ritual_orders")
+        .update({ generation_status: "generated", review_status: "waiting" })
+        .eq("id", order.id)
+        .eq("generation_status", "generating");
+      if (!upd.error) break;
+      console.error(`[gen:${requestId}] status_update code=${upd.error.code} try=${i + 1}`);
+      await new Promise((r) => setTimeout(r, 500 * (i + 1)));
     }
 
     return {
