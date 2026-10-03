@@ -29,6 +29,33 @@ import {
   clearDraftBackup,
 } from "@/lib/ritual-storage";
 
+/** 서버가 알려 준 확인 필요 항목 → 손님이 알아볼 수 있는 이름 */
+const FIELD_LABEL: Record<string, string> = {
+  applicant_name: "내 이름",
+  partner_name: "상대 이름",
+  applicant_gender: "성별",
+  applicant_birth_year: "태어난 해",
+  life_stage: "지금 생활",
+  partner_birth_year: "상대가 태어난 해",
+  relationship_type: "관계",
+  relationship_type_other: "관계(직접 입력)",
+  relationship_duration: "만난 기간",
+  breakup_elapsed: "이별 후 지난 시간",
+  breakup_initiator: "먼저 이별을 말한 사람",
+  last_conversation: "마지막 대화",
+  contact_status: "연락 상태",
+  partner_new_relationship: "상대의 새 연인",
+  pain_points: "가장 힘든 것",
+  main_wish: "가장 바라는 것",
+  story: "상세 사연",
+  current_emotion: "지금 감정",
+  safety_concerns: "안전 확인",
+  email: "이메일",
+  consent_processing: "개인정보 동의",
+  consent_no_guarantee: "안내 사항 동의",
+};
+
+
 function Row({ label, value }: { label: string; value: string }) {
   const empty = value.trim() === "";
   return (
@@ -76,6 +103,11 @@ export default function ConfirmPage() {
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
+        /* 느린 모바일·앱 내 브라우저에서 요청이 멈춰 있지 않게 25초 뒤 안내 (입력은 그대로 저장돼 있음) */
+        signal:
+          typeof AbortSignal !== "undefined" && "timeout" in AbortSignal
+            ? AbortSignal.timeout(25_000)
+            : undefined,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           submission_id: getOrCreateSubmissionId(),
@@ -115,14 +147,20 @@ export default function ConfirmPage() {
         );
         return; // 이동 중 재클릭 방지
       }
+      const fields: string[] = Array.isArray(json?.invalid_fields) ? json.invalid_fields : [];
       setErrorMsg(
-        json?.message ??
-          "이야기를 저장하는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요."
+        fields.length
+          ? `${json?.message ?? "입력 내용에 확인이 필요한 항목이 있습니다."} (확인할 항목: ${fields
+              .slice(0, 3)
+              .map((f) => FIELD_LABEL[f] ?? f)
+              .join(", ")})`
+          : json?.message ??
+              "이야기를 저장하는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요."
       );
       setSubmitting(false);
     } catch {
       setErrorMsg(
-        "이야기를 저장하는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요."
+        "연결이 잠시 불안정해요. 적어 주신 이야기는 그대로 있으니 버튼을 한 번 더 눌러 주세요."
       );
       setSubmitting(false);
     }
