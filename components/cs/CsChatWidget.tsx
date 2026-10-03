@@ -191,6 +191,8 @@ export default function CsChatWidget() {
         "assistant",
         "같은 정보의 신청이 여러 건 있어요. 신청하실 때 적으신 이메일도 함께 알려주세요."
       );
+    } else if (j?.status === "rate_limited") {
+      say("assistant", typeof j.message === "string" ? j.message : "잠시 후 다시 시도해 주세요.");
     } else {
       say(
         "assistant",
@@ -254,6 +256,8 @@ export default function CsChatWidget() {
         "신청하실 때 등록하신 이메일로 6자리 인증번호를 보냈어요."
       );
       setFlow("otp");
+    } else if (j?.status === "rate_limited") {
+      say("assistant", typeof j.message === "string" ? j.message : "잠시 후 다시 시도해 주세요.");
     } else {
       say(
         "assistant",
@@ -395,10 +399,16 @@ export default function CsChatWidget() {
     if (r?.ok) say("assistant", "결과 이메일을 다시 보내드렸어요. 받은편지함과 스팸함을 함께 확인해주세요.");
     else if (r?.code === "cooldown")
       say("assistant", "방금 발송 요청이 처리됐어요. 2분 뒤에 다시 시도할 수 있어요.");
+    else if (r?.code === "sending_in_progress")
+      say("assistant", "지금 메일을 보내는 중이에요. 몇 분 뒤 받은편지함과 스팸함을 확인해 주세요.");
+    else if (r?.code === "invalid_recipient" || r?.code === "resend_invalid_recipient")
+      say("assistant", "등록된 이메일 주소로 메일이 전달되지 않아요. 주소가 맞는지 확인하고, 틀렸다면 '이메일 변경'으로 바꿔 주세요.");
+    else if (r?.code === "not_eligible")
+      say("assistant", "결과가 아직 준비 중이라 지금은 메일을 보낼 수 없어요. 결과가 완성되면 자동으로 이메일로 보내 드려요.");
     else
       say(
         "assistant",
-        "메일 발송이 바로 처리되지 않아 자동 복구 요청을 등록했어요. 완료되면 이메일로 알려드릴게요."
+        "메일 발송이 바로 되지 않았어요. 몇 분 안에 자동으로 다시 보내 드릴게요. 받은편지함과 스팸함을 함께 확인해 주세요."
       );
   };
 
@@ -493,7 +503,12 @@ export default function CsChatWidget() {
     setBusy(false);
     setOtp("");
     if (r?.ok) {
-      say("assistant", "이메일 주소가 변경됐어요. 결과 이메일도 새 주소로 다시 보내드릴까요?");
+      say(
+        "assistant",
+        r?.code === "changed_and_resent"
+          ? "이메일 주소가 변경됐어요. 새 주소로 결과 메일도 다시 보내드렸어요. 받은편지함과 스팸함을 확인해 주세요."
+          : "이메일 주소가 변경됐어요. 결과가 완성되면 새 주소로 보내드릴게요."
+      );
       setFlow("verified");
       await refreshStatus();
     } else {
