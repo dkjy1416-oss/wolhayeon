@@ -168,6 +168,7 @@ export default function PreviewExperience({
 
   const fetchPreview = async () => {
     tries.current += 1;
+    const startedAt = Date.now();
     try {
       const res = await fetch("/api/rituals/preview", {
         method: "POST",
@@ -185,7 +186,8 @@ export default function PreviewExperience({
            읽는 화면을 유지한 채 AI 생성을 한 번 더 기다린다.
            - 폴백은 서버에 저장되지 않으므로 재요청 시 AI를 다시 시도한다.
            - 한 번 더 실패하면 그때는 폴백이라도 보여준다 (화면이 비면 안 됨). */
-        if (json.generated === false && fallbackRetries.current < 1) {
+        /* 첫 시도가 오래 걸렸으면(AI가 느린 상황) 손님을 또 기다리게 하지 않고 바로 보여준다 */
+        if (json.generated === false && fallbackRetries.current < 1 && Date.now() - startedAt < 20_000) {
           fallbackRetries.current += 1;
           scheduleRetry(1500);
           return;
