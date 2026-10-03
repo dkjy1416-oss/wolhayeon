@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
@@ -12,6 +13,7 @@ import {
   kstTodayStartIso,
   won,
 } from "@/lib/admin-util";
+import { kickSweep } from "@/lib/sweep-kick";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,8 @@ function Tile({
 }
 
 export default async function AdminDashboard() {
+  /* 멈춘 주문 자동 재처리 깨우기 (응답 뒤, 실패해도 무관) */
+  after(() => kickSweep());
   if (!(await isAdminAuthenticated())) redirect("/admin/login");
 
   const supabase = getSupabaseAdmin();
