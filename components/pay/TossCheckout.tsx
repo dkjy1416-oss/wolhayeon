@@ -21,6 +21,53 @@ function errorCode(e: unknown): string | null {
 const ORDER_NAME = "월하연 붉은 인연의 실 리추얼";
 
 /**
+ * 결제창을 열기 직전, 이 화면의 금액이 지금 주문 금액과 같은지 서버에 확인.
+ * 다른 탭에서 상품을 바꿨거나 뒤로가기로 예전 화면이 보이는 경우 → 새로고침해서 최신 금액으로.
+ * 확인 자체가 실패하면 결제를 막지 않는다(서버 승인 단계에서 다시 검사함).
+ */
+async function amountIsCurrent(orderNumber: string, amount: number): Promise<boolean> {
+  try {
+    const r = await fetch(`/api/orders/price?order=${encodeURIComponent(orderNumber)}`, {
+      cache: "no-store",
+    });
+    if (!r.ok) return true;
+    const j = (await r.json()) as { amount?: number; status?: string };
+    if (j.status === "paid" || (typeof j.amount === "number" && j.amount !== amount)) {
+      window.location.reload();
+      return false;
+    }
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * 예전 결제 화면 방지:
+ * - 뒤로가기로 저장된 화면이 복원되면 새로고침 (버튼 멈춤·옛 금액 방지)
+ * - 화면에 다시 돌아올 때마다(다른 탭에서 상품을 바꿨을 수 있음) 금액을 확인
+ * 결제 버튼 클릭 흐름에는 끼어들지 않음(결제창 팝업 차단 방지).
+ */
+function useReloadOnRestore(orderNumber: string, amount: number) {
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) window.location.reload();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void amountIsCurrent(orderNumber, amount);
+    };
+    window.addEventListener("pageshow", onShow);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      window.removeEventListener("pageshow", onShow);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [orderNumber, amount]);
+}
+
+/**
  * 결제 진입점 — 클라이언트 키 종류로 방식을 자동 선택.
  * - 결제위젯 키(*_gck_*): 토스 결제위젯 (상점 vwolha95uh에 묶임)
  * - API 개별 연동 키(*_ck_*): 결제창 직접 호출 (키가 속한 상점, 예: vwolhagv36)
@@ -102,6 +149,8 @@ function TossWindowCheckout({
       cancelled = true;
     };
   }, [clientKey, orderNumber]);
+
+  useReloadOnRestore(orderNumber, amount);
 
   const handlePay = async () => {
     const payment = paymentRef.current;
@@ -277,6 +326,8 @@ function TossWidgetCheckout({
       cancelled = true;
     };
   }, [clientKey, amount]);
+
+  useReloadOnRestore(orderNumber, amount);
 
   const handlePay = async () => {
     const widgets = widgetsRef.current;
