@@ -109,15 +109,17 @@ async function SuccessView({ orderNumber }: { orderNumber: string }) {
 function ErrorView({
   message,
   retryOrder,
+  title = "결제가 완료되지 않았습니다.",
 }: {
   message: string;
   retryOrder: string | null;
+  title?: string;
 }) {
   return (
     <main className="flex min-h-[100svh] flex-col items-center justify-center px-6 text-center">
       <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
       <h1 className="font-display mt-6 text-xl leading-relaxed text-ivory">
-        결제가 완료되지 않았습니다.
+        {title}
       </h1>
       <p className="mt-5 max-w-sm text-sm leading-[1.9] text-ivory-dim">
         {message}
@@ -155,7 +157,8 @@ export default async function PaymentSuccessPage({
      서버 검증 + 토스 승인 API를 거친 결과로만 화면을 결정 */
   const result = await confirmOrderPayment(params);
 
-  if (result.status === "success") {
+  /* 처음 승인한 요청이 중간에 끊겼어도 다시 열린 화면(already_paid)에서 처리가 이어지게 */
+  if (result.status === "success" || result.status === "already_paid") {
     const on = result.orderNumber;
     /* 응답을 보낸 뒤 서버에서 이어서 실행 — 화면의 요청과 겹쳐도 원자적 선점으로 1번만 생성 */
     after(async () => {
@@ -174,10 +177,25 @@ export default async function PaymentSuccessPage({
     case "amount_mismatch":
       return (
         <ErrorView
-          message="결제 금액이 주문 정보와 일치하지 않아 승인하지 않았습니다. 다시 시도해주세요."
+          message="결제 화면의 금액이 지금 주문 금액과 달라서 결제를 진행하지 않았어요. 돈은 빠져나가지 않았으니 안심하세요. 아래 버튼을 누르면 지금 금액으로 다시 결제할 수 있어요."
           retryOrder={
             typeof params.orderId === "string" ? params.orderId : null
           }
+        />
+      );
+    case "confirm_pending":
+      return (
+        <ErrorView
+          message="카드사·토스의 결제 확인이 늦어지고 있어요. 다시 결제하지 마시고 잠시만 기다려 주세요. 결제가 완료됐다면 몇 분 안에 자동으로 확인되어 결과를 이메일로 보내 드려요. 결제가 되지 않았다면 돈은 빠져나가지 않아요."
+          retryOrder={null}
+          title="결제를 확인하고 있어요."
+        />
+      );
+    case "promo_expired":
+      return (
+        <ErrorView
+          message="특가 기간이 끝나서 이 결제 화면의 금액으로는 결제가 진행되지 않았어요. 돈은 빠져나가지 않았어요. 아래 버튼을 누르면 지금 가격으로 다시 결제할 수 있어요."
+          retryOrder={result.orderNumber}
         />
       );
     case "confirm_failed":
