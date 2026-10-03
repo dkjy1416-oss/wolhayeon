@@ -6,12 +6,13 @@ import { NextResponse } from "next/server";
 import { verifyBookToken } from "@/lib/book/book-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { BOOK_BUCKET } from "@/lib/book/book-service";
+import { safeRoute } from "@/lib/route-safe";
 
 export const dynamic = "force-dynamic";
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const url = new URL(request.url);
   const order = url.searchParams.get("order") ?? "";
   const token = url.searchParams.get("t");
@@ -48,7 +49,13 @@ export async function GET(request: Request) {
       headers: { "content-type": "text/plain; charset=utf-8" },
     });
   }
-  if (!row.data.book_downloaded_at) {
+  /* 다운로드 기록(환불 기준)은 실제 사람이 브라우저로 연 경우에만 남긴다.
+     메일 보안 검사·링크 미리보기 봇은 Sec-Fetch 헤더가 없거나 봇 이름을 쓴다 → 기록하지 않음 */
+  const ua = (request.headers.get("user-agent") ?? "").toLowerCase();
+  const isBot = /bot|crawl|spider|preview|scanner|safelinks|facebookexternalhit|kakaotalk-scrap|yeti|daumoa|slack|whatsapp|curl|wget|python|headless/.test(ua);
+  const browserLike = /mozilla\//.test(ua) && /safari|applewebkit|gecko/.test(ua);
+  const looksHuman = !isBot && (request.headers.has("sec-fetch-mode") || browserLike);
+  if (!row.data.book_downloaded_at && looksHuman) {
     await supabase
       .from("ritual_orders")
       .update({ book_downloaded_at: new Date().toISOString() })
@@ -56,3 +63,5 @@ export async function GET(request: Request) {
   }
   return NextResponse.redirect(signed.data.signedUrl, 302);
 }
+
+export const GET = safeRoute("book_download", handleGET);
