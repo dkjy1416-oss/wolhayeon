@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { loadCsOrder, actionCheckRefund } from "@/lib/cs-actions";
+import { safeRoute } from "@/lib/route-safe";
 
 export const runtime = "nodejs";
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     orderNumber?: string;
     csToken?: string;
@@ -14,3 +15,5 @@ export async function POST(req: Request) {
   const r = await actionCheckRefund(order);
   return NextResponse.json(r);
 }
+
+export const POST = safeRoute("cs_check_refund", handlePOST);
