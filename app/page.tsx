@@ -16,8 +16,8 @@ import FinalCTASection from "@/components/home/FinalCTASection";
 import StickyMobileCta from "@/components/home/StickyMobileCta";
 import ResumeOrder from "@/components/book/ResumeOrder";
 
-/* 승인된 실제 후기·프로모션 가격 반영 (10분마다 새로) */
-export const revalidate = 600;
+/* 승인된 실제 후기·프로모션 가격 반영 (1분마다 새로 — 특가 마감 직후 옛 가격이 오래 남지 않게) */
+export const revalidate = 60;
 
 /** 첫 화면에서 교차 재생할 원본 영상 (자막 없음 · 무음) */
 const HERO_CLIPS = [
