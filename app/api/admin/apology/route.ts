@@ -1,3 +1,4 @@
+import { isPromoActive } from "@/lib/ritual-types";
 /**
  * POST /api/admin/apology — 결제 오류 사과 쿠폰 + 안내 메일 (관리자 세션 전용)
  *
@@ -115,10 +116,11 @@ function buildEmail(name: string, openUrl: string) {
         </td></tr>`
   ).join("");
 
-  const btn = `display:block;text-align:center;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:15px;`;
+  const btn = `display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:15px;`;
 
-  const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background:#0a0908;">
-  <div style="max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
+  const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background-color:#0a0908;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0908" style="background-color:#0a0908;"><tr><td align="center" bgcolor="#0a0908" style="background-color:#0a0908;">
+  <div style="background-color:#0a0908;text-align:left;max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
     <p style="font-size:11px;letter-spacing:0.3em;color:#c9a96e;margin:0 0 28px;">月下緣 · 월하연</p>
     <p style="font-size:17px;line-height:1.9;margin:0 0 18px;">${esc}님, 안녕하세요.<br/>월하연입니다.</p>
     <p style="font-size:15px;line-height:2.05;color:#d8d2c6;margin:0 0 18px;">
@@ -167,7 +169,7 @@ function buildEmail(name: string, openUrl: string) {
     <p style="font-size:11.5px;color:#7d776b;line-height:1.9;margin:40px 0 0;">
       이 메일은 월하연에서 결제를 시도하셨던 분께 드리는 서비스 안내 메일입니다.
     </p>
-  </div></body></html>`;
+  </div></td></tr></table></body></html>`;
 
   return { subject, text, html };
 }
@@ -211,6 +213,14 @@ export async function POST(request: Request) {
   if (body.campaign === "book") {
     const out = await runBookCoupon(orderNumbers, mode);
     return NextResponse.json(out, { status: out.ok ? 200 : 500 });
+  }
+
+  /* 사과 쿠폰(9,900원)은 특가 마감(10/4 23:59) 뒤에는 결제에 적용되지 않으므로 발송 금지 */
+  if (mode === "send" && !isPromoActive()) {
+    return NextResponse.json(
+      { ok: false, error: "coupon_expired", message: "사과 쿠폰 기간(10/4)이 끝나 더 이상 보낼 수 없어요." },
+      { status: 400 }
+    );
   }
 
   const supabase = getSupabaseAdmin();
