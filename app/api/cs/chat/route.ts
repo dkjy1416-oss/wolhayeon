@@ -14,6 +14,7 @@ import {
   REFUND_POLICY_SECTIONS,
   REFUND_WINDOW_DAYS,
 } from "@/lib/refund-policy";
+import { allowRequest, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -104,6 +105,12 @@ function getModel(): string {
 }
 
 export async function POST(req: Request) {
+  /* 같은 곳에서 10분에 40번 넘게 묻는 건 비정상 — AI 비용 남용 방지 */
+  if (!allowRequest(`chat:${clientIp(req)}`, 40, 10 * 60 * 1000)) {
+    return NextResponse.json({
+      reply: "질문이 너무 빠르게 이어지고 있어요. 잠시 후 다시 물어봐 주세요.",
+    });
+  }
   const body = (await req.json().catch(() => null)) as {
     messages?: Array<{ role: "user" | "assistant"; content: string }>;
     orderNumber?: string;
