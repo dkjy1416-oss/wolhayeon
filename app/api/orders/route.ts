@@ -94,10 +94,26 @@ export async function POST(request: Request) {
     if (res.error && res.error.code === "23505" && submissionId) {
       const existing = await supabase
         .from("ritual_orders")
-        .select("order_number")
+        .select("*")
         .eq("submission_id", submissionId)
         .single();
       if (!existing.error && existing.data) {
+        /* 미리보기를 본 뒤 '수정하기'로 고쳐서 다시 낸 경우 — 결제 전이면 고친 내용으로 갱신하고
+           미리보기를 새로 만들게 한다 (예전엔 고친 내용이 조용히 버려졌음) */
+        const ex = existing.data as Record<string, unknown>;
+        const changed = Object.entries(data).some(
+          ([k, v]) => JSON.stringify(ex[k] ?? null) !== JSON.stringify(v ?? null)
+        );
+        if (changed && ex.payment_status === "pending") {
+          const upd = await supabase
+            .from("ritual_orders")
+            .update({ ...data, preview_content: null, preview_generated_at: null })
+            .eq("submission_id", submissionId)
+            .eq("payment_status", "pending");
+          if (upd.error) {
+            console.error(`[orders:${requestId}] edit_update_failed code=${upd.error.code}`);
+          }
+        }
         const previewToken = createPreviewToken(existing.data.order_number);
         return NextResponse.json({
           ok: true,
