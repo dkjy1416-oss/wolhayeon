@@ -3,6 +3,7 @@ import {
   loadCsOrderLite,
   verifyCardLast4ForOrder,
 } from "@/lib/cs-actions";
+import { safeRoute } from "@/lib/route-safe";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,7 @@ export const runtime = "nodejs";
  * - Toss 마스킹 응답에 마지막 4자리가 모두 보일 때만 정확 일치 검증.
  * - 부분일치/결제수단+시각 인증은 허용하지 않는다.
  */
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     orderNumber?: string;
     token?: string;
@@ -45,3 +46,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: "invalid" });
   }
 }
+
+export const POST = safeRoute("cs_verify_pay", handlePOST);
