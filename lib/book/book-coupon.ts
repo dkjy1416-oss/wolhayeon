@@ -19,6 +19,7 @@ import { cloneOrderForBook } from "@/lib/book/clone-order";
 import { sanitizeSiteUrl } from "@/lib/delivery-rules";
 import {
   APOLOGY_PRICE_KRW,
+  isPromoActive,
   BOOK_COUPON_PRICE_KRW,
   BOOK_PRICE_KRW,
   isValidEmail,
@@ -75,7 +76,7 @@ export function buildBookCouponEmail(opts: {
     `${BUSINESS.company} · 대표 ${BUSINESS.ceo} · 사업자등록번호 ${BUSINESS.regNo} · ${BUSINESS.address} · ${BUSINESS.phone} · ${BUSINESS.email}`,
   ].join("\n");
 
-  const btn = `display:block;text-align:center;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:15px;`;
+  const btn = `display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:15px;`;
   const btn2 = `display:block;text-align:center;color:#e2c48a;text-decoration:none;border:1px solid rgba(201,169,110,.45);border-radius:999px;padding:14px 20px;font-size:14px;`;
 
   const items = BOOK_ONLY_SHORT.map(
@@ -93,8 +94,9 @@ export function buildBookCouponEmail(opts: {
     )
     .join("");
 
-  const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background:#0a0908;">
-  <div style="max-width:520px;margin:0 auto;padding:40px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
+  const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background-color:#0a0908;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0908" style="background-color:#0a0908;"><tr><td align="center" bgcolor="#0a0908" style="background-color:#0a0908;">
+  <div style="background-color:#0a0908;text-align:left;max-width:520px;margin:0 auto;padding:40px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
     <p style="font-size:11px;letter-spacing:0.3em;color:#c9a96e;margin:0 0 26px;">(광고) 月下緣 · 월하연</p>
     <p style="font-size:17px;line-height:1.9;margin:0 0 16px;">${n}님, 안녕하세요.<br/>월하연입니다.</p>
     <p style="font-size:15px;line-height:2.05;color:#d8d2c6;margin:0 0 26px;">
@@ -145,7 +147,7 @@ export function buildBookCouponEmail(opts: {
       ${esc(BUSINESS.company)} · 대표 ${esc(BUSINESS.ceo)} · 사업자등록번호 ${esc(BUSINESS.regNo)}<br/>
       ${esc(BUSINESS.address)} · ${esc(BUSINESS.phone)} · ${esc(BUSINESS.email)}
     </p>
-  </div></body></html>`;
+  </div></td></tr></table></body></html>`;
 
   return { subject, text, html };
 }
@@ -236,7 +238,8 @@ export async function runBookCoupon(orderNumbers: string[], mode: "preview" | "s
 
       /* 2) 메시지 미결제자 — 기존 사과 쿠폰 주문으로 이어 보기 링크 */
       let messageUrl: string | null = null;
-      if (!t.paid && t.pendingLatest) {
+      /* 사과 쿠폰(9,900원)은 10/4 23:59 마감 — 마감 뒤에는 메시지 쿠폰 안내를 넣지 않는다 */
+      if (!t.paid && t.pendingLatest && isPromoActive()) {
         const tok = createRemindToken(t.pendingLatest.order_number);
         if (tok) {
           messageUrl = `${siteUrl}/api/remind/open?order=${encodeURIComponent(t.pendingLatest.order_number)}&t=${encodeURIComponent(tok)}`;

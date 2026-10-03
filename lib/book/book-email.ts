@@ -15,6 +15,8 @@ export async function sendBookReadyEmail(opts: {
   downloadUrl: string;
   /** 후기 남기기 링크 (없으면 생략) */
   reviewUrl?: string | null;
+  /** 같은 주문에 새로 다시 보낼 때(주소 변경 등) 구분값 — 없으면 같은 메일은 24시간 안에 한 번만 */
+  idempotencySuffix?: string;
 }): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
@@ -39,15 +41,17 @@ export async function sendBookReadyEmail(opts: {
     `— 월하연 月下緣`,
     `주문번호 ${opts.orderNumber}`,
   ].join("\n");
-  const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background:#0a0908;">
-  <div style="max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
+  /* 네이버·지메일은 body 배경을 지우므로 표(table)에 배경색을 직접 넣는다 (흰 바탕에 흰 글씨 방지) */
+  const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background-color:#0a0908;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0908" style="background-color:#0a0908;"><tr><td align="center" bgcolor="#0a0908" style="background-color:#0a0908;">
+  <div style="max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;background-color:#0a0908;text-align:left;">
     <p style="font-size:11px;letter-spacing:0.3em;color:#c9a96e;margin:0 0 28px;">月下緣 · 월하연</p>
     <p style="font-size:17px;line-height:1.9;margin:0 0 18px;">${n}님을 위한 책이<br/>완성되었어요.</p>
     <p style="font-size:15px;line-height:2.05;color:#d8d2c6;margin:0 0 24px;">
       ${n}님의 이야기로 엮은 《헤어진 뒤, 연락하지 말아야 할 때》예요.
       표지부터 지금의 판정, ${n}님을 위한 메시지 초안, 날짜가 적힌 7일·21일 기록장까지 담았어요.
     </p>
-    <a href="${opts.downloadUrl}" style="display:block;text-align:center;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:15px;">내 책 PDF 받기</a>
+    <a href="${opts.downloadUrl}" style="display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:15px;">내 책 PDF 받기</a>
     <p style="font-size:12.5px;color:#a89f8d;line-height:1.9;margin:14px 0 30px;text-align:center;">링크는 60일 동안 열려요. 휴대폰에 저장해 두고 흔들리는 밤마다 펼쳐 주세요.</p>
     ${
       opts.reviewUrl
@@ -55,12 +59,18 @@ export async function sendBookReadyEmail(opts: {
     <p style="text-align:center;margin:0 0 26px;"><a href="${opts.reviewUrl}" style="color:#c9a96e;font-size:13px;">후기 남기기</a></p>`
         : ""
     }
+    <p style="font-size:12px;color:#a89f8d;line-height:1.8;margin:0 0 6px;text-align:center;">버튼이 보이지 않으면 아래 주소를 눌러 주세요.</p>
+    <p style="font-size:11.5px;line-height:1.7;margin:0 0 20px;text-align:center;word-break:break-all;"><a href="${opts.downloadUrl}" style="color:#c9a96e;">${esc(opts.downloadUrl)}</a></p>
     <p style="font-size:11.5px;color:#7d776b;line-height:1.9;margin:30px 0 0;">주문번호 ${esc(opts.orderNumber)}</p>
-  </div></body></html>`;
+  </div></td></tr></table></body></html>`;
   try {
     const r = await new Resend(apiKey).emails.send(
       { from: `월하연 月下緣 <${fromEmail}>`, to: opts.to, subject, text, html },
-      { idempotencyKey: `book-ready-v1-${opts.orderNumber}` }
+      {
+        idempotencyKey: opts.idempotencySuffix
+          ? `book-ready-v1-${opts.orderNumber}-${opts.idempotencySuffix}`.slice(0, 250)
+          : `book-ready-v1-${opts.orderNumber}`,
+      }
     );
     return !r.error;
   } catch {
