@@ -65,8 +65,10 @@ export async function sendPreviewLinkEmail(params: {
       `이 메일은 월하연에 이야기를 남겨주신 분께 발송되는 안내 메일입니다.`,
     ].join("\n");
 
-    const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background:#0a0908;">
-  <div style="max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
+    /* 네이버·지메일은 body 배경을 지우므로 표(table)에 배경색을 직접 넣는다 */
+    const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background-color:#0a0908;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0908" style="background-color:#0a0908;"><tr><td align="center" bgcolor="#0a0908" style="background-color:#0a0908;">
+  <div style="max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;background-color:#0a0908;text-align:left;">
     <p style="font-size:11px;letter-spacing:0.3em;color:#c9a96e;margin:0 0 28px;">月下緣 · 월하연</p>
     <p style="font-size:16px;line-height:2;margin:0 0 20px;">${esc}님,</p>
     <p style="font-size:15px;line-height:2.1;color:#d8d2c6;margin:0 0 20px;">
@@ -75,7 +77,7 @@ export async function sendPreviewLinkEmail(params: {
       아래에서 언제든 다시 열 수 있어요.
     </p>
     <a href="${openUrl}"
-       style="display:block;text-align:center;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:16px 20px;font-size:15px;">
+       style="display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:16px 20px;font-size:15px;">
       ${esc}님의 미리보기 열기
     </a>
     <p style="font-size:12.5px;color:#a89f8d;line-height:1.9;margin:20px 0 0;">
@@ -84,7 +86,7 @@ export async function sendPreviewLinkEmail(params: {
     <p style="font-size:12px;color:#8d8779;line-height:1.9;margin:36px 0 0;">
       이 메일은 월하연에 이야기를 남겨주신 분께 발송되는 안내 메일입니다.
     </p>
-  </div></body></html>`;
+  </div></td></tr></table></body></html>`;
 
     await new Resend(apiKey).emails.send(
       {

@@ -109,7 +109,11 @@ function buildEmail(name: string, resultUrl: string) {
 }
 
 export async function sendApprovedResultEmail(
-  orderNumber: string
+  orderNumber: string,
+  opts: {
+    /** 손님이 직접 "다시 보내기"를 누른 경우 등 — 새 메일로 보내야 할 때 (같은 키면 Resend가 24시간 동안 다시 보내지 않음) */
+    freshKey?: boolean;
+  } = {}
 ): Promise<{ status: DeliveryOutcome; errorCode?: string }> {
   /* 환경변수 fail-closed */
   const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -120,6 +124,7 @@ export async function sendApprovedResultEmail(
     return { status: "config_missing" };
   }
 
+  let freshKey = opts.freshKey === true;
   try {
     const supabase = getSupabaseAdmin();
 
@@ -127,7 +132,7 @@ export async function sendApprovedResultEmail(
     const o = await supabase
       .from("ritual_orders")
       .select(
-        "id, applicant_name, email, payment_status, generation_status, review_status, delivery_status, delivery_attempt_count, delivery_attempted_at"
+        "id, applicant_name, email, payment_status, generation_status, review_status, delivery_status, delivery_attempt_count, delivery_attempted_at, delivery_to_email"
       )
       .eq("order_number", orderNumber)
       .maybeSingle();
@@ -155,15 +160,21 @@ export async function sendApprovedResultEmail(
       return { status: "not_eligible" };
     }
 
+    /* 메일 주소가 바뀐 뒤의 재발송은 새 메일로 (같은 키로는 24시간 동안 거절될 수 있음) */
+    const prevTo = (order as { delivery_to_email?: string | null }).delivery_to_email;
+    if (prevTo && order.email && prevTo !== order.email) freshKey = true;
+
     /* 발송 상태 확인: sent면 절대 재발송 안 함 */
     if (order.delivery_status === "sent") return { status: "already_sent" };
     if (order.delivery_status === "sending") {
       /* 발송 도중 서버가 끊기면 sending에 영원히 남는다 → 10분 지난 sending은 failed로 되돌려 다시 발송 */
       const at = Date.parse((order as { delivery_attempted_at?: string | null }).delivery_attempted_at ?? "");
-      /* 23시간이 넘은 건 메일 중복 방지 기록(24시간)이 끝나 이중 발송 위험 → 자동 재발송하지 않음 */
-      if (!Number.isFinite(at) || Date.now() - at < 10 * 60 * 1000 || Date.now() - at > 23 * 60 * 60 * 1000) {
+      if (!Number.isFinite(at) || Date.now() - at < 10 * 60 * 1000) {
         return { status: "sending_in_progress" };
       }
+      /* 23시간이 넘으면 중복 방지 기록(24시간)이 끝났을 수 있어 새 메일로 다시 보낸다
+         (드물게 같은 메일이 두 번 갈 수 있지만, 못 받는 것보다 낫다) */
+      if (Date.now() - at > 23 * 60 * 60 * 1000) freshKey = true;
       const reset = await supabase
         .from("ritual_orders")
         .update({ delivery_status: "failed", delivery_error_code: "stale_sending" })
@@ -250,7 +261,9 @@ export async function sendApprovedResultEmail(
         },
         {
           /* 같은 승인 결과에는 항상 같은 키 — 네트워크 재시도 중복 방지 */
-          idempotencyKey: buildIdempotencyKey(result.id, result.result_version),
+          idempotencyKey: freshKey
+            ? `${buildIdempotencyKey(result.id, result.result_version)}/r${(order.delivery_attempt_count ?? 0) + 1}`.slice(0, 256)
+            : buildIdempotencyKey(result.id, result.result_version),
         }
       );
       if (sendRes.error) {

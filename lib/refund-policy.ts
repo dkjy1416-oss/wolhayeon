@@ -76,6 +76,7 @@ export function evaluateRefund(
     result_open_count?: number | null;
     refunded_at?: string | null;
     product?: string | null;
+    review_status?: string | null;
     book_status?: string | null;
     book_downloaded_at?: string | null;
   },
@@ -95,11 +96,20 @@ export function evaluateRefund(
   if (opened) {
     return { eligible: false, reason_code: "DIGITAL_CONTENT_ACCESSED" };
   }
-  /* 미열람 + 생성이 끝내 실패 상태면 기간 무관 환불 (책 단품은 책 제작 상태 기준) */
+  /* 미열람 + 결제 후 24시간이 지나도 결과(또는 책)를 받지 못한 상태면 기간 무관 환불.
+     (실패로 표시됐든, 생성 중·검수 대기에 멈춰 있든 "제공되지 못한 것"은 같다) */
+  const paidMs = order.paid_at ? Date.parse(order.paid_at) : NaN;
+  const overADay = Number.isFinite(paidMs) && Date.now() - paidMs > 24 * 60 * 60 * 1000;
+  const messageUndelivered =
+    order.generation_status === "failed" || (overADay && order.review_status !== "approved");
+  const bookUndelivered =
+    order.book_status === "failed" || (overADay && order.book_status !== "ready");
   const failed =
     order.product === "book"
-      ? order.book_status === "failed"
-      : order.generation_status === "failed";
+      ? bookUndelivered
+      : order.product === "bundle"
+        ? messageUndelivered || bookUndelivered
+        : messageUndelivered;
   if (failed) {
     return { eligible: true, reason_code: "SERVICE_NOT_DELIVERED" };
   }

@@ -25,6 +25,7 @@ import {
 import { evaluateRefund, refundReasonMessage } from "@/lib/refund-policy";
 import { cancelTossPayment } from "@/lib/toss-cancel";
 import { sendApprovedResultEmail } from "@/lib/result-email";
+import { sendBookReadyEmail } from "@/lib/book/book-email";
 import { fetchPaymentCardInfo, compareExactCardLast4 } from "@/lib/payment-factor";
 import { sendOpsAlert } from "@/lib/ops-alert";
 
@@ -69,7 +70,21 @@ export async function createIncident(
   } catch {
     /* noop */
   }
-  await sendOpsAlert("cs_incident", { code: kind, detail });
+  /* 어느 주문인지 알림 메일에 표시 (예전엔 "(전체 영향)"으로만 와서 주문을 알 수 없었음) */
+  let orderNumber: string | null = null;
+  if (orderId) {
+    try {
+      const o = await getSupabaseAdmin()
+        .from("ritual_orders")
+        .select("order_number")
+        .eq("id", orderId)
+        .maybeSingle();
+      orderNumber = (o.data?.order_number as string | undefined) ?? null;
+    } catch {
+      /* noop */
+    }
+  }
+  await sendOpsAlert("cs_incident", { orderNumber, code: kind, detail });
 }
 
 function normEmail(v: string): string {
@@ -473,8 +488,10 @@ export async function actionResendResultEmail(
       .eq("id", order.id)
       .eq("delivery_status", "sent");
   }
+  /* 발송 전에 먼저 기록해 두 번 연속 눌러도 2분 안에는 다시 보내지 않게 */
+  await logAction(order.id, "EMAIL_RESEND", "started");
   try {
-    const r = await sendApprovedResultEmail(order.order_number);
+    const r = await sendApprovedResultEmail(order.order_number, { freshKey: true });
     const ok = r.status === "sent";
     await logAction(order.id, "EMAIL_RESEND", ok ? "sent" : `failed_${r.status}`);
     if (!ok) await createIncident(order.id, "email_resend_failed", r.status);
@@ -570,7 +587,54 @@ export async function confirmEmailChange(
     .update({ email: v.new_email })
     .eq("id", order.id);
   await logAction(order.id, "EMAIL_CHANGE", "changed");
-  return { ok: true, code: "changed" };
+
+  /* 바뀐 주소로 결과·책 메일을 바로 다시 보낸다 (예전엔 "다시 보내드릴까요?"라고만 묻고 보낼 방법이 없었음) */
+  let resent = false;
+  try {
+    const { data: fresh } = await supabase
+      .from("ritual_orders")
+      .select("*")
+      .eq("id", order.id)
+      .maybeSingle();
+    const o = fresh as RitualOrderRow | null;
+    if (o && o.payment_status === "paid") {
+      if (o.review_status === "approved" && o.product !== "book") {
+        if (o.delivery_status === "sent") {
+          await supabase
+            .from("ritual_orders")
+            .update({ delivery_status: "waiting" })
+            .eq("id", o.id)
+            .eq("delivery_status", "sent");
+        }
+        const r = await sendApprovedResultEmail(o.order_number, { freshKey: true });
+        resent = r.status === "sent";
+      }
+      if (productHasBook(o.product) && o.book_status === "ready" && o.email) {
+        const path = bookDownloadPath(o.order_number);
+        const site = (process.env.SITE_URL ?? "").replace(/\/$/, "");
+        if (path && site) {
+          const ok = await sendBookReadyEmail({
+            to: o.email,
+            name: o.applicant_name,
+            orderNumber: o.order_number,
+            downloadUrl: `${site}${path}`,
+            reviewUrl: null,
+            idempotencySuffix: `email-change-${v.id}`,
+          });
+          if (ok) {
+            /* 자동 재처리(스위퍼)가 책 메일을 또 보내지 않도록 기록 */
+            await supabase
+              .from("payment_events")
+              .insert({ order_number: o.order_number, event: "book_email_sent", code: "email_change" });
+          }
+          resent = resent || ok;
+        }
+      }
+    }
+  } catch {
+    /* 재발송 실패해도 주소 변경은 완료 — 상담창에서 "다시 보내기"로 재시도 가능 */
+  }
+  return { ok: true, code: resent ? "changed_and_resent" : "changed" };
 }
 
 /* ---------------- 6) 환불 ---------------- */
@@ -665,8 +729,10 @@ export async function actionExecuteRefund(
   const from = process.env.RESEND_FROM_EMAIL?.trim();
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (from && apiKey && order.email) {
-    fetch("https://api.resend.com/emails", {
+    /* 응답 뒤 서버가 멈추면 메일이 안 나갈 수 있어 끝까지 기다린다 (최대 10초) */
+    await fetch("https://api.resend.com/emails", {
       method: "POST",
+      signal: AbortSignal.timeout(10_000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
