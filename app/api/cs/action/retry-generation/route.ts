@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { loadCsOrderLite, getCsStatus } from "@/lib/cs-actions";
 import { processPaidOrder } from "@/lib/ritual-process";
 import { processBookOrder } from "@/lib/book/book-service";
+import { safeRoute } from "@/lib/route-safe";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -10,7 +11,7 @@ export const maxDuration = 300;
  * 결과 생성 복구 — lite/full 모두 가능하지만 응답은 상태 라벨만 반환.
  * 결과 원문 URL이나 process token은 절대 반환하지 않는다.
  */
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     orderNumber?: string;
     token?: string;
@@ -83,3 +84,5 @@ export async function POST(req: Request) {
     book: after.book,
   });
 }
+
+export const POST = safeRoute("cs_retry", handlePOST);
