@@ -4,11 +4,12 @@ import {
   startEmailChange,
   confirmEmailChange,
 } from "@/lib/cs-actions";
+import { safeRoute } from "@/lib/route-safe";
 
 export const runtime = "nodejs";
 
 /** step: "start" {newEmail} → 새 이메일로 OTP / "confirm" {otp} → 변경 확정 */
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = (await req.json().catch(() => null)) as {
     orderNumber?: string;
     csToken?: string;
@@ -29,3 +30,5 @@ export async function POST(req: Request) {
   }
   return NextResponse.json({ ok: false, code: "bad_request" });
 }
+
+export const POST = safeRoute("cs_update_email", handlePOST);
