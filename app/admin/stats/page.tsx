@@ -222,6 +222,7 @@ export default async function AdminStatsPage() {
 
   /* ---- 결제 퍼널 (payment_events — 테이블 없으면 섹션만 생략) ---- */
   const FUNNEL_STEPS: [string, string][] = [
+    ["preview_end_seen", "미리보기 끝까지 읽음"],
     ["preview_cta_click", "미리보기 결제 버튼 클릭"],
     ["pay_page_view", "결제 페이지 진입"],
     ["widget_ready", "결제수단 표시됨"],
