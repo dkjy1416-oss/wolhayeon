@@ -7,6 +7,7 @@
  */
 export type ClientPayEvent =
   | "preview_cta_click"
+  | "preview_end_seen"
   | "pay_page_view"
   | "widget_ready"
   | "widget_error"

@@ -15,7 +15,8 @@ export const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
 /** 브라우저에서 보낼 수 있는 이벤트 (화이트리스트) */
 export const CLIENT_PAY_EVENTS = [
-  "preview_cta_click", // 미리보기 결제 버튼 클릭
+  "preview_cta_click", // 미리보기 결제 버튼 클릭 (code: main | sticky | lock05 | bundle)
+  "preview_end_seen", // 미리보기 끝(결제 안내)까지 읽음
   "pay_page_view", // 결제 페이지 진입 (code: open | closed)
   "widget_ready", // 결제수단 위젯 표시 완료
   "widget_error", // 결제수단 위젯 로드 실패
