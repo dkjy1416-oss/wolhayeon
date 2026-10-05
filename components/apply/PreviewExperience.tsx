@@ -17,8 +17,6 @@ import {
 } from "@/lib/ritual-storage";
 import {
   RITUAL_PRICE_KRW,
-  RITUAL_REGULAR_PRICE_KRW,
-  APOLOGY_PRICE_KRW,
   isAllowedPrice,
   listPriceKRW,
   priceBadge,
@@ -30,18 +28,16 @@ import {
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
-import BookPackageCard from "@/components/apply/BookPackageCard";
 import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import SceneBreak from "@/components/apply/SceneBreak";
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
-import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
+import { CONTENT_VIEW_DAYS } from "@/lib/content-access-policy";
 import { REFUND_WINDOW_DAYS } from "@/lib/refund-policy";
 import {
   NOW_STANCE_LABELS,
-  PAID_DEEP_ITEMS,
 } from "@/lib/preview-display";
 
 interface Preview {
@@ -62,13 +58,62 @@ interface Preview {
 }
 
 /* CTA 버튼·보조 문구는 고정 (AI가 선택하지 않음) */
-const CTA_BUTTON = "내 이야기의 다음 장 열기";
-/* 결제 직전 안심 문구 — 실제 운영 기준(최근 결제 결과 도착 1~4분, 환불정책 7일)에 맞춘 고정 문구 */
+/* 결제 직전 안내 — 실제 운영 기준(최근 결제 결과 도착 1~4분)에 맞춘 고정 문구 */
 const CTA_ASSURANCES = [
-  { icon: "✉", text: "결제 후 보통 5분 안에 이메일로 도착" },
-  { icon: "₩", text: "1회 결제 · 추가 결제 없음" },
-  { icon: "↺", text: `결과를 열어보기 전이면 ${REFUND_WINDOW_DAYS}일 안에 전액 환불` },
+  "1회 결제 · 보통 결제 후 5분 안에 완성",
+  `웹에서 ${CONTENT_VIEW_DAYS}일 열람 · 결과 링크 이메일 발송`,
 ];
+
+/* 상황 구분: 서버(신청 내용 + 무료 결과)가 정해서 코드만 보낸다 */
+type Situation = "boundary" | "lover" | "light" | "wait";
+const SITUATION_COPY: Record<
+  Situation,
+  { questions: string[]; includes: [string, string]; bookPersonal: string }
+> = {
+  wait: {
+    questions: [
+      "기다리는 동안 무엇을 해야 할까?",
+      "먼저 연락이 오면 어떻게 답할까?",
+      "다시 연락하기 전 무엇을 확인할까?",
+    ],
+    includes: ["연락을 고려할 때 쓸 첫 문장", "상대의 반응에 따른 다음 행동"],
+    bookPersonal: "책의 첫 편지·메시지 초안·일부 계획은 내 사연에 맞춰 구성됩니다.",
+  },
+  light: {
+    questions: [
+      "첫 문장을 어떻게 시작할까?",
+      "짧은 답만 오면 어떻게 할까?",
+      "답이 없으면 어디서 멈출까?",
+    ],
+    includes: ["연락을 고려할 때 쓸 첫 문장", "상대의 반응에 따른 다음 행동"],
+    bookPersonal: "책의 첫 편지·메시지 초안·일부 계획은 내 사연에 맞춰 구성됩니다.",
+  },
+  lover: {
+    questions: [
+      "이 이야기를 언제 꺼낼까?",
+      "비난 없이 어떻게 말할까?",
+      "같은 싸움을 반복하지 않으려면 무엇을 합의할까?",
+    ],
+    includes: ["이야기를 꺼낼 때 쓸 첫 문장", "상대의 반응에 따른 다음 행동"],
+    bookPersonal: "책의 첫 편지·메시지 초안·일부 계획은 내 사연에 맞춰 구성됩니다.",
+  },
+  boundary: {
+    questions: [
+      "상대의 경계를 어떻게 지킬까?",
+      "연락 충동이 올라오면 무엇을 할까?",
+      "내 일상을 어떻게 회복할까?",
+    ],
+    includes: ["거리를 지키는 방법", "연락 충동이 올라올 때 할 행동"],
+    bookPersonal: "책의 첫 편지와 일부 계획은 내 사연에 맞춰 구성됩니다.",
+  },
+};
+
+/** 첫 문장만 (마침표·물음표·느낌표 기준, 너무 짧거나 없으면 전체) */
+function firstSentence(text: string): string {
+  const t = (text ?? "").trim();
+  const m = t.match(/^(.{12,}?[.!?。])(\s|$)/);
+  return m ? m[1] : t;
+}
 
 /** 흐림 처리용 자리표시 문장 (실제 결과 아님 — 유출 불가) */
 const BLUR_LINES = [
@@ -144,6 +189,7 @@ export default function PreviewExperience({
   const [name, setName] = useState<string>("");
   /* 주문별 결제 금액 — 사과 쿠폰 적용 주문이면 쿠폰가 */
   const [price, setPrice] = useState<number>(() => listPriceKRW());
+  const [situation, setSituation] = useState<Situation | null>(null);
   const [showLoading, setShowLoading] = useState(false);
   const [slowNote, setSlowNote] = useState(false); // 15초 이상 걸릴 때 안심 문구
   const tries = useRef(0); // pending 폴링 횟수
@@ -199,6 +245,8 @@ export default function PreviewExperience({
           setName(json.applicantName.trim());
         }
         if (isAllowedPrice(json.paymentAmount)) setPrice(json.paymentAmount);
+        if (typeof json.situation === "string" && json.situation in SITUATION_COPY)
+          setSituation(json.situation as Situation);
         setPreview(json.preview as Preview);
         setPhase("ready");
         try {
@@ -444,7 +492,6 @@ export default function PreviewExperience({
 
   /* ---------- ready: 같은 화면에서 fade로 preview 공개 ---------- */
   if (!preview) return null;
-  const leadText = preview.cta_lead_text;
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
   /* 메시지 결제는 항상 product=message 를 명시 (책·패키지를 봤다가 돌아와도 메시지 가격으로) */
   const messageHref = `${payHref}&product=message`;
@@ -459,23 +506,22 @@ export default function PreviewExperience({
       : want === "bundle"
         ? `메시지 + 책 함께 받기 · ${bundleNow.toLocaleString()}원`
         : null;
-  const isApologyCoupon = price === APOLOGY_PRICE_KRW;
   const onCtaClick = (where: string) => {
     trackEvent("payment_cta_click", { order: orderNumber });
     logPayEvent(orderNumber, "preview_cta_click", where);
   };
-  /* 결제하면 바로 열리는 것 — 이 사람의 미리보기에서 잠가 둔 부분과 1:1로 연결 */
+  /* 무료 결론 한 줄 = 무료 분석 05의 설명 첫 문장 그대로 */
   const stanceLabel = NOW_STANCE_LABELS[preview.now_plan.stance] ?? "";
-  const unlockItems = [
-    stanceLabel
-      ? `‘${stanceLabel}’ — 언제까지, 무엇을 보고 다음 행동을 정할지`
-      : "언제까지, 무엇을 보고 다음 행동을 정할지",
-    preview.partner_reading.modes[0]
-      ? `그 사람의 ‘${preview.partner_reading.modes[0]}’ 반응 뒤의 감정과, 답장 유형별 대응`
-      : "그 사람의 반응별 대응 — 반가운 답 · 단답 · 무응답",
-    "연락한다면 첫 메시지의 방향과 피해야 할 말",
-    "월화의 첫 편지 전문 + 24시간 · 7일 · 21일 가이드",
-  ];
+  const conclusion = firstSentence(preview.now_plan.why);
+  /* 서버가 준 상황 구분이 없으면(구버전 응답) 무료 결과의 방향으로 판단 */
+  const sit: Situation =
+    situation ??
+    (preview.now_plan.stance === "hold_boundary"
+      ? "boundary"
+      : preview.now_plan.stance === "light_contact"
+        ? "light"
+        : "wait");
+  const copy = SITUATION_COPY[sit];
 
   /* 카드 사이 장면 — 이 사람의 미리보기 내용(상대 반응·지금 할 일)에 맞춰 고른다 */
   const firstMode = preview.partner_reading.modes[0] ?? "";
@@ -701,71 +747,61 @@ export default function PreviewExperience({
       </section>
 
       <SceneBreak
-        image="/wolhwa/result-cards.webp"
-        eyebrow="전체 결과"
-        line={"상대의 반응부터\n지금 해야 할 행동까지"}
-        position="object-center"
-      />
-
-      {/* ---------- E. 전체 결과에서 더 깊게 보는 것 (고정 목록) ---------- */}
-      <section className="mt-4 px-6">
-        <p className="font-display text-center text-[1.02rem] font-medium text-ivory">
-          전체 결과에서 더 깊게 보는 것
-        </p>
-        <p className="mt-2 text-center text-[0.78rem] font-light text-ivory-dim">
-          방향은 봤어요. 이제 남은 건 언제·어떻게예요
-        </p>
-        <ul className="mx-auto mt-4 flex max-w-md flex-col gap-2">
-          {PAID_DEEP_ITEMS.map((item) => (
-            <li
-              key={item}
-              className="flex items-center justify-between gap-3 rounded-xl border border-gold-dim/20 bg-ink-soft px-4 py-3"
-            >
-              <span className="text-[0.86rem] text-ivory">{item}</span>
-              <span aria-hidden className="shrink-0 text-[0.7rem] text-gold-dim/80">🔒</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <SceneBreak
         video="/book/v3/w-final.mp4"
         poster="/book/v3/w-final.webp"
         eyebrow="다음 장"
         line={name ? `여기서부터는,\n${name}님만의 이야기예요` : "여기서부터는,\n당신만의 이야기예요"}
       />
 
-      {/* ---------- 가격은 여기서 처음 등장 ---------- */}
+      {/* ---------- 마지막 결제 안내: 무료 결론 한 줄 → 남은 질문 3개 → 메시지 → 책(추가 선택) ---------- */}
       <section className="mt-4 px-6 text-center">
-        <div className="mx-auto max-w-md rounded-2xl border border-thread/30 bg-gradient-to-b from-[#160d10] to-ink-soft px-6 py-7">
-          <p className="text-[0.65rem] tracking-[0.3em] text-thread/90">
+        <div className="mx-auto max-w-md rounded-2xl border border-thread/30 bg-gradient-to-b from-[#160d10] to-ink-soft px-6 py-7 text-left">
+          <p className="text-center text-[0.65rem] tracking-[0.3em] text-thread/90">
             여기까지가 월화가 먼저 전한 이야기예요
           </p>
-          <p className="mt-4 whitespace-pre-line text-[0.9rem] font-light leading-[2] text-ivory">
-            {leadText}
-          </p>
-          <p className="mt-5 text-[0.85rem] font-light leading-[1.9] text-gold">
-            {name
-              ? `여기서 멈추면, ${name}님 이야기는 이 페이지에서 끝나요.`
-              : "여기서 멈추면, 이야기는 이 페이지에서 끝나요."}
-            <br />
-            다음 장부터는 오직 당신의 사연으로만 쓰여요.
-          </p>
-          <div className="mt-6 rounded-xl border border-gold-dim/25 bg-ink/50 px-4 py-4 text-left">
-            <p className="text-[0.7rem] tracking-wider text-gold/80">결제하면 바로 열리는 것</p>
-            <ul className="mt-2.5 flex flex-col gap-2">
-              {unlockItems.map((t) => (
-                <li key={t} className="flex gap-2.5 text-[0.84rem] leading-[1.75] text-ivory">
-                  <span aria-hidden className="mt-[0.15rem] shrink-0 text-[0.7rem] text-thread">✦</span>
-                  <span className="min-w-0">{t}</span>
-                </li>
-              ))}
-            </ul>
+          {/* ① 무료 결론 — 무료 분석(05)과 같은 문장을 그대로. 새 결론·불안 문구를 더하지 않는다 */}
+          <div className="mt-5 rounded-xl border border-gold-dim/25 bg-ink/50 px-4 py-4">
+            <p className="text-[0.7rem] tracking-wider text-gold/80">
+              {name ? `${name}님에게 먼저 전한 결론` : "먼저 전한 결론"}
+              {stanceLabel && <span className="mt-1 block text-[0.8rem] text-gold">{stanceLabel}</span>}
+            </p>
+            <p className="mt-2 text-[0.9rem] leading-[1.95] text-ivory">{conclusion}</p>
           </div>
+          {/* ② 내 상황에서 남은 질문 3개 */}
+          <p className="mt-6 text-[0.7rem] tracking-wider text-gold/80">
+            {name ? `${name}님 상황에서 남은 질문` : "내 상황에서 남은 질문"}
+          </p>
+          <ul className="mt-2.5 flex flex-col gap-2">
+            {copy.questions.map((q) => (
+              <li
+                key={q}
+                className="flex gap-2.5 rounded-xl border border-gold-dim/20 bg-ink-soft px-4 py-3 text-[0.88rem] leading-[1.7] text-ivory"
+              >
+                <span aria-hidden className="shrink-0 text-thread">Q</span>
+                <span className="min-w-0">{q}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* ③ 월화의 메시지 — 이 자리의 중심 상품 */}
+        <div className="mx-auto mt-6 max-w-md">
+          <p className="font-display text-[1.08rem] font-semibold text-ivory">
+            이제, 어떻게 움직일지 함께 정리해요.
+          </p>
+          <p className="mt-3 text-[0.86rem] font-light leading-[1.95] text-ivory-dim">
+            월화의 메시지에는 들려주신 사연을 바탕으로
+            <br />
+            지금 할 행동과 멈출 행동,
+            <br />
+            {copy.includes[0]},
+            <br />
+            {copy.includes[1]}을 담아요.
+          </p>
           {want ? (
-            <p className="mt-4 text-[0.78rem] text-ivory-dim">
+            <p className="mt-4 text-[0.82rem] text-ivory-dim">
               {want === "book" ? "고르신 상품 · 개인화 PDF 책" : "고르신 상품 · 메시지 + 책 패키지"}
-              <span className="ml-2 text-thread">{wantPrice.toLocaleString()}원</span>
+              <span className="ml-2 font-semibold text-ivory">{wantPrice.toLocaleString()}원</span>
               {want === "bundle" && isPromoActive() && (
                 <span className="mt-1 block text-[0.74rem] text-gold/90">
                   패키지 특가 {PROMO_DEADLINE_TEXT} · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원
@@ -773,24 +809,19 @@ export default function PreviewExperience({
               )}
             </p>
           ) : (
-          <p className="mt-5 text-[0.78rem] text-ivory-dim">
-            {priceBadge(price).strike !== null && (
-              <span className="line-through opacity-60">
-                {priceBadge(price).strike!.toLocaleString()}원
+            <p className="mt-4 text-[0.82rem] text-ivory-dim">
+              월화의 메시지
+              {priceBadge(price).strike !== null && (
+                <span className="ml-2 line-through opacity-60">
+                  {priceBadge(price).strike!.toLocaleString()}원
+                </span>
+              )}
+              {priceBadge(price).label && (
+                <span className="ml-2 text-thread">{priceBadge(price).label}</span>
+              )}
+              <span className="font-display ml-2 text-[1.2rem] font-semibold text-ivory">
+                {price.toLocaleString()}원
               </span>
-            )}
-            <span className="ml-2 text-thread">
-              {priceBadge(price).label ? `${priceBadge(price).label} ` : ""}
-            </span>
-            <span className="font-display ml-1 text-[1.25rem] font-semibold text-ivory">
-              {price.toLocaleString()}원
-            </span>
-            <span className="ml-1.5 text-[0.74rem] text-ivory-dim/80">· 1회</span>
-          </p>
-          )}
-          {!want && isPromoActive() && price < RITUAL_REGULAR_PRICE_KRW && (
-            <p className="mt-2 text-[0.74rem] text-gold/90">
-              10월 5일부터는 {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원으로 올라요
             </p>
           )}
         </div>
@@ -800,12 +831,9 @@ export default function PreviewExperience({
             <Link
               href={mainHref}
               onClick={() => onCtaClick("main")}
-              className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
+              className="cta-glow mt-5 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
             >
-              {mainLabel ??
-                (name
-                  ? `${name}님의 다음 장 이어서 읽기 · ${priceText}`
-                  : `${CTA_BUTTON} · ${priceText}`)}
+              {mainLabel ?? "내 상황에 맞는 다음 행동 보기"}
             </Link>
             {want && (
               <Link
@@ -815,30 +843,37 @@ export default function PreviewExperience({
                 메시지만 받기 · {priceText}
               </Link>
             )}
-            <ul className="mx-auto mt-5 flex max-w-md flex-col gap-1.5 text-left">
+            <div className="mx-auto mt-4 flex max-w-md flex-col gap-1 text-[0.74rem] leading-[1.8] text-ivory-dim">
               {CTA_ASSURANCES.map((a) => (
-                <li key={a.text} className="flex items-center justify-center gap-2 text-[0.76rem] text-ivory-dim">
-                  <span aria-hidden className="w-4 text-center text-gold/80">{a.icon}</span>
-                  <span>{a.text}</span>
-                </li>
+                <p key={a}>{a}</p>
               ))}
-            </ul>
-            <p className="mx-auto mt-2.5 max-w-md text-[0.7rem] text-ivory-dim/70">
-              카드 · 간편결제 · {CONTENT_VIEW_LINE} ·{" "}
-              <Link href="/refund" className="underline underline-offset-2">환불정책</Link>
-            </p>
+              <p className="text-ivory-dim/70">
+                열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불 ·{" "}
+                <Link href="/refund" className="underline underline-offset-2">환불정책</Link>
+              </p>
+            </div>
 
-            {/* ---------- 월화가 함께 건네는 책 (패키지 소개) ---------- */}
-            {BOOK_SALES_OPEN && (
-              <div ref={bookRef}>
-              <BookPackageCard
-                orderNumber={orderNumber}
-                name={name}
-                price={price}
-                bundleHref={`${payHref}&product=bundle`}
-                bookHref={`${payHref}&product=book`}
-                onBundleClick={() => onCtaClick("bundle")}
-              />
+            {/* ④ 책은 추가 선택으로 짧게 (책·패키지를 고르고 온 손님에게는 생략) */}
+            {BOOK_SALES_OPEN && !want && (
+              <div
+                ref={bookRef}
+                className="mx-auto mt-10 max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft/60 px-6 py-6 text-left"
+              >
+                <p className="font-display text-[0.98rem] font-semibold text-ivory">
+                  기다리는 동안 다시 펼쳐 볼 책도 필요하다면
+                </p>
+                <p className="mt-2.5 text-[0.82rem] font-light leading-[1.9] text-ivory-dim">
+                  상황별 문장과 체크리스트를 담은 PDF 책을 함께 받을 수 있어요.
+                  <br />
+                  {copy.bookPersonal}
+                </p>
+                <Link
+                  href={`/book?order=${encodeURIComponent(orderNumber)}`}
+                  onClick={() => onCtaClick("book")}
+                  className="mt-4 flex h-11 items-center justify-center rounded-full border border-gold/40 text-[0.86rem] text-gold active:opacity-80"
+                >
+                  메시지 + 책 구성 보기
+                </Link>
               </div>
             )}
           </>
@@ -884,10 +919,10 @@ export default function PreviewExperience({
             onClick={() => onCtaClick("sticky")}
             className="mx-auto flex h-12 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-medium text-ivory active:opacity-85"
           >
-            {mainLabel ?? `${name ? `${name}님의 다음 장 이어서 보기` : "다음 장 이어서 보기"} · ${priceText}`}
+            {mainLabel ?? `내 상황에 맞는 다음 행동 보기 · ${priceText}`}
           </Link>
           <p className="mx-auto mt-1.5 max-w-md text-center text-[0.68rem] text-ivory-dim/80">
-            보통 5분 안에 이메일로 · 열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불
+            1회 결제 · 보통 5분 안에 완성 · 열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불
           </p>
         </div>,
         document.body
