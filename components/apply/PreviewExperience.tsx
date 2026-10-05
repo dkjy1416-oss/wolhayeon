@@ -38,6 +38,7 @@ import { logPayEvent } from "@/lib/pay-events";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
 import { CONTENT_VIEW_LINE } from "@/lib/content-access-policy";
+import { REFUND_WINDOW_DAYS } from "@/lib/refund-policy";
 import {
   NOW_STANCE_LABELS,
   PAID_DEEP_ITEMS,
@@ -62,9 +63,11 @@ interface Preview {
 
 /* CTA 버튼·보조 문구는 고정 (AI가 선택하지 않음) */
 const CTA_BUTTON = "내 이야기의 다음 장 열기";
-const CTA_HELPERS = [
-  "1회 결제 · 추가 결제 없음",
-  "개인 리추얼 · 24시간/7일/21일 가이드 포함",
+/* 결제 직전 안심 문구 — 실제 운영 기준(최근 결제 결과 도착 1~4분, 환불정책 7일)에 맞춘 고정 문구 */
+const CTA_ASSURANCES = [
+  { icon: "✉", text: "결제 후 보통 5분 안에 이메일로 도착" },
+  { icon: "₩", text: "1회 결제 · 추가 결제 없음" },
+  { icon: "↺", text: `결과를 열어보기 전이면 ${REFUND_WINDOW_DAYS}일 안에 전액 환불` },
 ];
 
 /** 흐림 처리용 자리표시 문장 (실제 결과 아님 — 유출 불가) */
@@ -328,6 +331,7 @@ export default function PreviewExperience({
   const mainCtaRef = useRef<HTMLDivElement>(null);
   /* 책 소개가 보이는 동안엔 하단 고정 버튼(메시지 결제)을 숨겨 책 버튼을 가리지 않게 */
   const bookRef = useRef<HTMLDivElement>(null);
+  const endSeen = useRef(false);
   useEffect(() => {
     if (phase !== "ready" || !PAYMENTS_OPEN) return;
     const onScroll = () => {
@@ -337,6 +341,11 @@ export default function PreviewExperience({
       const ctaVisible = !!m && m.top < window.innerHeight && m.bottom > 0;
       const bk = bookRef.current?.getBoundingClientRect();
       const bookVisible = !!bk && bk.top < window.innerHeight && bk.bottom > 0;
+      /* 결제 안내까지 읽은 손님 수 측정 (주문당 1회) — "도달"과 "결정" 중 어디가 문제인지 보기 위함 */
+      if (ctaVisible && !endSeen.current) {
+        endSeen.current = true;
+        logPayEvent(orderNumber, "preview_end_seen");
+      }
       setShowSticky(pastStart && !ctaVisible && !bookVisible);
     };
     onScroll();
@@ -451,7 +460,22 @@ export default function PreviewExperience({
         ? `메시지 + 책 함께 받기 · ${bundleNow.toLocaleString()}원`
         : null;
   const isApologyCoupon = price === APOLOGY_PRICE_KRW;
-  const ctaLabel = `내 전체 이야기 이어서 보기 · ${priceText}`;
+  const onCtaClick = (where: string) => {
+    trackEvent("payment_cta_click", { order: orderNumber });
+    logPayEvent(orderNumber, "preview_cta_click", where);
+  };
+  /* 결제하면 바로 열리는 것 — 이 사람의 미리보기에서 잠가 둔 부분과 1:1로 연결 */
+  const stanceLabel = NOW_STANCE_LABELS[preview.now_plan.stance] ?? "";
+  const unlockItems = [
+    stanceLabel
+      ? `‘${stanceLabel}’ — 언제까지, 무엇을 보고 다음 행동을 정할지`
+      : "언제까지, 무엇을 보고 다음 행동을 정할지",
+    preview.partner_reading.modes[0]
+      ? `그 사람의 ‘${preview.partner_reading.modes[0]}’ 반응 뒤의 감정과, 답장 유형별 대응`
+      : "그 사람의 반응별 대응 — 반가운 답 · 단답 · 무응답",
+    "연락한다면 첫 메시지의 방향과 피해야 할 말",
+    "월화의 첫 편지 전문 + 24시간 · 7일 · 21일 가이드",
+  ];
 
   /* 카드 사이 장면 — 이 사람의 미리보기 내용(상대 반응·지금 할 일)에 맞춰 고른다 */
   const firstMode = preview.partner_reading.modes[0] ?? "";
@@ -637,9 +661,19 @@ export default function PreviewExperience({
               <p className="mt-1 text-[0.86rem] leading-[1.85] text-ivory-dim">이 기준이 채워지면 그때 한 번, 짧고 가볍게</p>
             </div>
             <div className="absolute inset-0 flex items-center justify-center bg-ink/40">
-              <p className="rounded-full border border-gold/30 bg-ink/80 px-4 py-1.5 text-[0.74rem] text-gold">
-                🔒 언제까지·무엇을 보고 정할지는 전체 결과에서
-              </p>
+              {PAYMENTS_OPEN ? (
+                <Link
+                  href={mainHref}
+                  onClick={() => onCtaClick("lock05")}
+                  className="rounded-full border border-gold/40 bg-ink/85 px-4 py-1.5 text-[0.74rem] text-gold underline-offset-4 active:opacity-80"
+                >
+                  🔒 언제까지·무엇을 보고 정할지 열어보기 ›
+                </Link>
+              ) : (
+                <p className="rounded-full border border-gold/30 bg-ink/80 px-4 py-1.5 text-[0.74rem] text-gold">
+                  🔒 언제까지·무엇을 보고 정할지는 전체 결과에서
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -717,6 +751,17 @@ export default function PreviewExperience({
             <br />
             다음 장부터는 오직 당신의 사연으로만 쓰여요.
           </p>
+          <div className="mt-6 rounded-xl border border-gold-dim/25 bg-ink/50 px-4 py-4 text-left">
+            <p className="text-[0.7rem] tracking-wider text-gold/80">결제하면 바로 열리는 것</p>
+            <ul className="mt-2.5 flex flex-col gap-2">
+              {unlockItems.map((t) => (
+                <li key={t} className="flex gap-2.5 text-[0.84rem] leading-[1.75] text-ivory">
+                  <span aria-hidden className="mt-[0.15rem] shrink-0 text-[0.7rem] text-thread">✦</span>
+                  <span className="min-w-0">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
           {want ? (
             <p className="mt-4 text-[0.78rem] text-ivory-dim">
               {want === "book" ? "고르신 상품 · 개인화 PDF 책" : "고르신 상품 · 메시지 + 책 패키지"}
@@ -728,7 +773,7 @@ export default function PreviewExperience({
               )}
             </p>
           ) : (
-          <p className="mt-4 text-[0.78rem] text-ivory-dim">
+          <p className="mt-5 text-[0.78rem] text-ivory-dim">
             {priceBadge(price).strike !== null && (
               <span className="line-through opacity-60">
                 {priceBadge(price).strike!.toLocaleString()}원
@@ -736,8 +781,11 @@ export default function PreviewExperience({
             )}
             <span className="ml-2 text-thread">
               {priceBadge(price).label ? `${priceBadge(price).label} ` : ""}
+            </span>
+            <span className="font-display ml-1 text-[1.25rem] font-semibold text-ivory">
               {price.toLocaleString()}원
             </span>
+            <span className="ml-1.5 text-[0.74rem] text-ivory-dim/80">· 1회</span>
           </p>
           )}
           {!want && isPromoActive() && price < RITUAL_REGULAR_PRICE_KRW && (
@@ -751,10 +799,7 @@ export default function PreviewExperience({
             <div ref={mainCtaRef} />
             <Link
               href={mainHref}
-              onClick={() => {
-                trackEvent("payment_cta_click", { order: orderNumber });
-                logPayEvent(orderNumber, "preview_cta_click");
-              }}
+              onClick={() => onCtaClick("main")}
               className="cta-glow mt-7 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
             >
               {mainLabel ??
@@ -770,14 +815,18 @@ export default function PreviewExperience({
                 메시지만 받기 · {priceText}
               </Link>
             )}
-            <div className="mx-auto mt-4 flex max-w-md flex-col gap-1">
-              {CTA_HELPERS.map((h, i) => (
-                <p key={i} className="text-[0.72rem] text-ivory-dim/70">
-                  {h}
-                </p>
+            <ul className="mx-auto mt-5 flex max-w-md flex-col gap-1.5 text-left">
+              {CTA_ASSURANCES.map((a) => (
+                <li key={a.text} className="flex items-center justify-center gap-2 text-[0.76rem] text-ivory-dim">
+                  <span aria-hidden className="w-4 text-center text-gold/80">{a.icon}</span>
+                  <span>{a.text}</span>
+                </li>
               ))}
-              <p className="text-[0.72rem] text-ivory-dim">{CONTENT_VIEW_LINE}</p>
-            </div>
+            </ul>
+            <p className="mx-auto mt-2.5 max-w-md text-[0.7rem] text-ivory-dim/70">
+              카드 · 간편결제 · {CONTENT_VIEW_LINE} ·{" "}
+              <Link href="/refund" className="underline underline-offset-2">환불정책</Link>
+            </p>
 
             {/* ---------- 월화가 함께 건네는 책 (패키지 소개) ---------- */}
             {BOOK_SALES_OPEN && (
@@ -788,10 +837,7 @@ export default function PreviewExperience({
                 price={price}
                 bundleHref={`${payHref}&product=bundle`}
                 bookHref={`${payHref}&product=book`}
-                onBundleClick={() => {
-                  trackEvent("payment_cta_click", { order: orderNumber });
-                  logPayEvent(orderNumber, "preview_cta_click");
-                }}
+                onBundleClick={() => onCtaClick("bundle")}
               />
               </div>
             )}
@@ -835,14 +881,14 @@ export default function PreviewExperience({
           <Link
             href={mainHref}
             tabIndex={showSticky ? 0 : -1}
-            onClick={() => {
-              trackEvent("payment_cta_click", { order: orderNumber });
-              logPayEvent(orderNumber, "preview_cta_click");
-            }}
+            onClick={() => onCtaClick("sticky")}
             className="mx-auto flex h-12 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-medium text-ivory active:opacity-85"
           >
             {mainLabel ?? `${name ? `${name}님의 다음 장 이어서 보기` : "다음 장 이어서 보기"} · ${priceText}`}
           </Link>
+          <p className="mx-auto mt-1.5 max-w-md text-center text-[0.68rem] text-ivory-dim/80">
+            보통 5분 안에 이메일로 · 열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불
+          </p>
         </div>,
         document.body
       )}
