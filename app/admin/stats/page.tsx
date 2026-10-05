@@ -50,7 +50,7 @@ export default async function AdminStatsPage() {
     const res = await supabase
       .from("ritual_orders")
       .select(
-        "order_number, created_at, paid_at, preview_generated_at, email, applicant_name, payment_amount, remind_sent_at"
+        "order_number, created_at, paid_at, preview_generated_at, email, applicant_name, payment_amount, remind_sent_at, product"
       )
       .gt("created_at", since)
       .order("created_at", { ascending: false })
@@ -71,8 +71,22 @@ export default async function AdminStatsPage() {
     }
   }
 
-  const real = rows.filter(
+  /* 결제는 "결제한 날" 기준으로 센다 (신청이 기간 밖이어도 기간 안에 결제했으면 포함) */
+  const paidRes = await supabase
+    .from("ritual_orders")
+    .select("order_number, paid_at, payment_amount, email")
+    .eq("payment_status", "paid")
+    .gt("paid_at", since)
+    .limit(3000);
+  const paidRows = ((paidRes.data ?? []) as { order_number: string; paid_at: string; payment_amount: number | null; email: string | null }[]).filter(
     (r) => !OPERATOR_EMAILS.has((r.email ?? "").toLowerCase())
+  );
+
+  const real = rows.filter(
+    (r) =>
+      !OPERATOR_EMAILS.has((r.email ?? "").toLowerCase()) &&
+      /* 책 쿠폰 메일로 자동 만든 주문은 손님 신청이 아니므로 제외 */
+      !((r as { product?: string | null }).product === "book" && r.payment_amount === 26000)
   );
 
   /* ---- 일별 집계 ---- */
@@ -86,10 +100,13 @@ export default async function AdminStatsPage() {
       byDay.get(d) ?? { applied: 0, preview: 0, paid: 0, revenue: 0 };
     cur.applied += 1;
     if (r.preview_generated_at) cur.preview += 1;
-    if (r.paid_at) {
-      cur.paid += 1;
-      cur.revenue += r.payment_amount ?? 0;
-    }
+    byDay.set(d, cur);
+  }
+  for (const r of paidRows) {
+    const d = kstDate(r.paid_at);
+    const cur = byDay.get(d) ?? { applied: 0, preview: 0, paid: 0, revenue: 0 };
+    cur.paid += 1;
+    cur.revenue += r.payment_amount ?? 0;
     byDay.set(d, cur);
   }
   const days = [...byDay.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1));
@@ -106,8 +123,8 @@ export default async function AdminStatsPage() {
   const total = {
     applied: real.length,
     preview: real.filter((r) => r.preview_generated_at).length,
-    paid: real.filter((r) => r.paid_at).length,
-    revenue: real.reduce((s, r) => s + (r.paid_at ? r.payment_amount ?? 0 : 0), 0),
+    paid: paidRows.length,
+    revenue: paidRows.reduce((s, r) => s + (r.payment_amount ?? 0), 0),
   };
   const convApplyPay = total.applied
     ? ((total.paid / total.applied) * 100).toFixed(1)
