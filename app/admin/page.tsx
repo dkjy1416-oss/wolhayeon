@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PAYMENTS_OPEN } from "@/lib/payment-availability";
-import { APOLOGY_PRICE_KRW } from "@/lib/ritual-types";
+import { APOLOGY_PRICE_KRW, BOOK_COUPON_PRICE_KRW, isPromoActive } from "@/lib/ritual-types";
 import {
   isOperatorEmail,
   kstDate,
@@ -23,6 +23,7 @@ export const dynamic = "force-dynamic";
  */
 
 interface OrderRow {
+  product?: string | null;
   order_number: string;
   applicant_name: string | null;
   email: string | null;
@@ -78,7 +79,7 @@ export default async function AdminDashboard() {
       supabase
         .from("ritual_orders")
         .select(
-          "order_number, applicant_name, email, created_at, paid_at, preview_generated_at, payment_status, payment_amount, generation_status, review_status, delivery_status"
+          "order_number, applicant_name, email, created_at, paid_at, preview_generated_at, payment_status, payment_amount, generation_status, review_status, delivery_status, product"
         )
         .gt("created_at", weekStart)
         .order("created_at", { ascending: false })
@@ -118,7 +119,10 @@ export default async function AdminDashboard() {
   );
 
   const dayOf = (key: string) => {
-    const rows = recent.filter((r) => kstDate(r.created_at) === key);
+    /* 책 쿠폰 메일로 자동 만든 주문(손님이 직접 낸 신청 아님)은 신청 수에서 제외 */
+    const rows = recent.filter(
+      (r) => kstDate(r.created_at) === key && !(r.product === "book" && r.payment_amount === BOOK_COUPON_PRICE_KRW)
+    );
     const paid = recent.filter(
       (r) => r.paid_at && kstDate(r.paid_at) === key
     );
@@ -132,7 +136,8 @@ export default async function AdminDashboard() {
   const today = dayOf(todayKey);
   const yesterday = dayOf(yesterdayKey);
 
-  const weekPaid = recent.filter((r) => r.paid_at);
+  /* 최근 7일 "결제일" 기준 (예전엔 신청일 기준이라 예전에 신청하고 최근 결제한 주문이 빠졌음) */
+  const weekPaid = paidAll.filter((r) => r.paid_at && r.paid_at > weekStart);
   const weekRevenue = weekPaid.reduce((s, r) => s + (r.payment_amount ?? 0), 0);
 
   /* 지금 처리할 일 */
@@ -168,9 +173,12 @@ export default async function AdminDashboard() {
   );
   const reviewPending = reviewRes.error ? 0 : (reviewRes.data ?? []).length;
 
-  const couponPending = recent.filter(
-    (r) => r.payment_status === "pending" && r.payment_amount === APOLOGY_PRICE_KRW
-  ).length;
+  /* 사과 쿠폰은 10/4 마감 — 마감 뒤에는 대기 건수를 보여 주지 않음 */
+  const couponPending = isPromoActive()
+    ? recent.filter(
+        (r) => r.payment_status === "pending" && r.payment_amount === APOLOGY_PRICE_KRW
+      ).length
+    : 0;
 
   const todos: { label: string; count: number; href: string; tone: "warn" | "info" }[] = [];
   if (stuck.length)
