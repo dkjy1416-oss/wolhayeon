@@ -13,6 +13,15 @@ export const dynamic = "force-dynamic";
 
 const OPERATOR_EMAILS = new Set(["dkjy1416@naver.com", "tosstest@gmail.com"]);
 const DAYS = 14;
+/** 미리보기 마지막 결제 안내를 바꾼 시각 (이후 미리보기를 본 주문만 따로 비교) */
+const CTA_CHANGE_AT = "2026-10-05T05:30:00.000Z"; // 2026-10-05 14:30 KST
+const CTA_CODE_LABELS: Record<string, string> = {
+  main: "본문 버튼",
+  sticky: "하단 고정 버튼",
+  lock05: "05번 잠금",
+  book: "책 구성 보기",
+  bundle: "패키지(이전 화면)",
+};
 
 interface Row {
   order_number: string;
@@ -311,6 +320,69 @@ export default async function AdminStatsPage() {
     .sort((a, b) => (a.paid_at! < b.paid_at! ? 1 : -1))
     .slice(0, 5);
 
+  /* ---- 결제 안내 변경 이후 (같은 주문 기준, 중복 제외) ---- */
+  let cohort: {
+    reached: number;
+    endSeen: number;
+    clicked: number;
+    paid: number;
+    byCode: [string, number][];
+  } | null = null;
+  {
+    const co = await supabase
+      .from("ritual_orders")
+      .select("order_number, email, product, payment_amount, payment_status")
+      .gte("preview_generated_at", CTA_CHANGE_AT)
+      .limit(5000);
+    if (!co.error) {
+      const orders = (
+        (co.data ?? []) as {
+          order_number: string;
+          email: string | null;
+          product: string | null;
+          payment_amount: number | null;
+          payment_status: string | null;
+        }[]
+      ).filter(
+        (r) =>
+          !OPERATOR_EMAILS.has((r.email ?? "").toLowerCase()) &&
+          !(r.product === "book" && r.payment_amount === 26000)
+      );
+      const nums = orders.map((r) => r.order_number);
+      const endSeen = new Set<string>();
+      const clicked = new Set<string>();
+      const codeSets = new Map<string, Set<string>>();
+      for (let i = 0; i < nums.length; i += 200) {
+        const ev = await supabase
+          .from("payment_events")
+          .select("order_number, event, code")
+          .in("order_number", nums.slice(i, i + 200))
+          .in("event", ["preview_end_seen", "preview_cta_click"])
+          .gte("created_at", CTA_CHANGE_AT);
+        for (const e of (ev.data ?? []) as { order_number: string; event: string; code: string | null }[]) {
+          if (e.event === "preview_end_seen") endSeen.add(e.order_number);
+          else {
+            clicked.add(e.order_number);
+            const k = e.code ?? "-";
+            const set = codeSets.get(k) ?? new Set<string>();
+            set.add(e.order_number);
+            codeSets.set(k, set);
+          }
+        }
+      }
+      cohort = {
+        reached: orders.length,
+        endSeen: endSeen.size,
+        clicked: clicked.size,
+        paid: orders.filter((r) => r.payment_status === "paid").length,
+        byCode: [...codeSets.entries()]
+          .map(([k, v]) => [CTA_CODE_LABELS[k] ?? k, v.size] as [string, number])
+          .sort((a, b) => b[1] - a[1]),
+      };
+    }
+  }
+  const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : "-");
+
   return (
     <main className="mx-auto min-h-[100svh] w-full max-w-2xl px-6 py-12 text-ivory">
       <div className="flex items-baseline justify-between">
@@ -466,6 +538,41 @@ export default async function AdminStatsPage() {
         <p className="mt-3 text-[0.82rem] text-ivory-dim">
           결제 퍼널 집계는 payment_events 테이블 생성 후 시작됩니다.
         </p>
+      )}
+
+      {/* 결제 안내 변경 이후 */}
+      <h2 className="font-display mt-10 text-[1rem] font-semibold">
+        결제 안내 변경 이후 (10/5 14:30부터 미리보기를 본 주문)
+      </h2>
+      {cohort ? (
+        <div className="mt-3 rounded-xl border border-gold-dim/25 bg-ink-soft/50 px-5 py-4 text-[0.85rem] leading-[2]">
+          {(
+            [
+              ["미리보기 도달", cohort.reached, ""],
+              ["끝(결제 안내)까지 읽음", cohort.endSeen, pct(cohort.endSeen, cohort.reached)],
+              ["결제 버튼 클릭", cohort.clicked, pct(cohort.clicked, cohort.reached)],
+              ["결제 완료", cohort.paid, pct(cohort.paid, cohort.reached)],
+            ] as [string, number, string][]
+          ).map(([label, n, r]) => (
+            <div key={label} className="flex justify-between gap-3">
+              <span className="text-ivory-dim">{label}</span>
+              <span className="tabular-nums">
+                <b className={label === "결제 완료" && n ? "text-gold" : ""}>{n}</b>
+                {r && <span className="text-ivory-dim/70"> (도달 대비 {r})</span>}
+              </span>
+            </div>
+          ))}
+          {cohort.byCode.length > 0 && (
+            <p className="mt-2 text-[0.78rem] text-ivory-dim">
+              누른 버튼: {cohort.byCode.map(([l, n]) => `${l} ${n}`).join(" · ")}
+            </p>
+          )}
+          <p className="mt-2 text-[0.74rem] text-ivory-dim/70">
+            주문당 한 번만 셉니다. 하루 10건 안팎이라 2주쯤 쌓여야 비교할 만해요.
+          </p>
+        </div>
+      ) : (
+        <p className="mt-3 text-[0.82rem] text-ivory-dim">집계를 불러오지 못했어요.</p>
       )}
 
       {/* CS 이용 */}
