@@ -25,7 +25,7 @@ import {
   LAST_CONVERSATION_OPTIONS,
   optionLabel,
 } from "@/lib/ritual-types";
-import { HIGH_RISK_SAFETY_VALUES } from "@/lib/wolhwa-prompt";
+import { HIGH_RISK_SAFETY_VALUES, BLOCKED_CONTACT_VALUES } from "@/lib/wolhwa-prompt";
 import { sendOpsAlert } from "@/lib/ops-alert";
 
 export type PreviewOutcome =
@@ -37,9 +37,25 @@ export type PreviewOutcome =
       generated: boolean;
       /** 이 주문의 결제 금액 (사과 쿠폰 적용 시 쿠폰가) */
       paymentAmount: number;
+      /** 결제 안내 문구를 고르기 위한 상황 구분 (사연 원문은 보내지 않음) */
+      situation: PreviewSituation;
     }
   | { status: "not_found" }
   | { status: "server_error" };
+
+/** 결제 안내용 상황 구분 — 안전·차단이 최우선, 그다음 현재 연인, 그다음 무료 결과의 방향 */
+export type PreviewSituation = "boundary" | "lover" | "light" | "wait";
+export function previewSituation(
+  order: Pick<RitualOrderRow, "safety_concerns" | "contact_status" | "relationship_type">,
+  stance: string
+): PreviewSituation {
+  const highRisk = (order.safety_concerns ?? []).some((v) => HIGH_RISK_SAFETY_VALUES.includes(v));
+  const blocked = BLOCKED_CONTACT_VALUES.includes(order.contact_status);
+  if (highRisk || blocked || stance === "hold_boundary") return "boundary";
+  if (order.relationship_type === "current_lover") return "lover";
+  if (stance === "light_contact") return "light";
+  return "wait";
+}
 
 function clip(value: string | null | undefined, max: number): string {
   const clean = (value ?? "").replace(/\s+/g, " ").trim();
@@ -458,6 +474,7 @@ export async function getOrCreatePreview(
           preview: cached.data,
           applicantName: order.applicant_name,
           paymentAmount: resolveOrderPrice(order.payment_amount),
+          situation: previewSituation(order, cached.data.now_plan.stance),
           generated: true,
         };
       }
@@ -489,6 +506,7 @@ export async function getOrCreatePreview(
       preview,
       applicantName: order.applicant_name,
           paymentAmount: resolveOrderPrice(order.payment_amount),
+      situation: previewSituation(order, preview.now_plan.stance),
       generated: ai !== null,
     };
   } catch (e) {

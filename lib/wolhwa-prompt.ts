@@ -36,7 +36,7 @@ export const HIGH_RISK_SAFETY_VALUES = [
 ];
 
 /** 연락이 차단된 상태: 접촉 시도를 권하지 않도록 지시 */
-const BLOCKED_CONTACT_VALUES = ["i_blocked", "blocked_by_partner", "both_blocked"];
+export const BLOCKED_CONTACT_VALUES = ["i_blocked", "blocked_by_partner", "both_blocked"];
 
 /** main_wish → 리추얼 방향 */
 const RITUAL_DIRECTION: Record<string, string> = {
