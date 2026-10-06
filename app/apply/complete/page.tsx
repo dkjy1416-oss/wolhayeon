@@ -21,6 +21,7 @@ import {
 import ProductPicker from "@/components/pay/ProductPicker";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import PayEventPing from "@/components/pay/PayEventPing";
+import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
 
@@ -321,6 +322,7 @@ export default async function CompletePage({
               orderName={PRODUCTS[product].orderName}
             />
           </div>
+          <InAppBrowserNotice orderNumber={orderNumber} />
 
           {/* 테스트 결제 단계 전용 — 실결제 전환 시 제거 (TestModeNotices.tsx 참고) */}
           <TestPaymentNotice />
