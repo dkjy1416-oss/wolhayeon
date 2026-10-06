@@ -54,9 +54,11 @@ export default function ProductPicker({
     },
     { key: "book", price: BOOK_PRICE_KRW },
   ];
+  /* 손님이 고르고 들어온 상품을 맨 위에 (미리보기에서 메시지를 눌렀는데 42,900원 패키지가 먼저 보이지 않게) */
+  const ordered = [...items.filter((x) => x.key === selected), ...items.filter((x) => x.key !== selected)];
   return (
     <div className="flex flex-col gap-2.5">
-      {items.map((it) => {
+      {ordered.map((it) => {
         const p = PRODUCTS[it.key];
         const on = it.key === selected;
         return (
