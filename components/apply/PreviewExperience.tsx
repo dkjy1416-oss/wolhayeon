@@ -31,6 +31,7 @@ import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import SceneBreak from "@/components/apply/SceneBreak";
 import PageFlipper from "@/components/book/PageFlipper";
+import ShareStoryCard from "@/components/apply/ShareStoryCard";
 import { BOOK_SAMPLE_PAGES } from "@/lib/book/book-pages";
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
@@ -769,6 +770,15 @@ export default function PreviewExperience({
             </p>
             <p className="mt-2 text-[0.9rem] leading-[1.95] text-ivory">{conclusion}</p>
           </div>
+          {/* 결론 카드 저장·공유 (이름·사연 없이 결론 라벨과 반응 태그만) */}
+          {stanceLabel && (
+            <ShareStoryCard
+              orderNumber={orderNumber}
+              stance={stanceLabel}
+              tags={preview.partner_reading.modes}
+              line={stanceScene.line}
+            />
+          )}
           {/* ② 내 상황에서 남은 질문 3개 */}
           <p className="mt-6 text-[0.7rem] tracking-wider text-gold/80">
             {name ? `${name}님 상황에서 남은 질문` : "내 상황에서 남은 질문"}
