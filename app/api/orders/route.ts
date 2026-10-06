@@ -22,6 +22,7 @@ import { sanitizeAndValidateApplication } from "@/lib/ritual-validation";
 import { createPreviewToken } from "@/lib/preview-auth";
 import { sendOpsAlert } from "@/lib/ops-alert";
 import { kickSweep } from "@/lib/sweep-kick";
+import { listPriceKRW } from "@/lib/ritual-types";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,8 @@ export async function POST(request: Request) {
         가격/상태/주문번호는 DB 기본값. */
   try {
     const supabase = getSupabaseAdmin();
-    const payload: Record<string, unknown> = { ...data };
+    /* 금액은 신청 시점의 정가로 저장 (DB 기본값은 예전 특가 12,900원이라 그대로 두면 관리자 화면·메일에 옛 가격이 보임) */
+    const payload: Record<string, unknown> = { ...data, payment_amount: listPriceKRW() };
     if (submissionId) payload.submission_id = submissionId;
 
     let res = await supabase
@@ -134,7 +136,7 @@ export async function POST(request: Request) {
     ) {
       res = await supabase
         .from("ritual_orders")
-        .insert({ ...data })
+        .insert({ ...data, payment_amount: listPriceKRW() })
         .select("order_number")
         .single();
     }
