@@ -11,6 +11,7 @@ const EVENTS = new Set([
   "home_cta_click",
   "apply_start",
   "apply_complete",
+  "apply_step",
   "order_created",
   "preview_view",
   "payment_cta_click",
