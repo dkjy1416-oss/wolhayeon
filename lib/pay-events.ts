@@ -8,6 +8,8 @@
 export type ClientPayEvent =
   | "preview_cta_click"
   | "preview_end_seen"
+  | "inapp_browser"
+  | "share_card"
   | "pay_page_view"
   | "widget_ready"
   | "widget_error"

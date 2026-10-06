@@ -17,6 +17,8 @@ export const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 export const CLIENT_PAY_EVENTS = [
   "preview_cta_click", // 미리보기 결제 버튼 클릭 (code: main | sticky | lock05 | bundle)
   "preview_end_seen", // 미리보기 끝(결제 안내)까지 읽음
+  "inapp_browser", // 결제 화면을 연 브라우저 (code: instagram | kakaotalk | … | none)
+  "share_card", // 미리보기 스토리 카드 (code: shared | saved)
   "pay_page_view", // 결제 페이지 진입 (code: open | closed)
   "widget_ready", // 결제수단 위젯 표시 완료
   "widget_error", // 결제수단 위젯 로드 실패
