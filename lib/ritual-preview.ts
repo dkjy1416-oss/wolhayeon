@@ -336,7 +336,11 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
    1차 시도 25초 초과 → 템플릿 폴백 노출). 미리보기는 결제 직전 핵심 화면이라
    템플릿 노출을 최소화해야 하므로 여유를 크게 둔다 (route maxDuration 60초). */
 const PREVIEW_AI_TIMEOUT_MS = 50_000;
-const PREVIEW_AI_MAX_TOKENS = 1600;
+const PREVIEW_AI_MAX_TOKENS = 3000;
+/* 한 요청 안에서 AI 미리보기에 쓸 수 있는 전체 시간 (route maxDuration 120초 안에서 여유) —
+   10/1~10/6 실측: 사연이 긴 손님(중앙값 268자)일수록 한 조각이 실패해 템플릿이 노출됐다(23/68건).
+   실패한 조각만 한 번 더 쓰게 해서 템플릿 노출을 줄인다. */
+const PREVIEW_BUDGET_MS = 100_000;
 
 function getPreviewModelId(): string {
   /* 무료 분석은 결제 전환의 핵심 — 문장 정확도를 위해 Sonnet 기본 (운영자 선택 9/30) */
@@ -360,9 +364,14 @@ async function callPart(
   client: Anthropic,
   order: RitualOrderRow,
   keys: readonly string[],
-  label: string
+  label: string,
+  timeoutMs: number = PREVIEW_AI_TIMEOUT_MS,
+  retry = false
 ): Promise<Record<string, unknown> | null> {
   const t0 = Date.now();
+  const retryNote = retry
+    ? "\n\n[중요] 직전 작성이 길이·형식 문제로 실패했습니다. 모든 규칙을 지키면서 각 항목을 더 짧고 간결하게 작성합니다."
+    : "";
   try {
     const message = await client.messages.create(
       {
@@ -372,12 +381,12 @@ async function callPart(
         messages: [
           {
             role: "user",
-            content: `${buildPreviewUserPrompt(order)}\n\n[이번 요청의 출력 범위]\n이번에는 다음 항목만 작성합니다: ${keys.join(", ")}. 나머지 항목은 다른 요청에서 작성되므로 쓰지 않습니다. 모든 규칙은 그대로 지킵니다.`,
+            content: `${buildPreviewUserPrompt(order)}\n\n[이번 요청의 출력 범위]\n이번에는 다음 항목만 작성합니다: ${keys.join(", ")}. 나머지 항목은 다른 요청에서 작성되므로 쓰지 않습니다. 모든 규칙은 그대로 지킵니다.${retryNote}`,
           },
         ],
         output_config: { format: zodOutputFormat(partSchema(keys)) },
       },
-      { timeout: PREVIEW_AI_TIMEOUT_MS }
+      { timeout: timeoutMs }
     );
     if (message.stop_reason === "max_tokens" || message.stop_reason === "refusal") {
       console.error(`[preview] ai_${label}_stop=${message.stop_reason} ms=${Date.now() - t0}`);
@@ -403,30 +412,48 @@ async function buildAiPreview(
 
   const t0 = Date.now();
   const client = new Anthropic({ apiKey, maxRetries: 0 });
-  const parts = await Promise.all(
-    PARTS.map((p) => callPart(client, order, p.keys, p.label))
-  );
-  if (parts.some((x) => x === null)) {
-    console.error(`[preview] ai_failed ms=${Date.now() - t0}`);
-    return null;
+  const got: Record<string, Record<string, unknown> | null> = {};
+  let todo: string[] = PARTS.map((p) => p.label);
+  for (let round = 0; round < 2 && todo.length; round++) {
+    const left = PREVIEW_BUDGET_MS - (Date.now() - t0);
+    if (round > 0 && left < 15_000) break;
+    const timeout = Math.min(PREVIEW_AI_TIMEOUT_MS, left - 3_000);
+    const results = await Promise.all(
+      PARTS.filter((p) => todo.includes(p.label)).map(
+        async (p) => [p.label, await callPart(client, order, p.keys, p.label, timeout, round > 0)] as const
+      )
+    );
+    for (const [label, r] of results) got[label] = r;
+    todo = PARTS.filter((p) => !got[p.label]).map((p) => p.label);
+    if (todo.length) {
+      console.error(`[preview] ai_round${round}_missing=${todo.join("+")} ms=${Date.now() - t0}`);
+      continue;
+    }
+    const parsed = PreviewSchema.safeParse(Object.assign({}, ...PARTS.map((p) => got[p.label])));
+    if (!parsed.success) {
+      const bad = new Set(parsed.error.issues.map((i) => String(i.path[0])));
+      const paths = parsed.error.issues
+        .slice(0, 4)
+        .map((i) => `${i.path.join(".")}:${i.code}`)
+        .join(",");
+      console.error(`[preview] ai_schema_invalid ms=${Date.now() - t0} ${paths}`);
+      todo = PARTS.filter((p) => p.keys.some((k) => bad.has(k))).map((p) => p.label);
+      if (!todo.length) todo = PARTS.map((p) => p.label);
+      for (const l of todo) got[l] = null;
+      continue;
+    }
+    const banned = previewBannedMatch(parsed.data);
+    if (banned) {
+      console.error(`[preview] ai_banned_phrase ms=${Date.now() - t0} hit=${banned}`);
+      todo = PARTS.map((p) => p.label);
+      for (const l of todo) got[l] = null;
+      continue;
+    }
+    console.error(`[preview] ai_ok round=${round} ms=${Date.now() - t0}`);
+    return parsed.data;
   }
-
-  const parsed = PreviewSchema.safeParse(Object.assign({}, ...parts));
-  if (!parsed.success) {
-    const paths = parsed.error.issues
-      .slice(0, 4)
-      .map((i) => `${i.path.join(".")}:${i.code}`)
-      .join(",");
-    console.error(`[preview] ai_schema_invalid ms=${Date.now() - t0} ${paths}`);
-    return null;
-  }
-  const banned = previewBannedMatch(parsed.data);
-  if (banned) {
-    console.error(`[preview] ai_banned_phrase ms=${Date.now() - t0} hit=${banned}`);
-    return null;
-  }
-  console.error(`[preview] ai_ok ms=${Date.now() - t0}`);
-  return parsed.data;
+  console.error(`[preview] ai_failed ms=${Date.now() - t0}`);
+  return null;
 }
 
 export async function getOrCreatePreview(
