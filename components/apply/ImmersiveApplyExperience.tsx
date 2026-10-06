@@ -509,6 +509,15 @@ export default function ImmersiveApplyExperience({
   const safeStep = Math.min(step, total - 1);
   const cur = visibleSteps[safeStep];
 
+  /* 질문별 도달 기록 (어느 질문에서 그만두는지 보기 위함 · 단계당 1회, 답변 내용은 보내지 않음) */
+  const stepsTracked = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (phase !== "questions" || !cur) return;
+    if (stepsTracked.current.has(cur.id)) return;
+    stepsTracked.current.add(cur.id);
+    trackEvent("apply_step", { step: cur.id });
+  }, [phase, cur]);
+
   const name = app.applicant_name.trim();
   const partner = app.partner_name.trim();
   const fill = useCallback(

@@ -30,6 +30,8 @@ import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import SceneBreak from "@/components/apply/SceneBreak";
+import PageFlipper from "@/components/book/PageFlipper";
+import { BOOK_SAMPLE_PAGES } from "@/lib/book/book-pages";
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
@@ -867,6 +869,12 @@ export default function PreviewExperience({
                   <br />
                   {copy.bookPersonal}
                 </p>
+                {/* 실제 책 넘겨 보기 — 책 상세 페이지와 같은 뷰어 */}
+                <p className="mt-5 text-center text-[0.72rem] tracking-[0.25em] text-gold/80">실제 책을 넘겨 보세요</p>
+                <p className="mb-5 mt-1.5 text-center text-[0.72rem] text-ivory-dim">
+                  가상의 신청자 ‘지수’ 님 사연으로 만든 실제 PDF · 눌러서 넘길 수 있어요
+                </p>
+                <PageFlipper pages={BOOK_SAMPLE_PAGES} />
                 <Link
                   href={`/book?order=${encodeURIComponent(orderNumber)}`}
                   onClick={() => onCtaClick("book")}
