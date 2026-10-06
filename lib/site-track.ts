@@ -88,7 +88,8 @@ export function sendSiteEvent(event: string, props?: Record<string, string>): vo
     const body = JSON.stringify({
       vid: visitorId(),
       ev: event,
-      path: location.pathname,
+      /* 질문 단계 기록은 경로 뒤에 단계 이름을 붙여 저장 (예: /apply#story) */
+      path: props?.step ? `${location.pathname}#${props.step}` : location.pathname,
       ref: event === "view" ? refHost() : null,
       us: ft.s ?? null,
       um: ft.m ?? null,
