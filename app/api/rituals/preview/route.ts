@@ -11,7 +11,7 @@ import { verifyContinueToken } from "@/lib/cs-auth";
 
 export const dynamic = "force-dynamic";
 /* AI 미리보기 타임아웃(40초) + 응답 여유. Vercel 함수 실행 한도. */
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 const UUID_RE =
