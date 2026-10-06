@@ -2,7 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { APOLOGY_PRICE_KRW } from "@/lib/ritual-types";
+import { APOLOGY_PRICE_KRW, productPrice } from "@/lib/ritual-types";
+
+/** 결제 전 주문은 "지금 결제하면 내는 금액"으로 보여준다 (저장값은 결제 화면에 들어올 때 맞춰짐) */
+const shownAmount = (r: { payment_status: string | null; product?: string | null; payment_amount: number | null }) =>
+  r.payment_status === "pending" && typeof r.payment_amount === "number"
+    ? productPrice(r.product ?? "message", r.payment_amount)
+    : r.payment_amount;
 import { isOperatorEmail, won } from "@/lib/admin-util";
 import CsvButton from "@/components/admin/CsvButton";
 
@@ -227,7 +233,7 @@ export default async function AdminOrdersPage({
               r.applicant_name,
               r.email,
               PRODUCT_LABEL[r.product ?? "message"] ?? r.product,
-              r.payment_amount,
+              shownAmount(r),
               r.payment_status,
               r.generation_status,
               r.review_status,
@@ -296,7 +302,7 @@ export default async function AdminOrdersPage({
                   <Badge kind="rv" value={r.review_status} />
                   <Badge kind="dl" value={r.delivery_status} />
                   <span className="ml-auto text-[0.68rem] text-ivory-dim/70">
-                    {typeof r.payment_amount === "number" && `${won(r.payment_amount)} · `}
+                    {typeof r.payment_amount === "number" && `${won(shownAmount(r) ?? 0)} · `}
                     {versions.get(r.order_number)
                       ? `v${versions.get(r.order_number)}`
                       : "결과 없음"}
