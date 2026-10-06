@@ -2,6 +2,60 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getMarketingStats, type Funnel } from "@/lib/marketing-stats";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { kstDaysAgoStartIso } from "@/lib/admin-util";
+
+/** 신청 질문 순서 (components/apply/ImmersiveApplyExperience.tsx STEPS와 같은 순서) */
+const APPLY_STEPS: [string, string][] = [
+  ["applicant_name", "내 이름"],
+  ["applicant_birth_year", "내 출생연도"],
+  ["applicant_gender", "내 성별"],
+  ["life_stage", "요즘 일상"],
+  ["partner_name", "상대 이름"],
+  ["partner_birth_year", "상대 출생연도"],
+  ["partner_gender", "상대 정보"],
+  ["relationship_type", "관계"],
+  ["relationship_duration", "함께한 기간"],
+  ["breakup_elapsed", "멀어진 지 (이별일 때만)"],
+  ["breakup_initiator", "누가 먼저 (이별일 때만)"],
+  ["last_conversation", "마지막 대화 시점"],
+  ["contact_status", "연락 상태"],
+  ["partner_new_relationship", "상대의 새 사람"],
+  ["current_emotion", "지금 마음"],
+  ["pain_points", "가장 힘든 것"],
+  ["story", "두 사람 이야기 (직접 쓰기)"],
+  ["last_conversation_memory", "남아 있는 말 (선택)"],
+  ["desired_change", "달라졌으면 하는 것 (선택)"],
+  ["main_wish", "가장 알고 싶은 것"],
+  ["wish_sentence", "월화에게 하고 싶은 말 (선택)"],
+  ["safety_concerns", "안전 확인"],
+  ["email", "이메일"],
+  ["consent", "동의"],
+];
+
+/** 질문별 도달 방문자 수 (apply_step 기록 · 2026-10-07부터 쌓임) */
+async function getStepReach(days: number): Promise<Map<string, number> | null> {
+  try {
+    const res = await getSupabaseAdmin()
+      .from("site_events")
+      .select("visitor_id, path")
+      .eq("event", "apply_step")
+      .gte("created_at", kstDaysAgoStartIso(days - 1))
+      .limit(20000);
+    if (res.error) return null;
+    const sets = new Map<string, Set<string>>();
+    for (const r of (res.data ?? []) as { visitor_id: string; path: string | null }[]) {
+      const id = (r.path ?? "").split("#")[1];
+      if (!id) continue;
+      const set = sets.get(id) ?? new Set<string>();
+      set.add(r.visitor_id);
+      sets.set(id, set);
+    }
+    return new Map([...sets.entries()].map(([k, v]) => [k, v.size]));
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +112,7 @@ export default async function AdminMarketingPage({
   if (!(await isAdminAuthenticated())) redirect("/admin/login");
   const { d } = await searchParams;
   const days = PERIODS.some(([n]) => String(n) === d) ? Number(d) : 7;
-  const s = await getMarketingStats(days);
+  const [s, stepReach] = await Promise.all([getMarketingStats(days), getStepReach(days)]);
   const t = s.today;
 
   return (
@@ -161,6 +215,45 @@ export default async function AdminMarketingPage({
           )}
         </section>
       </div>
+
+      {/* 질문별 도달 */}
+      <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
+        <p className="text-sm font-semibold">신청 질문, 어디서 그만두나</p>
+        <p className="mt-1 text-[0.74rem] text-ivory-dim">
+          각 질문까지 온 방문자 수 · 앞 질문 대비 남은 비율 (10월 7일부터 기록)
+        </p>
+        {stepReach && stepReach.size > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[420px] text-[0.8rem] tabular-nums">
+              <tbody>
+                {(() => {
+                  const first = stepReach.get(APPLY_STEPS[0][0]) ?? 0;
+                  let prev = first;
+                  return APPLY_STEPS.map(([id, label], i) => {
+                    const n = stepReach.get(id);
+                    if (n === undefined) return null;
+                    const row = (
+                      <tr key={id} className="border-t border-gold-dim/10">
+                        <td className="py-1.5 pr-3 text-ivory-dim">{i + 1}. {label}</td>
+                        <td className="py-1.5 pr-3 text-right">{n}</td>
+                        <td className={`py-1.5 pr-3 text-right ${prev > 0 && n / prev < 0.9 ? "text-thread" : "text-ivory-dim/70"}`}>
+                          {i > 0 ? pct(n, prev) : ""}
+                        </td>
+                        <td className="py-1.5 text-right text-ivory-dim/70">{pct(n, first)}</td>
+                      </tr>
+                    );
+                    if (!id.startsWith("breakup_")) prev = n;
+                    return row;
+                  });
+                })()}
+              </tbody>
+            </table>
+            <p className="mt-2 text-[0.72rem] text-ivory-dim/70">붉은 숫자 = 앞 질문보다 10% 넘게 빠진 곳 · 오른쪽 끝 = 첫 질문 대비</p>
+          </div>
+        ) : (
+          <p className="mt-3 text-[0.8rem] text-ivory-dim">아직 기록이 없어요. 신청이 몇 건 쌓이면 보여요.</p>
+        )}
+      </section>
 
       {/* 세그먼트 */}
       <section className="mt-6">
