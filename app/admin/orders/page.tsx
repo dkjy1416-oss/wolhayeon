@@ -74,7 +74,6 @@ const FILTERS: { key: string; label: string }[] = [
   { key: "all", label: "전체" },
   { key: "paid", label: "결제 완료" },
   { key: "pending", label: "결제 전" },
-  { key: "coupon", label: "사과 쿠폰" },
   { key: "book", label: "책·패키지" },
   { key: "book_pending", label: "책 미완성" },
   { key: "gen_failed", label: "생성 실패" },
