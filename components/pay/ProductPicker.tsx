@@ -18,23 +18,33 @@ export default function ProductPicker({
   orderNumber,
   selected,
   messagePrice,
+  bundlePrice: bundleOverride,
+  offerOn = false,
   basePath = "/apply/complete",
   extraQuery = "",
 }: {
   orderNumber: string;
   selected: Product;
   messagePrice: number;
+  /** 이 주문 기준 패키지 가격 (첫 구매 24시간이면 할인가) */
+  bundlePrice?: number;
+  /** 첫 구매 24시간 적용 중 */
+  offerOn?: boolean;
   basePath?: string;
   extraQuery?: string;
 }) {
   const promo = isPromoActive();
-  const bundle = bundlePrice();
+  const bundle = bundleOverride ?? bundlePrice();
   const items: Array<{ key: Product; price: number; note?: string; badge?: string; deadline?: string }> = [
     {
       key: "bundle",
       price: bundle,
       badge: "월화의 추천",
-      deadline: promo ? `패키지 특가 ${PROMO_DEADLINE_TEXT} · 이후 ${BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원` : undefined,
+      deadline: promo
+        ? `패키지 특가 ${PROMO_DEADLINE_TEXT} · 이후 ${BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원`
+        : offerOn && bundle < BUNDLE_REGULAR_PRICE_KRW
+          ? `첫 구매 24시간 특가 · 이후 ${BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원`
+          : undefined,
       note:
         messagePrice + BOOK_PRICE_KRW > bundle
           ? `따로 사면 ${(messagePrice + BOOK_PRICE_KRW).toLocaleString()}원`
@@ -50,7 +60,9 @@ export default function ProductPicker({
       deadline:
         messagePrice < RITUAL_REGULAR_PRICE_KRW && promo
           ? `특가 ${PROMO_DEADLINE_TEXT} · 이후 ${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원`
-          : undefined,
+          : messagePrice < RITUAL_REGULAR_PRICE_KRW && offerOn
+            ? `첫 구매가 · 이후 ${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원`
+            : undefined,
     },
     { key: "book", price: BOOK_PRICE_KRW },
   ];
