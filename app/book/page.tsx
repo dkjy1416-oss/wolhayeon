@@ -17,7 +17,12 @@ import {
   RITUAL_PRICE_KRW,
   RITUAL_REGULAR_PRICE_KRW,
   isPromoActive,
+  productPrice,
+  offerAnchor,
+  isFirstOfferActive,
+  FIRST_OFFER_BUNDLE_PRICE_KRW,
 } from "@/lib/ritual-types";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getPublicReviews } from "@/lib/reviews";
 
 export const dynamic = "force-dynamic";
@@ -255,10 +260,30 @@ export default async function BookPage({
     orderNumber
       ? `/apply/complete?order=${encodeURIComponent(orderNumber)}&product=${product}`
       : `/apply?want=${product}`;
-  const messageNow = isPromoActive() ? RITUAL_PRICE_KRW : RITUAL_REGULAR_PRICE_KRW;
+  /* 미리보기에서 넘어온 손님(주문번호 있음)은 그 주문 기준 가격 — 첫 구매 24시간이면 메시지·패키지 할인가 */
+  let offerOn = false;
+  let messageNow = isPromoActive() ? RITUAL_PRICE_KRW : RITUAL_REGULAR_PRICE_KRW;
+  let bundleNow = bundlePrice();
+  if (orderNumber) {
+    try {
+      const r = await getSupabaseAdmin()
+        .from("ritual_orders")
+        .select("created_at, remind_sent_at, payment_status")
+        .eq("order_number", orderNumber)
+        .maybeSingle();
+      if (r.data && r.data.payment_status === "pending") {
+        const anchor = offerAnchor(r.data);
+        offerOn = !isPromoActive() && isFirstOfferActive(anchor);
+        messageNow = productPrice("message", null, Date.now(), anchor);
+        bundleNow = productPrice("bundle", null, Date.now(), anchor);
+      }
+    } catch {
+      /* 조회 실패 시 일반 가격 */
+    }
+  }
   const separate = messageNow + BOOK_PRICE_KRW;
-  const bundleNow = bundlePrice();
   const promoOn = isPromoActive();
+  const bundlePriceFirstOffer = FIRST_OFFER_BUNDLE_PRICE_KRW;
   const save = separate - bundleNow;
   const reviews = await getPublicReviews(12);
   const avg = reviews.length ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : 0;
@@ -292,6 +317,16 @@ export default async function BookPage({
         {promoOn && (
           <p className="mt-1.5 text-[0.72rem] text-gold/90">
             패키지 특가 {PROMO_DEADLINE_TEXT} · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원
+          </p>
+        )}
+        {!promoOn && offerOn && (
+          <p className="mt-1.5 text-[0.72rem] text-gold/90">
+            첫 구매 24시간 특가 · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원
+          </p>
+        )}
+        {!promoOn && !orderNumber && (
+          <p className="mt-1.5 text-[0.72rem] text-gold/90">
+            무료 미리보기 후 24시간 동안 {bundlePriceFirstOffer.toLocaleString()}원
           </p>
         )}
         <span className="mt-4 flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] text-ivory">
