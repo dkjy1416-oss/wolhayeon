@@ -5,9 +5,9 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { APOLOGY_PRICE_KRW, productPrice } from "@/lib/ritual-types";
 
 /** 결제 전 주문은 "지금 결제하면 내는 금액"으로 보여준다 (저장값은 결제 화면에 들어올 때 맞춰짐) */
-const shownAmount = (r: { payment_status: string | null; product?: string | null; payment_amount: number | null }) =>
+const shownAmount = (r: { payment_status: string | null; product?: string | null; payment_amount: number | null; created_at?: string }) =>
   r.payment_status === "pending" && typeof r.payment_amount === "number"
-    ? productPrice(r.product ?? "message", r.payment_amount)
+    ? productPrice(r.product ?? "message", r.payment_amount, Date.now(), r.created_at)
     : r.payment_amount;
 import { isOperatorEmail, won } from "@/lib/admin-util";
 import CsvButton from "@/components/admin/CsvButton";
