@@ -9,6 +9,7 @@ import {
   RITUAL_PRICE_KRW,
   RITUAL_REGULAR_PRICE_KRW,
   isPromoActive,
+  FIRST_OFFER_BUNDLE_PRICE_KRW,
 } from "@/lib/ritual-types";
 
 /**
@@ -104,6 +105,11 @@ export default function ProductsSection() {
                 {promo && (
                   <p className="text-[0.7rem] text-gold/90">
                     특가 {PROMO_DEADLINE_TEXT} · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원
+                  </p>
+                )}
+                {!promo && (
+                  <p className="text-[0.7rem] text-gold/90">
+                    무료 미리보기 후 24시간 {FIRST_OFFER_BUNDLE_PRICE_KRW.toLocaleString()}원
                   </p>
                 )}
                 {save > 0 && (
