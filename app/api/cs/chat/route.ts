@@ -8,6 +8,7 @@ import {
   bundlePrice,
   PROMO_DEADLINE_TEXT,
   isPromoActive,
+  FIRST_OFFER_BUNDLE_PRICE_KRW,
 } from "@/lib/ritual-types";
 import { loadCsOrderLite, getCsStatus } from "@/lib/cs-actions";
 import {
@@ -56,7 +57,7 @@ const csSystem = () => `당신은 월하연(月下緣)의 안내자 월화(月�
 - 상품은 세 가지입니다: ① 월화의 메시지 ${priceSentence()} ② 개인화 PDF 책
   《헤어진 뒤, 연락하지 말아야 할 때》 ${BOOK_PRICE_KRW.toLocaleString()}원 (약 120쪽, 내 이름 판본,
   연락이 왔을 때 대처·재회를 말할 때의 문장·다시 만나기 전 체크리스트 등)
-  ③ 메시지+책 패키지 ${bundlePrice().toLocaleString()}원${isPromoActive() ? ` (특가 ${PROMO_DEADLINE_TEXT})` : ""}.
+  ③ 메시지+책 패키지 ${bundlePrice().toLocaleString()}원${isPromoActive() ? ` (특가 ${PROMO_DEADLINE_TEXT})` : ` (무료 미리보기 후 24시간 안에 결제하면 ${FIRST_OFFER_BUNDLE_PRICE_KRW.toLocaleString()}원)`}.
 - 책은 결제 후 몇 분 안에 PDF로 만들어져, 완성 화면·결과 화면의 'PDF로 저장하기/바로 열어 보기'
   버튼과 이메일('내 책 PDF 받기' 버튼, 60일 동안 유효)로 받을 수 있습니다.
 - 메시지를 이미 받은 분은 결과 화면 아래 '사연 다시 안 쓰고 책 받기' 버튼으로 같은 사연의 책만
@@ -151,7 +152,7 @@ export async function POST(req: Request) {
     }
     if (/책|pdf|PDF|패키지|다운로드|다운/.test(lastText)) {
       return NextResponse.json({
-        reply: `개인화 PDF 책《헤어진 뒤, 연락하지 말아야 할 때》는 ${BOOK_PRICE_KRW.toLocaleString()}원, 메시지와 함께 받는 패키지는 ${bundlePrice().toLocaleString()}원이에요. 책은 결제 후 몇 분 안에 만들어져 화면 버튼과 이메일('내 책 PDF 받기')로 받을 수 있어요. 이미 결제하셨는데 책을 못 받으셨다면 아래 '주문 확인하기'로 상태를 바로 확인해 드릴게요.`,
+        reply: `개인화 PDF 책《헤어진 뒤, 연락하지 말아야 할 때》는 ${BOOK_PRICE_KRW.toLocaleString()}원, 메시지와 함께 받는 패키지는 ${bundlePrice().toLocaleString()}원이에요${isPromoActive() ? "" : ` (무료 미리보기 후 24시간 안에는 ${FIRST_OFFER_BUNDLE_PRICE_KRW.toLocaleString()}원)`}. 책은 결제 후 몇 분 안에 만들어져 화면 버튼과 이메일('내 책 PDF 받기')로 받을 수 있어요. 이미 결제하셨는데 책을 못 받으셨다면 아래 '주문 확인하기'로 상태를 바로 확인해 드릴게요.`,
       });
     }
     if (/언제|얼마나|몇 분|안 와|안와|기다/.test(lastText)) {
