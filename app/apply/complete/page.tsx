@@ -15,6 +15,7 @@ import {
   isPromoActive,
   FIRST_OFFER_PRICE_KRW,
   firstOfferEndsAt,
+  offerAnchor,
   isProduct,
   productPrice,
   PRODUCTS,
@@ -84,13 +85,14 @@ export default async function CompletePage({
     product: string | null;
     message_amount: number | null;
     created_at: string;
+    remind_sent_at: string | null;
   } | null = null;
   let lookupFailed = false;
   try {
     const supabase = getSupabaseAdmin();
     const res = await supabase
       .from("ritual_orders")
-      .select("payment_amount, payment_status, product, message_amount, created_at")
+      .select("payment_amount, payment_status, product, message_amount, created_at, remind_sent_at")
       .eq("order_number", orderNumber)
       .single();
     if (!res.error && res.data) {
@@ -108,7 +110,7 @@ export default async function CompletePage({
           current !== "message" && target === "message"
             ? row.message_amount ?? RITUAL_PRICE_KRW
             : row.payment_amount;
-        const want = productPrice(target, base, Date.now(), row.created_at);
+        const want = productPrice(target, base, Date.now(), offerAnchor(row));
         if (want !== row.payment_amount || target !== current) {
           /* 메시지 → 책·패키지로 바꿀 때 원래 메시지 금액(사과 쿠폰 9,900원 등)을 기억해 두었다가
              다시 메시지로 돌아오면 그대로 적용 */
@@ -158,11 +160,11 @@ export default async function CompletePage({
   const messagePrice =
     product === "message"
       ? row.payment_amount
-      : productPrice("message", row.message_amount ?? RITUAL_PRICE_KRW, Date.now(), row.created_at);
+      : productPrice("message", row.message_amount ?? RITUAL_PRICE_KRW, Date.now(), offerAnchor(row));
   /* 첫 구매가 적용 중이면 마감 시각 (메시지 결제일 때만 표시) */
   const offerEnd =
     product === "message" && row.payment_amount === FIRST_OFFER_PRICE_KRW && !isPromoActive()
-      ? firstOfferEndsAt(row.created_at)
+      ? firstOfferEndsAt(offerAnchor(row))
       : null;
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
