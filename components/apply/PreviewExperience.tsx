@@ -32,6 +32,7 @@ import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import SceneBreak from "@/components/apply/SceneBreak";
 import PageFlipper from "@/components/book/PageFlipper";
 import ShareStoryCard from "@/components/apply/ShareStoryCard";
+import OfferCountdown from "@/components/pay/OfferCountdown";
 import { BOOK_SAMPLE_PAGES } from "@/lib/book/book-pages";
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
@@ -193,6 +194,8 @@ export default function PreviewExperience({
   /* 주문별 결제 금액 — 사과 쿠폰 적용 주문이면 쿠폰가 */
   const [price, setPrice] = useState<number>(() => listPriceKRW());
   const [situation, setSituation] = useState<Situation | null>(null);
+  /* 첫 구매가 마감 시각 (신청 후 24시간 · 서버가 정함) */
+  const [offerEndsAt, setOfferEndsAt] = useState<number | null>(null);
   const [showLoading, setShowLoading] = useState(false);
   const [slowNote, setSlowNote] = useState(false); // 15초 이상 걸릴 때 안심 문구
   const tries = useRef(0); // pending 폴링 횟수
@@ -250,6 +253,7 @@ export default function PreviewExperience({
         if (isAllowedPrice(json.paymentAmount)) setPrice(json.paymentAmount);
         if (typeof json.situation === "string" && json.situation in SITUATION_COPY)
           setSituation(json.situation as Situation);
+        setOfferEndsAt(typeof json.offerEndsAt === "number" ? json.offerEndsAt : null);
         setPreview(json.preview as Preview);
         setPhase("ready");
         try {
@@ -836,6 +840,7 @@ export default function PreviewExperience({
               </span>
             </p>
           )}
+          {!want && offerEndsAt && <OfferCountdown endsAt={offerEndsAt} className="mt-1.5" />}
         </div>
         {PAYMENTS_OPEN ? (
           <>
@@ -939,9 +944,13 @@ export default function PreviewExperience({
           >
             {mainLabel ?? `내 상황에 맞는 다음 행동 보기 · ${priceText}`}
           </Link>
-          <p className="mx-auto mt-1.5 max-w-md text-center text-[0.68rem] text-ivory-dim/80">
-            1회 결제 · 보통 5분 안에 완성 · 열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불
-          </p>
+          {!want && offerEndsAt ? (
+            <OfferCountdown endsAt={offerEndsAt} className="mx-auto mt-1.5 max-w-md text-center !text-[0.7rem]" />
+          ) : (
+            <p className="mx-auto mt-1.5 max-w-md text-center text-[0.68rem] text-ivory-dim/80">
+              1회 결제 · 보통 5분 안에 완성 · 열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불
+            </p>
+          )}
         </div>,
         document.body
       )}
