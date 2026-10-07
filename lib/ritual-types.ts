@@ -388,7 +388,7 @@ export function priceBadge(amount: number): { strike: number | null; label: stri
 export function priceSentence(now: number = Date.now()): string {
   return isPromoActive(now)
     ? `${RITUAL_PRICE_KRW.toLocaleString()}원(재오픈 기념 특가, ${PROMO_DEADLINE_TEXT} · 정가 ${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원)`
-    : `${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원(무료 미리보기 후 24시간 안에 결제하면 첫 구매가 ${RITUAL_PRICE_KRW.toLocaleString()}원)`;
+    : `${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원(무료 미리보기 후 24시간 안에 결제하면 첫 구매가 ${RITUAL_PRICE_KRW.toLocaleString()}원, 메시지+책 패키지도 ${BUNDLE_PRICE_KRW.toLocaleString()}원)`;
 }
 
 /* ---------- 상품 (메시지 / 개인화 책 / 패키지) ---------- */
@@ -407,6 +407,16 @@ export const BOOK_COUPON_DEADLINE_TEXT = "10월 11일(일)까지";
 /** 지금 패키지 가격 (특가 기간이면 39,900원, 이후 42,900원) */
 export function bundlePrice(now: number = Date.now()): number {
   return isPromoActive(now) ? BUNDLE_PRICE_KRW : BUNDLE_REGULAR_PRICE_KRW;
+}
+
+/** 첫 구매 24시간 동안 패키지도 함께 할인 (메시지 12,900원 + 책 29,000원 = 41,900원보다 싸게) — 운영자 결정 10/7 */
+export const FIRST_OFFER_BUNDLE_PRICE_KRW = BUNDLE_PRICE_KRW;
+
+/** 이 주문 기준 지금 패키지 가격 (anchor = offerAnchor(주문)) */
+export function bundlePriceFor(now: number = Date.now(), anchor?: unknown): number {
+  if (isPromoActive(now)) return BUNDLE_PRICE_KRW;
+  if (anchor !== undefined && isFirstOfferActive(anchor, now)) return FIRST_OFFER_BUNDLE_PRICE_KRW;
+  return BUNDLE_REGULAR_PRICE_KRW;
 }
 
 export const PRODUCTS: Record<
@@ -462,7 +472,7 @@ export function productPrice(
       ? BOOK_COUPON_PRICE_KRW
       : BOOK_PRICE_KRW;
   }
-  if (product === "bundle") return bundlePrice(now);
+  if (product === "bundle") return bundlePriceFor(now, createdAt);
   return resolveOrderPrice(storedAmount, now, createdAt);
 }
 

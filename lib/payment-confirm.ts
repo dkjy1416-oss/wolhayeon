@@ -190,6 +190,7 @@ export async function confirmOrderPayment(params: {
     /* 정가(16,900원)는 첫 구매가 기간 중에도 받는다 — 첫 구매가 도입 전에 열어 둔 결제창 대비 */
     const priceStillValid =
       (product === "message" && row.payment_amount === RITUAL_REGULAR_PRICE_KRW) ||
+      (product === "bundle" && row.payment_amount === BUNDLE_REGULAR_PRICE_KRW) ||
       [Date.now(), Date.now() - PROMO_GRACE_MS].some(
       (t) =>
         productPrice(product, row.payment_amount, t, offerAnchor(row as { created_at?: string | null; remind_sent_at?: string | null })) ===
