@@ -329,7 +329,6 @@ export default async function AdminDashboard() {
           ["/admin/stats", "유입·전환 통계", "일별 추이·결제 퍼널"],
           ["/admin/cs", "고객센터 현황", "문의·조회·처리·장애"],
           ["/admin/remind", "리마인드 메일", "미결제 고객 이어보기 메일"],
-          ["/admin/apology", "사과 쿠폰", "결제 오류 고객 안내"],
           ["https://dashboard.tosspayments.com", "토스 상점관리자", "결제 조회·취소·정산"],
         ].map(([href, title, desc]) => (
           <Link
