@@ -13,6 +13,8 @@ import {
   listPriceKRW,
   PROMO_DEADLINE_TEXT,
   isPromoActive,
+  FIRST_OFFER_PRICE_KRW,
+  firstOfferEndsAt,
   isProduct,
   productPrice,
   PRODUCTS,
@@ -22,6 +24,7 @@ import ProductPicker from "@/components/pay/ProductPicker";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import PayEventPing from "@/components/pay/PayEventPing";
 import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
+import OfferCountdown from "@/components/pay/OfferCountdown";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
 
@@ -80,13 +83,14 @@ export default async function CompletePage({
     payment_status: string;
     product: string | null;
     message_amount: number | null;
+    created_at: string;
   } | null = null;
   let lookupFailed = false;
   try {
     const supabase = getSupabaseAdmin();
     const res = await supabase
       .from("ritual_orders")
-      .select("payment_amount, payment_status, product, message_amount")
+      .select("payment_amount, payment_status, product, message_amount, created_at")
       .eq("order_number", orderNumber)
       .single();
     if (!res.error && res.data) {
@@ -104,7 +108,7 @@ export default async function CompletePage({
           current !== "message" && target === "message"
             ? row.message_amount ?? RITUAL_PRICE_KRW
             : row.payment_amount;
-        const want = productPrice(target, base);
+        const want = productPrice(target, base, Date.now(), row.created_at);
         if (want !== row.payment_amount || target !== current) {
           /* 메시지 → 책·패키지로 바꿀 때 원래 메시지 금액(사과 쿠폰 9,900원 등)을 기억해 두었다가
              다시 메시지로 돌아오면 그대로 적용 */
@@ -154,7 +158,12 @@ export default async function CompletePage({
   const messagePrice =
     product === "message"
       ? row.payment_amount
-      : productPrice("message", row.message_amount ?? RITUAL_PRICE_KRW);
+      : productPrice("message", row.message_amount ?? RITUAL_PRICE_KRW, Date.now(), row.created_at);
+  /* 첫 구매가 적용 중이면 마감 시각 (메시지 결제일 때만 표시) */
+  const offerEnd =
+    product === "message" && row.payment_amount === FIRST_OFFER_PRICE_KRW && !isPromoActive()
+      ? firstOfferEndsAt(row.created_at)
+      : null;
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
 
@@ -322,6 +331,7 @@ export default async function CompletePage({
               orderName={PRODUCTS[product].orderName}
             />
           </div>
+          {offerEnd && <OfferCountdown endsAt={offerEnd} className="mt-3 text-center" />}
           <InAppBrowserNotice orderNumber={orderNumber} />
 
           {/* 테스트 결제 단계 전용 — 실결제 전환 시 제거 (TestModeNotices.tsx 참고) */}
