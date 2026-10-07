@@ -2,12 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { APOLOGY_PRICE_KRW, productPrice } from "@/lib/ritual-types";
+import { APOLOGY_PRICE_KRW, productPrice, offerAnchor } from "@/lib/ritual-types";
 
 /** 결제 전 주문은 "지금 결제하면 내는 금액"으로 보여준다 (저장값은 결제 화면에 들어올 때 맞춰짐) */
-const shownAmount = (r: { payment_status: string | null; product?: string | null; payment_amount: number | null; created_at?: string }) =>
+const shownAmount = (r: { payment_status: string | null; product?: string | null; payment_amount: number | null; created_at?: string; remind_sent_at?: string | null }) =>
   r.payment_status === "pending" && typeof r.payment_amount === "number"
-    ? productPrice(r.product ?? "message", r.payment_amount, Date.now(), r.created_at)
+    ? productPrice(r.product ?? "message", r.payment_amount, Date.now(), offerAnchor(r))
     : r.payment_amount;
 import { isOperatorEmail, won } from "@/lib/admin-util";
 import CsvButton from "@/components/admin/CsvButton";
@@ -104,7 +104,7 @@ export default async function AdminOrdersPage({
     let query = supabase
       .from("ritual_orders")
       .select(
-        "id, order_number, applicant_name, email, payment_amount, payment_status, generation_status, review_status, delivery_status, created_at, product, book_status, paid_at"
+        "id, order_number, applicant_name, email, payment_amount, payment_status, generation_status, review_status, delivery_status, created_at, product, book_status, paid_at, remind_sent_at"
       );
     if (q) {
       query = query.or(
