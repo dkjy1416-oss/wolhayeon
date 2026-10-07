@@ -14,7 +14,6 @@ const ITEMS: { href: string; label: string }[] = [
   { href: "/admin/stats", label: "통계" },
   { href: "/admin/cs", label: "고객센터" },
   { href: "/admin/remind", label: "리마인드 메일" },
-  { href: "/admin/apology", label: "사과 쿠폰" },
 ];
 
 export default function AdminNav() {
