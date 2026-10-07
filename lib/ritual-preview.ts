@@ -13,14 +13,20 @@ import {
   isFirstOfferActive,
   isPromoActive,
   FIRST_OFFER_PRICE_KRW,
+  offerAnchor,
 } from "@/lib/ritual-types";
 
 /** 첫 구매가가 지금 이 주문에 적용 중이면 마감 시각, 아니면 null */
-function offerEndsFor(order: { payment_amount: unknown; created_at: string }): number | null {
+function offerEndsFor(order: {
+  payment_amount: unknown;
+  created_at: string;
+  remind_sent_at?: string | null;
+}): number | null {
   if (isPromoActive()) return null;
-  if (!isFirstOfferActive(order.created_at)) return null;
-  return resolveOrderPrice(order.payment_amount, Date.now(), order.created_at) === FIRST_OFFER_PRICE_KRW
-    ? firstOfferEndsAt(order.created_at)
+  const anchor = offerAnchor(order);
+  if (!isFirstOfferActive(anchor)) return null;
+  return resolveOrderPrice(order.payment_amount, Date.now(), anchor) === FIRST_OFFER_PRICE_KRW
+    ? firstOfferEndsAt(anchor)
     : null;
 }
 import Anthropic from "@anthropic-ai/sdk";
@@ -517,7 +523,7 @@ export async function getOrCreatePreview(
           status: "ready",
           preview: cached.data,
           applicantName: order.applicant_name,
-          paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), order.created_at),
+          paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), offerAnchor(order)),
           offerEndsAt: offerEndsFor(order),
           situation: previewSituation(order, cached.data.now_plan.stance),
           generated: true,
@@ -550,7 +556,7 @@ export async function getOrCreatePreview(
       status: "ready",
       preview,
       applicantName: order.applicant_name,
-          paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), order.created_at),
+          paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), offerAnchor(order)),
           offerEndsAt: offerEndsFor(order),
       situation: previewSituation(order, preview.now_plan.stance),
       generated: ai !== null,

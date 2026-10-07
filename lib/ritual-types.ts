@@ -342,6 +342,15 @@ export function firstOfferEndsAt(createdAt: unknown): number | null {
   return Number.isFinite(t) ? t + FIRST_OFFER_WINDOW_MS : null;
 }
 
+/** 첫 구매가 기준 시각: 신청 시각과 리마인드 메일 발송 시각 중 늦은 쪽
+ *  (리마인드 메일을 받은 때부터 다시 24시간 — 메일에 그렇게 안내함) */
+export function offerAnchor(row: { created_at?: string | null; remind_sent_at?: string | null }): string | undefined {
+  const c = Date.parse(row.created_at ?? "");
+  const r = Date.parse(row.remind_sent_at ?? "");
+  if (Number.isFinite(r) && (!Number.isFinite(c) || r > c)) return row.remind_sent_at as string;
+  return Number.isFinite(c) ? (row.created_at as string) : undefined;
+}
+
 export function isFirstOfferActive(createdAt: unknown, now: number = Date.now()): boolean {
   const end = firstOfferEndsAt(createdAt);
   return end !== null && now <= end;

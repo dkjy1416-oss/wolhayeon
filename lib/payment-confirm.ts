@@ -32,6 +32,7 @@ import {
   isAllowedPrice,
   productPrice,
   PROMO_GRACE_MS,
+  offerAnchor,
 } from "@/lib/ritual-types";
 import { verifyPaidOwnership } from "@/lib/payment-ownership";
 import { track } from "@vercel/analytics/server";
@@ -117,7 +118,7 @@ export async function confirmOrderPayment(params: {
     /* 1) 주문 존재 확인 — 개인정보 컬럼은 조회하지 않음 */
     const found = await supabase
       .from("ritual_orders")
-      .select("id, payment_amount, payment_status, payment_key, applicant_name, product, created_at")
+      .select("id, payment_amount, payment_status, payment_key, applicant_name, product, created_at, remind_sent_at")
       .eq("order_number", orderNumber)
       .single();
     if (found.error || !found.data) return { status: "not_found" };
@@ -191,7 +192,7 @@ export async function confirmOrderPayment(params: {
       (product === "message" && row.payment_amount === RITUAL_REGULAR_PRICE_KRW) ||
       [Date.now(), Date.now() - PROMO_GRACE_MS].some(
       (t) =>
-        productPrice(product, row.payment_amount, t, (row as { created_at?: string | null }).created_at) ===
+        productPrice(product, row.payment_amount, t, offerAnchor(row as { created_at?: string | null; remind_sent_at?: string | null })) ===
         row.payment_amount
     );
     if (!amountOk || !priceStillValid) {
