@@ -21,7 +21,12 @@ import { createHash, timingSafeEqual } from "crypto";
 import { Resend } from "resend";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { createRemindToken } from "@/lib/remind-auth";
-import { isValidEmail } from "@/lib/ritual-types";
+import {
+  isValidEmail,
+  FIRST_OFFER_PRICE_KRW,
+  FIRST_OFFER_WINDOW_MS,
+  RITUAL_REGULAR_PRICE_KRW,
+} from "@/lib/ritual-types";
 import { sanitizeSiteUrl } from "@/lib/delivery-rules";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 
@@ -50,22 +55,46 @@ function escapeHtml(v: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function buildEmail(name: string, openUrl: string, fromEmail: string) {
+/** 리마인드 받은 때부터 24시간 첫 구매가 (lib/ritual-types offerAnchor 와 같은 규칙) */
+function deadlineText(endMs: number): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(endMs));
+}
+
+function buildEmail(name: string, openUrl: string, fromEmail: string, endMs: number) {
   const safeName = name.trim() || "당신";
   const esc = escapeHtml(safeName);
+  const offer = FIRST_OFFER_PRICE_KRW.toLocaleString();
+  const regular = RITUAL_REGULAR_PRICE_KRW.toLocaleString();
+  const until = deadlineText(endMs);
   /* 정보통신망법: 영리 목적 광고성 정보는 (광고) 표기 + 수신거부 안내 */
-  const subject = `(광고) [월하연] ${safeName}님, 월화가 읽던 이야기가 아직 남아 있어요`;
+  const subject = `(광고) [월하연] ${safeName}님, 24시간 동안 ${offer}원으로 이어 볼 수 있어요`;
 
   const text = [
     `${safeName}님,`,
     ``,
-    `그날 들려주신 이야기, 월화가 먼저 읽은 마음이`,
-    `그대로 남아 있어요.`,
+    `그날 들려주신 이야기의 다음 장이 그대로 남아 있어요.`,
+    `무료 미리보기에서 본 흐름에서, 이제 "그래서 어떻게 해야 하지?"를 정리할 차례예요.`,
     ``,
-    `여기서 멈추면 이야기는 그 페이지에서 끝나요.`,
-    `아래 링크에서 무료 미리보기부터 다시 이어집니다.`,
+    `■ 이 메일을 받은 때부터 24시간, 첫 구매가 ${offer}원 (정가 ${regular}원)`,
+    `   ${until}까지`,
     ``,
+    `월화의 메시지에는 들려주신 사연을 바탕으로`,
+    `· 지금 할 행동과 멈출 행동`,
+    `· 연락을 고려할 때 쓸 첫 문장`,
+    `· 상대의 반응에 따른 다음 행동`,
+    `을 담아요.`,
+    ``,
+    `아래 링크를 누르면 다시 입력할 필요 없이 내 미리보기로 바로 이어집니다.`,
     openUrl,
+    ``,
+    `1회 결제 · 결제 후 보통 5분 안에 완성 · 결과를 열어보기 전이면 7일 안에 전액 환불`,
     ``,
     `— 월하연 月下緣`,
     ``,
@@ -77,19 +106,33 @@ function buildEmail(name: string, openUrl: string, fromEmail: string) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0908" style="background-color:#0a0908;"><tr><td align="center" bgcolor="#0a0908" style="background-color:#0a0908;">
   <div style="background-color:#0a0908;text-align:left;max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
     <p style="font-size:11px;letter-spacing:0.3em;color:#c9a96e;margin:0 0 28px;">月下緣 · 월하연</p>
-    <p style="font-size:16px;line-height:2;margin:0 0 20px;">${esc}님,</p>
-    <p style="font-size:15px;line-height:2.1;color:#d8d2c6;margin:0 0 20px;">
-      그날 들려주신 이야기,<br/>
-      월화가 먼저 읽은 마음이 그대로 남아 있어요.
+    <p style="font-size:16px;line-height:2;margin:0 0 18px;">${esc}님,</p>
+    <p style="font-size:15px;line-height:2.1;color:#d8d2c6;margin:0 0 26px;">
+      그날 들려주신 이야기의 다음 장이 그대로 남아 있어요.<br/>
+      무료 미리보기에서 본 흐름에서, 이제<br/>
+      <b style="color:#efe9dc;">“그래서 어떻게 해야 하지?”</b>를 정리할 차례예요.
     </p>
-    <p style="font-size:15px;line-height:2.1;color:#d8d2c6;margin:0 0 32px;">
-      여기서 멈추면 이야기는 그 페이지에서 끝나요.<br/>
-      무료 미리보기부터 다시 이어집니다.
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid rgba(201,169,110,.45);border-radius:14px;"><tr><td bgcolor="#16110d" style="background-color:#16110d;border-radius:14px;padding:22px 20px;text-align:center;">
+      <p style="font-size:12px;letter-spacing:0.12em;color:#c9a96e;margin:0 0 10px;">이 메일을 받은 때부터 24시간 · 첫 구매가</p>
+      <p style="margin:0 0 6px;font-size:14px;color:#8d8779;text-decoration:line-through;">${regular}원</p>
+      <p style="margin:0;font-size:34px;font-weight:700;color:#efe9dc;letter-spacing:0.02em;">${offer}원</p>
+      <p style="margin:12px 0 0;font-size:13px;color:#d4a24c;">${escapeHtml(until)}까지</p>
+    </td></tr></table>
+    <p style="font-size:14px;line-height:2.05;color:#d8d2c6;margin:26px 0 8px;">월화의 메시지에는 들려주신 사연을 바탕으로</p>
+    <p style="font-size:14px;line-height:2.05;color:#efe9dc;margin:0 0 30px;">
+      · 지금 할 행동과 멈출 행동<br/>
+      · 연락을 고려할 때 쓸 첫 문장<br/>
+      · 상대의 반응에 따른 다음 행동<br/>
+      <span style="color:#d8d2c6;">을 담아요.</span>
     </p>
     <a href="${openUrl}"
-       style="display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:16px 20px;font-size:15px;">
-      ${esc}님의 이야기 이어서 읽기
+       style="display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:16px;font-weight:600;">
+      ${offer}원으로 내 이야기 이어 보기
     </a>
+    <p style="font-size:12px;line-height:1.9;color:#a9a294;text-align:center;margin:14px 0 0;">
+      다시 입력할 필요 없이 내 미리보기로 바로 이어져요<br/>
+      1회 결제 · 결제 후 보통 5분 안에 완성 · 열어보기 전이면 7일 안에 전액 환불
+    </p>
     <p style="font-size:12px;color:#8d8779;line-height:1.9;margin:36px 0 0;">
       이 메일은 월하연 소식 수신에 동의하신 분께 발송되었습니다.<br/>
       더 받고 싶지 않으시면 이 메일(${escapeHtml(fromEmail)})에
@@ -182,7 +225,9 @@ export async function POST(request: Request) {
     const openUrl = `${siteUrl}/api/remind/open?order=${encodeURIComponent(
       row.order_number
     )}&t=${encodeURIComponent(token)}`;
-    const mail = buildEmail(row.applicant_name ?? "", openUrl, fromEmail!);
+    /* 발송 직전 시각 기준 24시간 — 실제 기록(remind_sent_at)은 발송 직후라 안내한 마감보다 몇 초 늦게 끝나 손님에게 불리하지 않음 */
+    const sendStart = Date.now();
+    const mail = buildEmail(row.applicant_name ?? "", openUrl, fromEmail!, sendStart + FIRST_OFFER_WINDOW_MS);
 
     try {
       const r = await resend.emails.send(
@@ -193,7 +238,7 @@ export async function POST(request: Request) {
           text: mail.text,
           html: mail.html,
         },
-        { idempotencyKey: `remind-v1-${row.order_number}` }
+        { idempotencyKey: `remind-v2-${row.order_number}` }
       );
       if (r.error) {
         failed += 1;
