@@ -25,6 +25,7 @@ import {
   BOOK_PRICE_KRW,
   BUNDLE_REGULAR_PRICE_KRW,
   bundlePrice,
+  FIRST_OFFER_BUNDLE_PRICE_KRW,
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
@@ -502,7 +503,8 @@ export default function PreviewExperience({
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
   /* 메시지 결제는 항상 product=message 를 명시 (책·패키지를 봤다가 돌아와도 메시지 가격으로) */
   const messageHref = `${payHref}&product=message`;
-  const bundleNow = bundlePrice();
+  /* 첫 구매 24시간이면 패키지도 할인가 (서버가 보낸 마감 시각이 있을 때만) */
+  const bundleNow = offerEndsAt && offerEndsAt > Date.now() ? FIRST_OFFER_BUNDLE_PRICE_KRW : bundlePrice();
 
   const priceText = `${price.toLocaleString()}원`;
   const wantPrice = want === "book" ? BOOK_PRICE_KRW : want === "bundle" ? bundleNow : price;
