@@ -57,6 +57,11 @@ export default function ProductsSection() {
                 재오픈 특가 {PROMO_DEADLINE_TEXT} · 이후 {RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원
               </p>
             )}
+            {!promo && (
+              <p className="mt-2 inline-block rounded-full bg-thread/15 px-2.5 py-0.5 text-[0.7rem] text-thread">
+                무료 미리보기 후 24시간 동안 첫 구매가 {RITUAL_PRICE_KRW.toLocaleString()}원
+              </p>
+            )}
             <p className="mt-2 text-[0.8rem] font-light leading-[1.85] text-ivory-dim">
               한눈에 요약 · 첫 편지 · 관계 읽기 · 연락 타이밍과 첫 메시지 예시 · 순간별 실전 노트 · 24시간·7일·21일 가이드 · 리추얼. 결제 후 1~3분, 미리보기는 무료예요.
             </p>
