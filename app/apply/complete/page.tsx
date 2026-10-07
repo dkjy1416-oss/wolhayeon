@@ -14,7 +14,9 @@ import {
   PROMO_DEADLINE_TEXT,
   isPromoActive,
   FIRST_OFFER_PRICE_KRW,
+  FIRST_OFFER_BUNDLE_PRICE_KRW,
   firstOfferEndsAt,
+  isFirstOfferActive,
   offerAnchor,
   isProduct,
   productPrice,
@@ -162,9 +164,14 @@ export default async function CompletePage({
       ? row.payment_amount
       : productPrice("message", row.message_amount ?? RITUAL_PRICE_KRW, Date.now(), offerAnchor(row));
   /* 첫 구매가 적용 중이면 마감 시각 (메시지 결제일 때만 표시) */
+  const anchor = offerAnchor(row);
+  const offerOn = !isPromoActive() && isFirstOfferActive(anchor);
+  const bundleNowPrice = productPrice("bundle", null, Date.now(), anchor);
   const offerEnd =
-    product === "message" && row.payment_amount === FIRST_OFFER_PRICE_KRW && !isPromoActive()
-      ? firstOfferEndsAt(offerAnchor(row))
+    offerOn &&
+    ((product === "message" && row.payment_amount === FIRST_OFFER_PRICE_KRW) ||
+      (product === "bundle" && row.payment_amount === FIRST_OFFER_BUNDLE_PRICE_KRW))
+      ? firstOfferEndsAt(anchor)
       : null;
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
@@ -287,6 +294,8 @@ export default async function CompletePage({
               orderNumber={orderNumber}
               selected={product}
               messagePrice={messagePrice}
+              bundlePrice={bundleNowPrice}
+              offerOn={offerOn}
               extraQuery={paytest === "1" ? "&paytest=1" : ""}
             />
           </div>
