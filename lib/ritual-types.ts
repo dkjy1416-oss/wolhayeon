@@ -332,14 +332,35 @@ export function listPriceKRW(now: number = Date.now()): number {
   return isPromoActive(now) ? RITUAL_PRICE_KRW : RITUAL_REGULAR_PRICE_KRW;
 }
 
-/** 주문에 저장된 금액 → 지금 결제할 금액 (특가·쿠폰 기한이 지나면 정가) */
-export function resolveOrderPrice(stored: unknown, now: number = Date.now()): number {
+/** 첫 구매가 — 신청(=무료 미리보기)한 뒤 24시간 동안만 메시지 12,900원, 이후 정가 (운영자 결정 10/7) */
+export const FIRST_OFFER_PRICE_KRW = RITUAL_PRICE_KRW;
+export const FIRST_OFFER_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** 이 주문의 첫 구매가 마감 시각(ms). 신청 시각을 알 수 없으면 null */
+export function firstOfferEndsAt(createdAt: unknown): number | null {
+  const t = typeof createdAt === "string" ? Date.parse(createdAt) : NaN;
+  return Number.isFinite(t) ? t + FIRST_OFFER_WINDOW_MS : null;
+}
+
+export function isFirstOfferActive(createdAt: unknown, now: number = Date.now()): boolean {
+  const end = firstOfferEndsAt(createdAt);
+  return end !== null && now <= end;
+}
+
+/** 주문에 저장된 금액 → 지금 결제할 금액
+ *  (특가·쿠폰 기한 안이면 그 금액, 아니면 신청 후 24시간 첫 구매가, 그 뒤엔 정가) */
+export function resolveOrderPrice(
+  stored: unknown,
+  now: number = Date.now(),
+  createdAt?: unknown
+): number {
   if (
     isPromoActive(now) &&
     (stored === RITUAL_PRICE_KRW || stored === APOLOGY_PRICE_KRW)
   ) {
     return stored as number;
   }
+  if (createdAt !== undefined && isFirstOfferActive(createdAt, now)) return FIRST_OFFER_PRICE_KRW;
   return listPriceKRW(now);
 }
 
@@ -348,7 +369,9 @@ export function priceBadge(amount: number): { strike: number | null; label: stri
   if (amount === APOLOGY_PRICE_KRW)
     return { strike: RITUAL_REGULAR_PRICE_KRW, label: `결제 오류 사과 쿠폰가 · ${PROMO_DEADLINE_TEXT}` };
   if (amount === RITUAL_PRICE_KRW)
-    return { strike: RITUAL_REGULAR_PRICE_KRW, label: `재오픈 기념 특가 · ${PROMO_DEADLINE_TEXT}` };
+    return isPromoActive()
+      ? { strike: RITUAL_REGULAR_PRICE_KRW, label: `재오픈 기념 특가 · ${PROMO_DEADLINE_TEXT}` }
+      : { strike: RITUAL_REGULAR_PRICE_KRW, label: "첫 구매가" };
   return { strike: null, label: "" };
 }
 
@@ -356,7 +379,7 @@ export function priceBadge(amount: number): { strike: number | null; label: stri
 export function priceSentence(now: number = Date.now()): string {
   return isPromoActive(now)
     ? `${RITUAL_PRICE_KRW.toLocaleString()}원(재오픈 기념 특가, ${PROMO_DEADLINE_TEXT} · 정가 ${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원)`
-    : `${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원`;
+    : `${RITUAL_REGULAR_PRICE_KRW.toLocaleString()}원(무료 미리보기 후 24시간 안에 결제하면 첫 구매가 ${RITUAL_PRICE_KRW.toLocaleString()}원)`;
 }
 
 /* ---------- 상품 (메시지 / 개인화 책 / 패키지) ---------- */
@@ -421,7 +444,8 @@ export function isProduct(v: unknown): v is Product {
 export function productPrice(
   product: unknown,
   storedAmount: unknown,
-  now: number = Date.now()
+  now: number = Date.now(),
+  createdAt?: unknown
 ): number {
   if (product === "book") {
     /* 책 쿠폰 주문은 마감(10/11) 전까지 쿠폰가 유지 */
@@ -430,7 +454,7 @@ export function productPrice(
       : BOOK_PRICE_KRW;
   }
   if (product === "bundle") return bundlePrice(now);
-  return resolveOrderPrice(storedAmount, now);
+  return resolveOrderPrice(storedAmount, now, createdAt);
 }
 
 export function isAllowedPrice(amount: unknown): amount is number {

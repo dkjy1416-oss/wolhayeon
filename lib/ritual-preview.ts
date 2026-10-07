@@ -7,7 +7,22 @@
  * 전체 유료 결과 생성 구조는 변경하지 않는다.
  */
 import "server-only";
-import { resolveOrderPrice } from "@/lib/ritual-types";
+import {
+  resolveOrderPrice,
+  firstOfferEndsAt,
+  isFirstOfferActive,
+  isPromoActive,
+  FIRST_OFFER_PRICE_KRW,
+} from "@/lib/ritual-types";
+
+/** 첫 구매가가 지금 이 주문에 적용 중이면 마감 시각, 아니면 null */
+function offerEndsFor(order: { payment_amount: unknown; created_at: string }): number | null {
+  if (isPromoActive()) return null;
+  if (!isFirstOfferActive(order.created_at)) return null;
+  return resolveOrderPrice(order.payment_amount, Date.now(), order.created_at) === FIRST_OFFER_PRICE_KRW
+    ? firstOfferEndsAt(order.created_at)
+    : null;
+}
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -35,8 +50,10 @@ export type PreviewOutcome =
       applicantName: string;
       /** true = AI 개인화(또는 저장된 AI본), false = 즉석 템플릿 폴백 */
       generated: boolean;
-      /** 이 주문의 결제 금액 (사과 쿠폰 적용 시 쿠폰가) */
+      /** 이 주문의 결제 금액 (사과 쿠폰 적용 시 쿠폰가, 신청 후 24시간은 첫 구매가) */
       paymentAmount: number;
+      /** 첫 구매가 마감 시각(ms) — 첫 구매가가 적용 중일 때만 */
+      offerEndsAt: number | null;
       /** 결제 안내 문구를 고르기 위한 상황 구분 (사연 원문은 보내지 않음) */
       situation: PreviewSituation;
     }
@@ -500,7 +517,8 @@ export async function getOrCreatePreview(
           status: "ready",
           preview: cached.data,
           applicantName: order.applicant_name,
-          paymentAmount: resolveOrderPrice(order.payment_amount),
+          paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), order.created_at),
+          offerEndsAt: offerEndsFor(order),
           situation: previewSituation(order, cached.data.now_plan.stance),
           generated: true,
         };
@@ -532,7 +550,8 @@ export async function getOrCreatePreview(
       status: "ready",
       preview,
       applicantName: order.applicant_name,
-          paymentAmount: resolveOrderPrice(order.payment_amount),
+          paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), order.created_at),
+          offerEndsAt: offerEndsFor(order),
       situation: previewSituation(order, preview.now_plan.stance),
       generated: ai !== null,
     };

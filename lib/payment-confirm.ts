@@ -117,7 +117,7 @@ export async function confirmOrderPayment(params: {
     /* 1) 주문 존재 확인 — 개인정보 컬럼은 조회하지 않음 */
     const found = await supabase
       .from("ritual_orders")
-      .select("id, payment_amount, payment_status, payment_key, applicant_name, product")
+      .select("id, payment_amount, payment_status, payment_key, applicant_name, product, created_at")
       .eq("order_number", orderNumber)
       .single();
     if (found.error || !found.data) return { status: "not_found" };
@@ -186,8 +186,13 @@ export async function confirmOrderPayment(params: {
           5) 특가·쿠폰 기한 안의 가격인가 (마감 직후 30분 유예).
        쿠폰가는 서버(DB)에서만 정해지므로 브라우저 조작으로 할인 불가. */
     const amountOk = isAllowedPrice(row.payment_amount) && amountNumber === row.payment_amount;
-    const priceStillValid = [Date.now(), Date.now() - PROMO_GRACE_MS].some(
-      (t) => productPrice(product, row.payment_amount, t) === row.payment_amount
+    /* 정가(16,900원)는 첫 구매가 기간 중에도 받는다 — 첫 구매가 도입 전에 열어 둔 결제창 대비 */
+    const priceStillValid =
+      (product === "message" && row.payment_amount === RITUAL_REGULAR_PRICE_KRW) ||
+      [Date.now(), Date.now() - PROMO_GRACE_MS].some(
+      (t) =>
+        productPrice(product, row.payment_amount, t, (row as { created_at?: string | null }).created_at) ===
+        row.payment_amount
     );
     if (!amountOk || !priceStillValid) {
       /* 혹시 예전에 이미 돈이 빠져나간 이 주문의 결제인지 토스에 직접 확인 */
