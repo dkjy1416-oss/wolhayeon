@@ -1,0 +1,44 @@
+name: shrink-videos
+
+# 홈·책 페이지 반복 영상(public/book/v3)을 화질은 그대로, 용량은 절반으로 다시 인코딩해 저장.
+# 이미 줄인 파일(초당 700kbps 이하)은 건드리지 않으므로 여러 번 돌아도 안전.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/shrink-videos.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  shrink:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ffmpeg
+        run: which ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+      - name: re-encode
+        run: |
+          set -e
+          mkdir -p /tmp/out
+          for f in public/book/v3/*.mp4; do
+            br=$(ffprobe -v error -show_entries format=bit_rate -of csv=p=0 "$f")
+            if [ "${br:-0}" -gt 700000 ]; then
+              ffmpeg -v error -y -i "$f" -an -vf "scale=480:-2:flags=lanczos" \
+                -c:v libx264 -preset slower -crf 27 -maxrate 480k -bufsize 960k \
+                -profile:v high -pix_fmt yuv420p -g 48 -movflags +faststart "/tmp/out/$(basename "$f")"
+              old=$(stat -c%s "$f"); new=$(stat -c%s "/tmp/out/$(basename "$f")")
+              if [ "$new" -lt "$old" ]; then cp "/tmp/out/$(basename "$f")" "$f"; echo "$f $old -> $new"; fi
+            else
+              echo "$f skip ($br)"
+            fi
+          done
+      - name: commit
+        run: |
+          git config user.name "wolhayeon-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/book/v3
+          if git diff --cached --quiet; then echo "no change"; exit 0; fi
+          git commit -m "영상 용량 절반으로 줄임 (화질 동일, 폰 로딩 빠르게)"
+          git push
