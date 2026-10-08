@@ -2,6 +2,7 @@
 
 /** 화면에 보일 때만 재생하는 반복 영상 (데이터·배터리 절약). sound=true 면 눌러서 소리 켜기 */
 import { useEffect, useId, useRef, useState } from "react";
+import { onFirstGesture } from "@/lib/video-unlock";
 
 const EVT = "wh-loopvideo-unmute";
 
@@ -35,9 +36,25 @@ export default function LoopVideo({
       v.play().catch(() => undefined);
       return;
     }
+    let visible = false;
+    const play = () => {
+      v.play().catch(() => undefined);
+    };
+    /* 화면에 들어오기 조금 전(약 한 화면 아래)부터 미리 받기 시작 → 스크롤해 오면 바로 움직임 */
+    const near = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting && v.preload !== "auto") {
+          v.preload = "auto";
+          if (v.readyState === 0) v.load();
+          near.disconnect();
+        }
+      },
+      { rootMargin: "100% 0px 100% 0px" }
+    );
     const io = new IntersectionObserver(
       ([e]) => {
-        if (e.isIntersecting) v.play().catch(() => undefined);
+        visible = e.isIntersecting;
+        if (visible) play();
         else {
           v.pause();
           if (!v.muted) {
@@ -46,10 +63,19 @@ export default function LoopVideo({
           }
         }
       },
-      { threshold: 0.25 }
+      { threshold: 0.2 }
     );
+    near.observe(v);
     io.observe(v);
-    return () => io.disconnect();
+    /* 자동재생이 막힌 폰(저전력 모드 등): 첫 터치·스크롤 때 보이는 영상 다시 재생 */
+    const off = onFirstGesture(() => {
+      if (visible) play();
+    });
+    return () => {
+      near.disconnect();
+      io.disconnect();
+      off();
+    };
   }, []);
 
   /* 다른 영상 소리를 켜면 이 영상은 음소거 */
