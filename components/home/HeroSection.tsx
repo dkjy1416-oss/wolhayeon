@@ -59,17 +59,24 @@ export default function HeroSection({
             기다려야 할까.
           </h1>
         </Reveal>
+        <Reveal delay={80}>
+          <p className="mt-4 text-[0.95rem] font-light leading-[1.85] text-ivory drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
+            지금 두 사람의 상태와
+            <br />
+            먼저 해야 할 행동부터 확인해보세요.
+          </p>
+        </Reveal>
         <Reveal delay={150}>
           <TrackedCtaLink
             event="home_cta_click"
             placement="hero"
             href="/apply"
-            className="cta-glow mt-7 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.98rem] font-medium text-ivory transition-opacity active:opacity-85"
+            className="cta-glow mt-7 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.98rem] font-semibold text-ivory transition-opacity active:opacity-85"
           >
-            무료로 내 관계 먼저 보기
+            내 관계 무료로 보기
           </TrackedCtaLink>
           <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/85">
-            사연 3분 · 결제 전 미리보기 무료
+            질문 3분 · 결제 전 무료 분석 먼저
           </p>
         </Reveal>
       </div>

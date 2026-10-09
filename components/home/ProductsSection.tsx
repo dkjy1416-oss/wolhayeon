@@ -41,7 +41,7 @@ export default function ProductsSection() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[0.66rem] tracking-[0.2em] text-gold/80">지금 내 관계를 읽는</p>
-                <p className="mt-1 text-[1rem] text-ivory">월화의 메시지</p>
+                <p className="mt-1 text-[1rem] text-ivory">내 관계 전체 분석</p>
               </div>
               <div className="shrink-0 text-right">
                 <p className="font-display text-[1.4rem] font-semibold text-gold">
@@ -94,7 +94,7 @@ export default function ProductsSection() {
               </div>
               <div className="relative px-4 py-5">
                 <span className="rounded-full bg-gold px-2.5 py-0.5 text-[0.64rem] font-medium text-ink">월화의 추천</span>
-                <p className="mt-2.5 text-[1rem] leading-[1.45] text-ivory">메시지 + 책 패키지</p>
+                <p className="mt-2.5 text-[1rem] leading-[1.45] text-ivory">월화 패키지</p>
                 <p className="mt-1 text-[0.74rem] font-light leading-[1.7] text-ivory-dim">
                   지금을 읽는 메시지와, 기다리는 동안 곁에 둘 내 이름의 책
                 </p>
@@ -126,7 +126,7 @@ export default function ProductsSection() {
                 href="/apply?want=bundle"
                 className="flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] text-ivory"
               >
-                패키지로 받기
+                월화 패키지로 받기
               </TrackedCtaLink>
             </div>
           </div>
