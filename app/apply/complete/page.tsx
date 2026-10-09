@@ -333,6 +333,9 @@ export default async function CompletePage({
               ? `${CONTENT_VIEW_LINE} · PDF 책 다운로드는 60일`
               : CONTENT_VIEW_LINE}
           </p>
+          <p className="mt-1.5 text-center text-[0.7rem] text-ivory-dim/80">
+            결제 완료 후 결과가 생성됩니다 · 입력하신 사연은 결과를 만드는 데에만 사용됩니다
+          </p>
 
           <div className="mt-7">
             <TossCheckout
