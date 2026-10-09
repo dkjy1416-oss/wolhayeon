@@ -106,12 +106,18 @@ function FunnelBars({ f }: { f: Funnel }) {
           </div>
           <span className="text-right tabular-nums">
             <b>{n}</b>
-            {i > 0 && <span className="ml-1 text-[0.68rem] text-ivory-dim">{pct(n, steps[i - 1][1])}</span>}
+            {i > 0 && (
+              <span className="ml-1 text-[0.68rem] text-ivory-dim">
+                {/* 신청 완료는 '무료 분석 시작' 대비 (질문 단계 기록은 10/7부터라 기간이 다름) */}
+                {pct(n, label === "분석 신청 완료" ? f.applyStart : steps[i - 1][1])}
+              </span>
+            )}
           </span>
         </div>
       ))}
       <p className="pt-1 text-[0.72rem] text-ivory-dim">
         결제 실패 <b className="text-ivory">{f.payFail}</b>건 · 결제 취소 <b className="text-ivory">{f.payCancel}</b>건
+        <span className="block text-ivory-dim/70">질문 1~4 단계는 10/7부터 기록 · 신청 완료 비율은 무료 분석 시작 대비</span>
       </p>
     </div>
   );
