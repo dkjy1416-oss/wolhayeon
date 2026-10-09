@@ -30,6 +30,8 @@ import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
 import OfferCountdown from "@/components/pay/OfferCountdown";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
+import { PayIncludes, PayReviews } from "@/components/pay/PayValueBlock";
+import { getPublicReviews } from "@/lib/reviews";
 
 /** 주문번호 형식 (개인정보 아님 — URL에 넣을 수 있는 유일한 값) */
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
@@ -175,6 +177,8 @@ export default async function CompletePage({
       : null;
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
+  /* 결제 화면 후기 — 결제가 열려 있고 아직 결제 전일 때만 (실제 구매자·공개 동의 후기만, 없으면 숨김) */
+  const payReviews = !alreadyPaid && paymentsOpen ? await getPublicReviews(2) : [];
 
   return (
     <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col px-6 pb-16 pt-14">
@@ -337,6 +341,8 @@ export default async function CompletePage({
             결제 완료 후 결과가 생성됩니다 · 입력하신 사연은 결과를 만드는 데에만 사용됩니다
           </p>
 
+          <PayIncludes product={product} />
+
           <div className="mt-7">
             <TossCheckout
               clientKey={clientKey}
@@ -347,6 +353,7 @@ export default async function CompletePage({
           </div>
           {offerEnd && <OfferCountdown endsAt={offerEnd} className="mt-3 text-center" />}
           <InAppBrowserNotice orderNumber={orderNumber} />
+          <PayReviews reviews={payReviews} />
 
           {/* 테스트 결제 단계 전용 — 실결제 전환 시 제거 (TestModeNotices.tsx 참고) */}
           <TestPaymentNotice />
