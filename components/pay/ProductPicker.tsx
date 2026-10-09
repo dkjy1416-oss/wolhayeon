@@ -35,11 +35,12 @@ export default function ProductPicker({
 }) {
   const promo = isPromoActive();
   const bundle = bundleOverride ?? bundlePrice();
-  const items: Array<{ key: Product; price: number; note?: string; badge?: string; deadline?: string }> = [
+  type Item = { key: Product; price: number; note?: string; badge?: string; deadline?: string };
+  const all: Item[] = [
     {
       key: "bundle",
       price: bundle,
-      badge: "월화의 추천",
+      badge: "월화 추천",
       deadline: promo
         ? `패키지 특가 ${PROMO_DEADLINE_TEXT} · 이후 ${BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원`
         : offerOn && bundle < BUNDLE_REGULAR_PRICE_KRW
@@ -66,6 +67,8 @@ export default function ProductPicker({
     },
     { key: "book", price: BOOK_PRICE_KRW },
   ];
+  const items = all.filter((it) => it.key !== "book" || selected === "book");
+  /* 무료 미리보기 뒤 결제 화면에는 두 상품만 (책 단독은 책 페이지에서 고르고 온 손님에게만) */
   /* 손님이 고르고 들어온 상품을 맨 위에 (미리보기에서 메시지를 눌렀는데 42,900원 패키지가 먼저 보이지 않게) */
   const ordered = [...items.filter((x) => x.key === selected), ...items.filter((x) => x.key !== selected)];
   return (
@@ -133,7 +136,7 @@ export default function ProductPicker({
         href={`/book?order=${encodeURIComponent(orderNumber)}`}
         className="mt-1 text-center text-[0.74rem] text-gold/80 underline underline-offset-4"
       >
-        책 차례와 실제 페이지 미리 보기
+        PDF 책 실제 페이지 넘겨 보기
       </Link>
     </div>
   );
