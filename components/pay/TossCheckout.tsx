@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import {
   loadTossPayments,
@@ -199,6 +200,18 @@ function TossWindowCheckout({
     }
   };
 
+  /* 결제 버튼이 첫 화면 아래(약 1,160px)에 있어, 결제 화면에 온 손님 대부분이 버튼까지 내려오지 않았다
+     (10/9: 결제 화면 5명 → 결제창 0명). 버튼이 안 보이는 동안 하단에 같은 버튼을 고정한다. */
+  const payBtnRef = useRef<HTMLButtonElement>(null);
+  const [payBtnVisible, setPayBtnVisible] = useState(true);
+  useEffect(() => {
+    const el = payBtnRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setPayBtnVisible(e.isIntersecting), { threshold: 0.1 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   const optionCls = (active: boolean) =>
     `flex w-full items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors ${
       active
@@ -242,6 +255,7 @@ function TossWindowCheckout({
       <RefundNotice />
 
       <button
+        ref={payBtnRef}
         type="button"
         onClick={handlePay}
         disabled={!ready || paying}
@@ -264,6 +278,31 @@ function TossWindowCheckout({
           {errorMsg}
         </p>
       )}
+
+      {typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className={`fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim/25 bg-ink/95 px-4 pt-3 backdrop-blur transition-transform duration-300 ${
+              !payBtnVisible && ready ? "translate-y-0" : "translate-y-full"
+            }`}
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
+            aria-hidden={payBtnVisible}
+          >
+            <button
+              type="button"
+              tabIndex={payBtnVisible ? -1 : 0}
+              onClick={handlePay}
+              disabled={!ready || paying}
+              className="mx-auto flex h-12 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.92rem] font-semibold text-ivory active:opacity-85 disabled:opacity-50"
+            >
+              {paying ? "결제창을 여는 중…" : `${amount.toLocaleString()}원 결제하기`}
+            </button>
+            <p className="mx-auto mt-1.5 max-w-md text-center text-[0.66rem] text-ivory-dim/80">
+              {method === "CARD" ? "카드 · 간편결제" : "계좌이체"} · 1회 결제 · 정기결제 없음
+            </p>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
