@@ -203,6 +203,9 @@ export default async function AdminMarketingPage({
           <p className="mt-3 text-[0.78rem] text-ivory-dim">
             매출 <b className="text-ivory">{s.total.revenue.toLocaleString()}원</b> · 신청→결제{" "}
             <b className="text-ivory">{pct(s.total.paid, s.total.applied)}</b>
+            <span className="block text-[0.68rem] text-ivory-dim/70">
+              이 화면은 기간 안에 신청한 사람 기준(방문자는 중복 없이) · 대시보드는 날짜별 합계라 숫자가 조금 다를 수 있어요
+            </span>
           </p>
         </section>
 
