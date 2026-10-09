@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { isOperatorEmail, won } from "@/lib/admin-util";
 import CsvButton from "@/components/admin/CsvButton";
 
@@ -51,11 +52,14 @@ export default async function AdminCustomersPage({
   let rows: OrderRow[] = [];
   let loadError = false;
   try {
-    const res = await getSupabaseAdmin()
-      .from("ritual_orders")
-      .select("order_number, applicant_name, email, payment_status, payment_amount, product, created_at, consent_marketing")
-      .order("created_at", { ascending: false })
-      .limit(3000);
+    const res = await fetchAll<OrderRow>((a, b) =>
+      getSupabaseAdmin()
+        .from("ritual_orders")
+        .select("order_number, applicant_name, email, payment_status, payment_amount, product, created_at, consent_marketing")
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(a, b)
+    );
     if (res.error || !res.data) throw new Error();
     rows = res.data as OrderRow[];
   } catch {
