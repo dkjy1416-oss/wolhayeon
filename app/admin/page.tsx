@@ -14,6 +14,8 @@ import {
   won,
 } from "@/lib/admin-util";
 import { kickSweep } from "@/lib/sweep-kick";
+import { getMarketingStats } from "@/lib/marketing-stats";
+import FunnelBoard from "@/components/admin/FunnelBoard";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +75,8 @@ export default async function AdminDashboard() {
   const todayKey = kstDate(new Date().toISOString());
   const yesterdayKey = kstDate(yesterdayStart);
 
+  /* 상단 핵심 숫자·퍼널 (30일) — 실패해도 대시보드는 열린다 */
+  const statsPromise = getMarketingStats(30).catch(() => null);
   /* 최근 7일 주문 + 처리 필요 주문(기간 무관) */
   const [recentRes, attentionRes, csChatRes, incidentRes, failRes, reviewRes] =
     await Promise.all([
@@ -199,6 +203,7 @@ export default async function AdminDashboard() {
     todos.push({ label: "고객센터 장애 접수 (미해결)", count: openIncidents, href: "/admin/cs", tone: "warn" });
 
   const recentPaid = paidAll.slice(0, 6);
+  const stats = await statsPromise;
 
   return (
     <main className="mx-auto min-h-[100svh] w-full max-w-5xl px-5 pb-20 pt-8 text-ivory">
@@ -236,21 +241,21 @@ export default async function AdminDashboard() {
           : "결제 닫힘 — 고객에게 '결제 오픈 준비 중' 안내가 표시되는 상태"}
       </div>
 
-      {/* 오늘 */}
+      {/* 오늘 — 핵심 6개 + 퍼널 + 전환율 */}
       <h2 className="font-display mt-8 text-[1rem] font-semibold">오늘</h2>
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <Tile label="신청" value={`${today.applied}명`} sub={`어제 ${yesterday.applied}명`} />
-        <Tile label="미리보기 도달" value={`${today.preview}명`} sub={`어제 ${yesterday.preview}명`} />
-        <Tile label="결제" value={`${today.paid}건`} sub={`어제 ${yesterday.paid}건`} accent={today.paid > 0} />
-        <Tile label="매출" value={won(today.revenue)} sub={`어제 ${won(yesterday.revenue)}`} accent={today.revenue > 0} />
-        <Tile
-          label="CS 문의"
-          value={csToday === null ? "–" : `${csToday}건`}
-          sub="챗봇 대화 기준"
-        />
-      </div>
+      {stats ? (
+        <FunnelBoard stats={stats} />
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Tile label="신청" value={`${today.applied}명`} sub={`어제 ${yesterday.applied}명`} />
+          <Tile label="미리보기 도달" value={`${today.preview}명`} sub={`어제 ${yesterday.preview}명`} />
+          <Tile label="결제" value={`${today.paid}건`} sub={`어제 ${yesterday.paid}건`} accent={today.paid > 0} />
+          <Tile label="매출" value={won(today.revenue)} sub={`어제 ${won(yesterday.revenue)}`} accent={today.revenue > 0} />
+        </div>
+      )}
       <p className="mt-2 text-[0.75rem] text-ivory-dim">
         최근 7일 결제 {weekPaid.length}건 · 매출 {won(weekRevenue)}
+        {csToday !== null && ` · 오늘 CS 문의 ${csToday}건`}
         {couponPending > 0 && ` · 사과 쿠폰 대기 주문 ${couponPending}건`}
       </p>
 
