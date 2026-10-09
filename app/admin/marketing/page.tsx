@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getMarketingStats, type Funnel } from "@/lib/marketing-stats";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { kstDaysAgoStartIso } from "@/lib/admin-util";
 
 /** 신청 질문 순서 (components/apply/ImmersiveApplyExperience.tsx STEPS와 같은 순서) */
@@ -36,12 +37,15 @@ const APPLY_STEPS: [string, string][] = [
 /** 질문별 도달 방문자 수 (apply_step 기록 · 2026-10-07부터 쌓임) */
 async function getStepReach(days: number): Promise<Map<string, number> | null> {
   try {
-    const res = await getSupabaseAdmin()
-      .from("site_events")
-      .select("visitor_id, path")
-      .eq("event", "apply_step")
-      .gte("created_at", kstDaysAgoStartIso(days - 1))
-      .limit(20000);
+    const res = await fetchAll<{ visitor_id: string; path: string | null }>((a, b) =>
+      getSupabaseAdmin()
+        .from("site_events")
+        .select("visitor_id, path")
+        .eq("event", "apply_step")
+        .gte("created_at", kstDaysAgoStartIso(days - 1))
+        .order("id")
+        .range(a, b)
+    );
     if (res.error) return null;
     const sets = new Map<string, Set<string>>();
     for (const r of (res.data ?? []) as { visitor_id: string; path: string | null }[]) {
