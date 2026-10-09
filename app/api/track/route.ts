@@ -41,9 +41,7 @@ export async function POST(request: Request) {
       const h = clip(v, 100);
       return h && /^[a-z0-9.\-]+$/i.test(h) ? h.toLowerCase() : null;
     };
-    await getSupabaseAdmin()
-      .from("site_events")
-      .insert({
+    const row: Record<string, string | null> = {
         visitor_id: vid,
         event: ev,
         path: clip(b.path, 120),
@@ -54,7 +52,13 @@ export async function POST(request: Request) {
         first_ref_host: host(b.fr),
         device: b.dev === "mobile" ? "mobile" : b.dev === "desktop" ? "desktop" : null,
         order_number: order && ORDER_RE.test(order) ? order : null,
-      });
+    };
+    const ux = clip(b.ux, 80);
+    const res = await getSupabaseAdmin()
+      .from("site_events")
+      .insert(ux ? { ...row, utm_content: ux } : row);
+    /* utm_content 열이 아직 없으면(마이그레이션 전) 열 없이 다시 저장 — 방문 기록을 잃지 않게 */
+    if (res.error && ux) await getSupabaseAdmin().from("site_events").insert(row);
   } catch {
     /* noop */
   }
