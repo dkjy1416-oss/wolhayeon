@@ -9,6 +9,7 @@
  */
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { isOperatorEmail, kstDate, kstDaysAgoStartIso } from "@/lib/admin-util";
 import {
   APPLICANT_GENDER_OPTIONS,
@@ -19,6 +20,7 @@ import {
   BREAKUP_ELAPSED_OPTIONS,
   CURRENT_EMOTION_OPTIONS,
   optionLabel,
+  BOOK_COUPON_PRICE_KRW,
 } from "@/lib/ritual-types";
 
 export interface Funnel {
@@ -150,6 +152,7 @@ interface OrderRow {
   preview_generated_at: string | null;
   email: string | null;
   payment_amount: number | null;
+  product: string | null;
   applicant_gender: string | null;
   applicant_birth_year: number | null;
   life_stage: string | null;
@@ -179,42 +182,56 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
   const todayKey = kstDate(new Date().toISOString());
 
   const [oRes, eRes, pRes, firstRes] = await Promise.all([
-    supabase
-      .from("ritual_orders")
-      .select(
-        "order_number, created_at, paid_at, preview_generated_at, email, payment_amount, applicant_gender, applicant_birth_year, life_stage, main_wish, pain_points, relationship_type, breakup_elapsed, current_emotion"
-      )
-      .gt("created_at", since)
-      .order("created_at", { ascending: false })
-      .limit(5000),
-    supabase
-      .from("site_events")
-      .select("created_at, visitor_id, event, path, utm_source, utm_campaign, utm_content, first_ref_host, device, order_number")
-      .gt("created_at", since)
-      .limit(50000),
-    supabase
-      .from("payment_events")
-      .select("created_at, order_number, event, code")
-      .gt("created_at", since)
-      .not("event", "like", "sweep%") /* 자동 재처리 내부 기록 제외 */
-      .limit(20000),
+    fetchAll<OrderRow>((a, b) =>
+      supabase
+        .from("ritual_orders")
+        .select(
+          "order_number, created_at, paid_at, preview_generated_at, email, payment_amount, product, applicant_gender, applicant_birth_year, life_stage, main_wish, pain_points, relationship_type, breakup_elapsed, current_emotion"
+        )
+        .gt("created_at", since)
+        .order("id")
+        .range(a, b)
+    ),
+    fetchAll<EventRow>((a, b) =>
+      supabase
+        .from("site_events")
+        .select("created_at, visitor_id, event, path, utm_source, utm_campaign, utm_content, first_ref_host, device, order_number")
+        .gt("created_at", since)
+        .order("id")
+        .range(a, b)
+    ),
+    fetchAll<{ created_at: string; order_number: string; event: string; code: string | null }>((a, b) =>
+      supabase
+        .from("payment_events")
+        .select("created_at, order_number, event, code")
+        .gt("created_at", since)
+        .not("event", "like", "sweep%") /* 자동 재처리 내부 기록 제외 */
+        .order("id")
+        .range(a, b)
+    ),
     supabase.from("site_events").select("created_at").order("created_at", { ascending: true }).limit(1),
   ]);
 
-  const orders = ((oRes.data ?? []) as OrderRow[]).filter((o) => !isOperatorEmail(o.email));
+  /* 운영자 테스트 주문 제외 + 책 쿠폰 메일로 자동 만든 주문(손님이 직접 낸 신청 아님 · 결제 전)은 신청 수에서 제외 */
+  const orders = ((oRes.data ?? []) as OrderRow[]).filter(
+    (o) => !isOperatorEmail(o.email) && !(o.product === "book" && o.payment_amount === BOOK_COUPON_PRICE_KRW && !o.paid_at)
+  );
   const realOrderSet = new Set(orders.map((o) => o.order_number));
-  /* utm_content 열이 아직 없으면(마이그레이션 전) 열 없이 다시 읽는다 */
   let eData = eRes.data as EventRow[] | null;
   if (eRes.error) {
-    const retry = await supabase
-      .from("site_events")
-      .select("created_at, visitor_id, event, path, utm_source, utm_campaign, first_ref_host, device, order_number")
-      .gt("created_at", since)
-      .limit(50000);
-    eData = (retry.data ?? []) as EventRow[];
+    /* utm_content 열이 없을 때(마이그레이션 전) 열 없이 다시 읽는다 */
+    const retry = await fetchAll<EventRow>((a, b) =>
+      supabase
+        .from("site_events")
+        .select("created_at, visitor_id, event, path, utm_source, utm_campaign, first_ref_host, device, order_number")
+        .gt("created_at", since)
+        .order("id")
+        .range(a, b)
+    );
+    eData = retry.data;
   }
   const events = (eData ?? []) as EventRow[];
-  const payEvents = ((pRes.data ?? []) as { created_at: string; order_number: string; event: string; code: string | null }[])
+  const payEvents = (pRes.data ?? [])
     .filter((p) => realOrderSet.has(p.order_number));
   const trackingSince = (firstRes.data?.[0] as { created_at?: string } | undefined)?.created_at ?? null;
 
