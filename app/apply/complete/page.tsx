@@ -341,7 +341,7 @@ export default async function CompletePage({
             결제 완료 후 결과가 생성됩니다 · 입력하신 사연은 결과를 만드는 데에만 사용됩니다
           </p>
 
-          <PayIncludes product={product} />
+          <PayIncludes product={product} compact={bookSales && !(product === "book" && row.payment_amount === BOOK_COUPON_PRICE_KRW)} />
 
           <div className="mt-7">
             <TossCheckout
