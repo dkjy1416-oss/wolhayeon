@@ -8,8 +8,15 @@ import { PRODUCTS, type Product } from "@/lib/ritual-types";
 import { REFUND_WINDOW_DAYS } from "@/lib/refund-policy";
 import type { PublicReview } from "@/lib/reviews";
 
-export function PayIncludes({ product }: { product: Product }) {
+export function PayIncludes({ product, compact = false }: { product: Product; compact?: boolean }) {
   const p = PRODUCTS[product];
+  /* 위에 상품 고르기 카드(구성 목록 포함)가 이미 보이면 목록은 빼고 환불 안내만 */
+  if (compact)
+    return (
+      <p className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft/50 px-4 py-3 text-center text-[0.78rem] leading-[1.8] text-ivory-dim">
+        결과를 열어보기 전이라면 {REFUND_WINDOW_DAYS}일 안에 <b className="text-ivory">전액 환불</b>돼요 · 자동 처리
+      </p>
+    );
   return (
     <div className="mt-7 rounded-2xl border border-gold-dim/30 bg-ink-soft/60 px-5 py-5">
       <p className="text-[0.7rem] tracking-[0.25em] text-gold/85">결제하면 바로 열리는 것</p>
