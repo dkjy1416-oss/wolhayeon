@@ -139,7 +139,12 @@ const KNOWN_HOSTS: [RegExp, string][] = [
 ];
 
 function sourceLabel(utm: string | null, host: string | null, campaign?: string | null, content?: string | null): string {
-  if (utm) return [utm, campaign, content].filter(Boolean).join(" · ");
+  if (utm) {
+    /* 인스타가 프로필 링크에 자동으로 붙이는 utm_source=ig · utm_content=link_in_bio 를 사람이 읽는 이름으로 */
+    const src = /^(ig|instagram|insta)$/i.test(utm) ? "인스타그램" : /^(fb|facebook)$/i.test(utm) ? "페이스북" : utm;
+    const tag = (v?: string | null) => (v === "link_in_bio" ? "프로필 링크" : v);
+    return [src, tag(campaign), tag(content)].filter(Boolean).join(" · ");
+  }
   if (!host) return "직접 방문 (주소 입력·북마크·앱 내 링크)";
   for (const [re, name] of KNOWN_HOSTS) if (re.test(host)) return name;
   return host;
@@ -242,6 +247,9 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
       .map((e) => e.visitor_id)
   );
   const ev = events.filter((e) => !operatorVisitors.has(e.visitor_id));
+  const viewedOrders = new Set(
+    events.filter((e) => e.event === "preview_view" && e.order_number).map((e) => e.order_number as string)
+  );
 
   /* visitor → 첫 유입·기기 */
   const visitorSource = new Map<string, string>();
@@ -276,7 +284,6 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
     if (e.event === "view") s.v.add(e.visitor_id);
     if (e.event === "apply_start") s.s.add(e.visitor_id);
     if (e.event === "payment_cta_click" && e.order_number) s.c.add(e.order_number);
-    if (e.event === "preview_view" && e.order_number) s.pv.add(e.order_number);
     if (e.event === "apply_step" && e.path) {
       const step = e.path.split("#")[1];
       const cp = QUESTION_CHECKPOINTS.find((q) => q.step === step);
@@ -296,6 +303,8 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
     const { f } = getDay(kstDate(o.created_at));
     f.applied += 1;
     if (o.preview_generated_at) f.preview += 1;
+    /* 미리보기 열람은 신청한 날 기준으로 한 번만 (다음 날 다시 열어도 중복으로 세지 않음) */
+    if (viewedOrders.has(o.order_number)) f.previewView += 1;
     if (o.paid_at) {
       const pf = getDay(kstDate(o.paid_at)).f;
       pf.paid += 1;
@@ -308,7 +317,6 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
     f.applyStart = s.s.size;
     f.payClick = s.c.size;
     f.payPage = s.pp.size;
-    f.previewView = s.pv.size;
     f.payWindow = s.pw.size;
     f.payFail = s.pf.size;
     f.payCancel = s.pc.size;
@@ -333,7 +341,7 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
   ]).size;
   total.payPage = new Set(payEvents.filter((p) => p.event === "pay_page_view").map((p) => p.order_number)).size;
   total.payWindow = new Set(payEvents.filter((p) => p.event === "pay_request").map((p) => p.order_number)).size;
-  total.previewView = new Set(ev.filter((e) => e.event === "preview_view" && e.order_number).map((e) => e.order_number as string)).size;
+  total.previewView = orders.filter((o) => viewedOrders.has(o.order_number)).length;
   const isCancel = (p: { event: string; code: string | null }) =>
     (p.event === "pay_request_error" || p.event === "pay_fail") && !!p.code && CANCEL_CODES.has(p.code);
   total.payCancel = new Set(payEvents.filter(isCancel).map((p) => p.order_number)).size;
