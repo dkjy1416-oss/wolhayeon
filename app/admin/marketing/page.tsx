@@ -76,11 +76,17 @@ const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 1000) / 1
 function FunnelBars({ f }: { f: Funnel }) {
   const steps: [string, number][] = [
     ["방문자", f.visitors],
-    ["신청 시작", f.applyStart],
-    ["신청 완료", f.applied],
-    ["미리보기 도달", f.preview],
-    ["결제 버튼 클릭", f.payClick],
-    ["결제 완료", f.paid],
+    ["무료 분석 시작", f.applyStart],
+    ["질문 1 완료", f.q1],
+    ["질문 2 완료", f.q2],
+    ["질문 3 완료", f.q3],
+    ["질문 4 완료", f.q4],
+    ["분석 신청 완료", f.applied],
+    ["미리보기 생성", f.preview],
+    ["미리보기 열람", f.previewView],
+    ["결제 CTA 클릭", f.payClick],
+    ["토스 결제창 진입", f.payWindow],
+    ["결제 성공", f.paid],
   ];
   const max = Math.max(1, ...steps.map(([, n]) => n));
   return (
@@ -100,6 +106,9 @@ function FunnelBars({ f }: { f: Funnel }) {
           </span>
         </div>
       ))}
+      <p className="pt-1 text-[0.72rem] text-ivory-dim">
+        결제 실패 <b className="text-ivory">{f.payFail}</b>건 · 결제 취소 <b className="text-ivory">{f.payCancel}</b>건
+      </p>
     </div>
   );
 }
@@ -213,6 +222,19 @@ export default async function AdminMarketingPage({
               ))}
             </div>
           )}
+          {s.payMethods.length > 0 && (
+            <>
+              <p className="mt-4 text-[0.72rem] tracking-wide text-gold/80">결제창에 들어간 결제수단</p>
+              <div className="mt-1 space-y-1 text-[0.78rem]">
+                {s.payMethods.map((m) => (
+                  <div key={m.label} className="flex justify-between gap-3">
+                    <span className="text-ivory-dim">{m.label}</span>
+                    <span className="tabular-nums">{m.count}건</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </section>
       </div>
 
@@ -297,44 +319,53 @@ export default async function AdminMarketingPage({
         </div>
       </section>
 
-      {/* 유입 경로 */}
-      <div className="mt-6 grid gap-5 md:grid-cols-2">
-        {[
-          ["어디서 들어왔나 (첫 유입)", s.sources],
-          ["기기", s.devices],
-        ].map(([title, rows]) => (
-          <section key={title as string} className="min-w-0 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
-            <p className="text-sm font-semibold">{title as string}</p>
-            <div className="mt-2 overflow-x-auto">
-              <table className="w-full text-[0.78rem]">
-                <thead>
-                  <tr className="text-[0.68rem] text-ivory-dim">
-                    <th className="py-1 text-left font-normal">경로</th>
-                    <th className="py-1 text-right font-normal">방문자</th>
-                    <th className="py-1 text-right font-normal">신청</th>
-                    <th className="py-1 text-right font-normal">결제</th>
-                  </tr>
-                </thead>
-                <tbody className="tabular-nums">
-                  {(rows as typeof s.sources).length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="py-2 text-ivory-dim">아직 기록 없음</td>
-                    </tr>
-                  )}
-                  {(rows as typeof s.sources).slice(0, 12).map((r) => (
-                    <tr key={r.label} className="border-t border-gold-dim/10">
-                      <td className="max-w-[14rem] break-all py-1.5 pr-2">{r.label}</td>
-                      <td className="py-1.5 text-right">{r.visitors}</td>
-                      <td className="py-1.5 text-right">{r.applied}</td>
-                      <td className="py-1.5 text-right">{r.paid}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* 유입 경로별 매출 — "어떤 릴스가 조회수가 아니라 결제를 만드는가" */}
+      <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
+        <p className="text-sm font-semibold">유입 경로별 매출 (첫 유입 기준)</p>
+        <p className="mt-1 text-[0.74rem] text-ivory-dim">
+          릴스마다 링크에 utm_source=instagram&amp;utm_campaign=reel&amp;utm_content=reel01 처럼 붙이면 릴스별로 나뉘어 보여요
+        </p>
+        <div className="mt-2 overflow-x-auto">
+          <table className="w-full min-w-[36rem] text-[0.78rem]">
+            <thead>
+              <tr className="text-[0.68rem] text-ivory-dim">
+                {["경로", "방문자", "무료 신청", "미리보기", "결제", "매출", "방문→결제"].map((h, i) => (
+                  <th key={h} className={`py-1 font-normal ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {s.sources.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-2 text-ivory-dim">아직 기록 없음</td>
+                </tr>
+              )}
+              {s.sources.slice(0, 20).map((r) => (
+                <tr key={r.label} className="border-t border-gold-dim/10">
+                  <td className="max-w-[16rem] break-all py-1.5 pr-2">{r.label}</td>
+                  <td className="py-1.5 text-right">{r.visitors}</td>
+                  <td className="py-1.5 text-right">{r.applied}</td>
+                  <td className="py-1.5 text-right">{r.preview}</td>
+                  <td className={`py-1.5 text-right ${r.paid > 0 ? "text-gold" : ""}`}>{r.paid}</td>
+                  <td className="py-1.5 text-right">{r.revenue.toLocaleString()}</td>
+                  <td className="py-1.5 text-right text-ivory-dim">{pct(r.paid, r.visitors)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
+        <p className="text-sm font-semibold">기기</p>
+        <div className="mt-2 space-y-1 text-[0.8rem] tabular-nums">
+          {s.devices.map((r) => (
+            <div key={r.label} className="flex justify-between gap-3">
+              <span className="text-ivory-dim">{r.label}</span>
+              <span>방문 {r.visitors} · 신청 {r.applied} · 결제 {r.paid}</span>
             </div>
-          </section>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
 
       {/* 일별 */}
       <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
@@ -343,7 +374,7 @@ export default async function AdminMarketingPage({
           <table className="w-full min-w-[34rem] text-[0.78rem]">
             <thead>
               <tr className="text-[0.68rem] text-ivory-dim">
-                {["날짜", "방문자", "신청 시작", "신청", "미리보기", "결제 버튼", "결제", "매출"].map((h, i) => (
+                {["날짜", "방문자", "신청 시작", "신청", "미리보기", "결제 버튼", "결제창", "결제", "매출"].map((h, i) => (
                   <th key={h} className={`py-1 font-normal ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
                 ))}
               </tr>
@@ -357,6 +388,7 @@ export default async function AdminMarketingPage({
                   <td className="py-1.5 text-right">{f.applied}</td>
                   <td className="py-1.5 text-right">{f.preview}</td>
                   <td className="py-1.5 text-right">{f.payClick}</td>
+                  <td className="py-1.5 text-right">{f.payWindow}</td>
                   <td className="py-1.5 text-right text-gold">{f.paid}</td>
                   <td className="py-1.5 text-right">{f.revenue.toLocaleString()}</td>
                 </tr>
