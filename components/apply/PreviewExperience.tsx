@@ -31,10 +31,8 @@ import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import SceneBreak from "@/components/apply/SceneBreak";
-import PageFlipper from "@/components/book/PageFlipper";
 import ShareStoryCard from "@/components/apply/ShareStoryCard";
 import OfferCountdown from "@/components/pay/OfferCountdown";
-import { BOOK_SAMPLE_PAGES } from "@/lib/book/book-pages";
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
@@ -58,60 +56,153 @@ interface Preview {
     watch: string[];
     decide_rule: string;
   };
-  love100: string[];
-  cta_lead_text: string;
+  love100?: string[];
+  cta_lead_text?: string;
+  /* v5 — 판정 카드 · 판단 근거 · 감정 연결 (구버전 저장본엔 없음 → 화면에서 대체) */
+  verdict?: { risk: string; need: string };
+  reasons?: string[];
+  bridge?: string[];
 }
-
-/* CTA 버튼·보조 문구는 고정 (AI가 선택하지 않음) */
-/* 결제 직전 안내 — 실제 운영 기준(최근 결제 결과 도착 1~4분)에 맞춘 고정 문구 */
-const CTA_ASSURANCES = [
-  "1회 결제 · 보통 결제 후 5분 안에 완성",
-  `웹에서 ${CONTENT_VIEW_DAYS}일 열람 · 결과 링크 이메일 발송`,
-];
 
 /* 상황 구분: 서버(신청 내용 + 무료 결과)가 정해서 코드만 보낸다 */
 type Situation = "boundary" | "lover" | "light" | "wait";
-const SITUATION_COPY: Record<
-  Situation,
-  { questions: string[]; includes: [string, string]; bookPersonal: string }
-> = {
-  wait: {
-    questions: [
-      "기다리는 동안 무엇을 해야 할까?",
-      "먼저 연락이 오면 어떻게 답할까?",
-      "다시 연락하기 전 무엇을 확인할까?",
-    ],
-    includes: ["연락을 고려할 때 쓸 첫 문장", "상대의 반응에 따른 다음 행동"],
-    bookPersonal: "책의 첫 편지·메시지 초안·일부 계획은 내 사연에 맞춰 구성됩니다.",
-  },
-  light: {
-    questions: [
-      "첫 문장을 어떻게 시작할까?",
-      "짧은 답만 오면 어떻게 할까?",
-      "답이 없으면 어디서 멈출까?",
-    ],
-    includes: ["연락을 고려할 때 쓸 첫 문장", "상대의 반응에 따른 다음 행동"],
-    bookPersonal: "책의 첫 편지·메시지 초안·일부 계획은 내 사연에 맞춰 구성됩니다.",
-  },
+type Stance = Preview["now_plan"]["stance"];
+
+/** 판정 카드 '지금 연락' — 무료에서는 방향까지만 (기간·날짜는 전체 결과에서) */
+const CONTACT_VERDICT: Record<Stance, string> = {
+  wait: "잠시 멈추는 편이 좋아요",
+  light_contact: "짧고 가볍게는 괜찮아요",
+  hold_boundary: "지금은 거리를 지켜요",
+};
+const NEED_DEFAULT: Record<Stance, string> = {
+  wait: "상대의 피로부터 낮추기",
+  light_contact: "가볍게 답할 수 있는 거리",
+  hold_boundary: "거리 존중하며 내 하루 지키기",
+};
+
+/** 구버전 저장본: 긴 행동 문장을 카드용으로 짧게 */
+function shortAction(text: string): string {
+  const t = text.replace(/[“”"']/g, "").trim();
+  return t.length <= 16 ? t : `${t.slice(0, 15).trim()}…`;
+}
+
+/** 잠금 영역·비교표·하단 문구 — 실제 전체 결과에 들어 있는 것만 적는다 (UI 고정, AI가 약속을 늘리지 못하게).
+ *  ph는 흐림 처리용 자리표시 문장(실제 결과 아님 — 유출 불가). */
+type LockCopy = {
+  title: string;
+  desc: string;
+  items: Array<{ t: string; ph: string }>;
+  compare: Array<[string, boolean]>;
+  recap: [string, string];
+  bottomCta: string;
+  bridge: string[];
+};
+const CONTACT_LOCK: LockCopy = {
+  title: "그렇다면 언제 연락해야 할까요?",
+  desc: "지금부터는 관계를 다시 움직이기 위한 실제 행동이 필요합니다.",
+  items: [
+    { t: "나에게 맞는 연락 시점", ph: "이 조건이 채워진 다음, 그때 한 번 짧고 가볍게" },
+    { t: "첫 연락 실제 문장", ph: "잘 지내? 갑자기 생각나서 연락했어 부담 갖지 말고" },
+    { t: "상대가 답장했을 때 다음 답장", ph: "반가운 답이 오면 이렇게 이어서 한 번만" },
+    { t: "단답·읽씹·무응답일 때 대응", ph: "답이 짧거나 없을 때는 여기서 멈추고 기다리기" },
+    { t: "24시간·7일·21일 행동 플랜", ph: "첫날 할 일과 일주일 동안 지킬 것, 셋째 주의 기준" },
+  ],
+  compare: [
+    ["관계 상태 분석", true],
+    ["상대 감정 분석", true],
+    ["연락 타이밍", true],
+    ["실제 메시지 문장", true],
+    ["21일 행동 플랜", true],
+    ["개인 맞춤 PDF 책", false],
+    ["PDF로 내려받아 보관", false],
+  ],
+  recap: ["이미 지금 해야 할 행동은 어느 정도 보였어요.", "이제 필요한 건 타이밍과 실제 문장입니다."],
+  bottomCta: "내 연락 타이밍과 메시지 보기",
+  bridge: [
+    "지금 아무것도 하지 않는 것이 가장 답답할 수 있어요.",
+    "하지만 관계가 다시 움직이려면, 연락보다 먼저 상대가 느끼는 감정의 압박을 낮추는 시간이 필요해요.",
+    "문제는 기다릴지 말지가 아니라, 얼마나 기다리고 어떤 말로 다시 시작하느냐예요.",
+  ],
+};
+const LOCK_COPY: Record<Situation, LockCopy> = {
+  wait: CONTACT_LOCK,
+  light: CONTACT_LOCK,
   lover: {
-    questions: [
-      "이 이야기를 언제 꺼낼까?",
-      "비난 없이 어떻게 말할까?",
-      "같은 싸움을 반복하지 않으려면 무엇을 합의할까?",
+    ...CONTACT_LOCK,
+    title: "그렇다면 언제, 어떻게 다시 이야기를 꺼내야 할까요?",
+    desc: "지금부터는 같은 싸움을 반복하지 않기 위한 실제 행동이 필요합니다.",
+    items: [
+      { t: "이야기를 다시 꺼낼 시점", ph: "감정이 가라앉은 다음, 이 조건일 때 한 번" },
+      { t: "비난 없이 꺼내는 첫마디 문장", ph: "그때 내가 서운했던 건 네가 아니라 그 순간이었어" },
+      { t: "상대가 답했을 때 다음 말", ph: "이렇게 답이 오면 이어서 이 말까지만" },
+      { t: "단답·회피할 때 대응", ph: "짧게 넘기려 할 때는 여기서 멈추고" },
+      { t: "24시간·7일·21일 행동 플랜", ph: "첫날 할 일과 일주일 동안 지킬 것, 셋째 주의 기준" },
     ],
-    includes: ["이야기를 꺼낼 때 쓸 첫 문장", "상대의 반응에 따른 다음 행동"],
-    bookPersonal: "책의 첫 편지·메시지 초안·일부 계획은 내 사연에 맞춰 구성됩니다.",
+    compare: [
+      ["관계 상태 분석", true],
+      ["상대 감정 분석", true],
+      ["대화를 꺼낼 타이밍", true],
+      ["실제 대화 문장", true],
+      ["21일 행동 플랜", true],
+      ["개인 맞춤 PDF 책", false],
+      ["PDF로 내려받아 보관", false],
+    ],
+    recap: ["이미 지금 하지 말아야 할 것은 보였어요.", "이제 필요한 건 꺼낼 타이밍과 실제 문장입니다."],
+    bottomCta: "내 대화 타이밍과 문장 보기",
+    bridge: [
+      "지금 아무 말도 하지 않는 게 가장 답답할 수 있어요.",
+      "하지만 대화가 다시 열리려면, 서운함을 설명하기보다 상대가 느끼는 부담을 먼저 낮추는 시간이 필요해요.",
+      "문제는 말할지 말지가 아니라, 언제 어떤 말로 다시 이야기를 꺼내느냐예요.",
+    ],
   },
   boundary: {
-    questions: [
-      "상대의 경계를 어떻게 지킬까?",
-      "연락 충동이 올라오면 무엇을 할까?",
-      "내 일상을 어떻게 회복할까?",
+    title: "그렇다면 지금, 무엇을 해야 할까요?",
+    desc: "지금부터는 거리를 지키면서 내 하루를 붙잡는 실제 행동이 필요합니다.",
+    items: [
+      { t: "내가 지킬 거리의 기준", ph: "상대가 먼저 거리를 풀기 전까지 이 선은 넘지 않기" },
+      { t: "연락하고 싶어질 때 바로 할 행동", ph: "보내기 전에 이것부터 하고 그래도 남으면" },
+      { t: "상대 소식을 접했을 때 대처", ph: "SNS나 지인을 통해 소식을 들었을 때는" },
+      { t: "흔들리는 밤에 꺼내 볼 문장", ph: "오늘 하루를 지킨 나에게 먼저 건네는 말" },
+      { t: "24시간·7일·21일 행동 플랜", ph: "첫날 할 일과 일주일 동안 지킬 것, 셋째 주의 기준" },
     ],
-    includes: ["거리를 지키는 방법", "연락 충동이 올라올 때 할 행동"],
-    bookPersonal: "책의 첫 편지와 일부 계획은 내 사연에 맞춰 구성됩니다.",
+    compare: [
+      ["관계 상태 분석", true],
+      ["상대 반응 해석", true],
+      ["거리를 지키는 기준", true],
+      ["흔들릴 때 대처", true],
+      ["21일 행동 플랜", true],
+      ["개인 맞춤 PDF 책", false],
+      ["PDF로 내려받아 보관", false],
+    ],
+    recap: ["이미 지금 하지 말아야 할 것은 보였어요.", "이제 필요한 건 흔들릴 때 붙잡을 기준입니다."],
+    bottomCta: "내 다음 행동 플랜 보기",
+    bridge: [
+      "아무것도 하지 않는 지금이 가장 답답할 수 있어요.",
+      "하지만 지금은 거리를 좁히는 것보다, 내 하루가 흔들리지 않는 게 먼저예요.",
+      "문제는 기다릴지 말지가 아니라, 얼마나 거리를 지키고 흔들릴 때 무엇을 하느냐예요.",
+    ],
   },
 };
+
+/** 결제 직전 FAQ — 실제 운영 기준과 일치하는 고정 문구 */
+const FAQ = [
+  {
+    q: "실제 상담사와 채팅하는 건가요?",
+    a: "아니에요. 월하연은 입력한 관계 정보를 바탕으로 개인별 결과를 생성하는 디지털 관계 분석 서비스입니다.",
+  },
+  {
+    q: "결과가 모두 똑같은가요?",
+    a: "아닙니다. 입력한 관계 상태, 마지막 연락, 상대 반응 등을 기준으로 결과 내용이 달라집니다.",
+  },
+  {
+    q: "언제 결과를 볼 수 있나요?",
+    a: "결제 후 결과 생성이 완료되면 바로 확인할 수 있어요. 보통 5분 안에 완성되고, 링크를 이메일로도 보내 드려요.",
+  },
+  {
+    q: "다시 볼 수 있나요?",
+    a: `결과는 결제일로부터 ${CONTENT_VIEW_DAYS}일 동안 같은 링크로 다시 확인할 수 있어요. 월화 패키지의 PDF 책은 결제일로부터 60일 안에 내려받으면 계속 보관할 수 있어요.`,
+  },
+];
 
 /** 첫 문장만 (마침표·물음표·느낌표 기준, 너무 짧거나 없으면 전체) */
 function firstSentence(text: string): string {
@@ -119,16 +210,6 @@ function firstSentence(text: string): string {
   const m = t.match(/^(.{12,}?[.!?。])(\s|$)/);
   return m ? m[1] : t;
 }
-
-/** 흐림 처리용 자리표시 문장 (실제 결과 아님 — 유출 불가) */
-const BLUR_LINES = [
-  "달빛이 스며드는 밤, 두 사람의 이야기는 조용히 이어지고 있었습니다. 그날의 말들과 마음의 온도, 그리고 아직 전하지 못한",
-  "관계의 흐름 속에서 반복되던 순간들을 하나씩 짚어보면, 그 안에 남아 있던 진짜 마음의 방향이 천천히 드러나기 시작합니다.",
-  "붉은 실을 손에 감고 준비된 문장을 읽는 다섯 번의 호흡, 그 시간 동안 정리되는 것들과 내려놓게 되는 것들에 대하여",
-  "그날 밤의 마지막 대화를 다시 펼쳐 보면, 말이 되지 못하고 남아 있던 마음이 어느 줄에 숨어 있었는지 보이기 시작하고",
-  "멀어진 순서를 거꾸로 되짚어 가다 보면, 두 사람이 각자 지키고 싶었던 것이 사실은 같은 자리에 있었다는 것도",
-  "기다림과 연락 사이에서 흔들리는 마음에게, 지금 필요한 건 답이 아니라 순서라는 것을 먼저 전하고 싶었습니다",
-];
 
 /** full-bleed 몰입형 루프 배경 — 플레이어/카드처럼 보이지 않게.
  *  상하단은 ink로 녹아들고, 텍스트 가독성용 하단 오버레이 포함 */
@@ -252,7 +333,7 @@ export default function PreviewExperience({
           setName(json.applicantName.trim());
         }
         if (isAllowedPrice(json.paymentAmount)) setPrice(json.paymentAmount);
-        if (typeof json.situation === "string" && json.situation in SITUATION_COPY)
+        if (typeof json.situation === "string" && json.situation in LOCK_COPY)
           setSituation(json.situation as Situation);
         setOfferEndsAt(typeof json.offerEndsAt === "number" ? json.offerEndsAt : null);
         setPreview(json.preview as Preview);
@@ -331,7 +412,7 @@ export default function PreviewExperience({
           Array.isArray(cached.preview.preview_letter_excerpt) &&
           Array.isArray(cached.preview.cautions) &&
           !!cached.preview.now_plan &&
-          Array.isArray(cached.preview.love100)
+          !!cached.preview.relationship_state
         ) {
           if (
             typeof cached.applicantName === "string" &&
@@ -498,438 +579,342 @@ export default function PreviewExperience({
     return <PreviewWaiting name={name} slow={slowNote} />;
   }
 
-  /* ---------- ready: 같은 화면에서 fade로 preview 공개 ---------- */
+  /* ---------- ready: 무료 = 이해 → 잠금(실행) → 결제 (10/9 개발지시서) ---------- */
   if (!preview) return null;
   const payHref = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
   /* 메시지 결제는 항상 product=message 를 명시 (책·패키지를 봤다가 돌아와도 메시지 가격으로) */
   const messageHref = `${payHref}&product=message`;
+  const bundleHref = `${payHref}&product=bundle`;
   /* 첫 구매 24시간이면 패키지도 할인가 (서버가 보낸 마감 시각이 있을 때만) */
-  const bundleNow = offerEndsAt && offerEndsAt > Date.now() ? FIRST_OFFER_BUNDLE_PRICE_KRW : bundlePrice();
+  const offerOn = !!offerEndsAt && offerEndsAt > Date.now();
+  const bundleNow = offerOn ? FIRST_OFFER_BUNDLE_PRICE_KRW : bundlePrice();
 
   const priceText = `${price.toLocaleString()}원`;
-  const wantPrice = want === "book" ? BOOK_PRICE_KRW : want === "bundle" ? bundleNow : price;
   const mainHref = want ? `${payHref}&product=${want}` : messageHref;
   const mainLabel =
     want === "book"
       ? `${name ? `${name}님의 ` : "나의 "}책 받기 · ${BOOK_PRICE_KRW.toLocaleString()}원`
       : want === "bundle"
-        ? `메시지 + 책 함께 받기 · ${bundleNow.toLocaleString()}원`
-        : null;
+        ? `월화 패키지로 보기 · ${bundleNow.toLocaleString()}원`
+        : `내 이야기 전체 보기 · ${priceText}`;
   const onCtaClick = (where: string) => {
     trackEvent("payment_cta_click", { order: orderNumber });
     logPayEvent(orderNumber, "preview_cta_click", where);
   };
-  /* 무료 결론 한 줄 = 무료 분석 05의 설명 첫 문장 그대로 */
-  const stanceLabel = NOW_STANCE_LABELS[preview.now_plan.stance] ?? "";
-  const conclusion = firstSentence(preview.now_plan.why);
+  const stance = preview.now_plan.stance;
   /* 서버가 준 상황 구분이 없으면(구버전 응답) 무료 결과의 방향으로 판단 */
   const sit: Situation =
     situation ??
-    (preview.now_plan.stance === "hold_boundary"
-      ? "boundary"
-      : preview.now_plan.stance === "light_contact"
-        ? "light"
-        : "wait");
-  const copy = SITUATION_COPY[sit];
+    (stance === "hold_boundary" ? "boundary" : stance === "light_contact" ? "light" : "wait");
+  const lock = LOCK_COPY[sit];
+  const badge = priceBadge(price);
 
-  /* 카드 사이 장면 — 이 사람의 미리보기 내용(상대 반응·지금 할 일)에 맞춰 고른다 */
-  const firstMode = preview.partner_reading.modes[0] ?? "";
-  const scene =
-    preview.now_plan.stance === "hold_boundary"
-      ? { v: "alone", eyebrow: "혼자 견딘 밤", line: "혼자 견디는 밤이\n길었다면" }
-      : firstMode === "방어" || firstMode === "감정소진"
-      ? { v: "fight", eyebrow: "그날의 장면", line: "그날의 말들이\n아직 귓가에 남아 있다면" }
-      : firstMode === "거리두기" || firstMode === "부담"
-        ? { v: "cry", eyebrow: "멀어지는 뒷모습", line: "붙잡고 싶었는데,\n뒷모습만 남았다면" }
-        : { v: "night", eyebrow: "새벽의 불빛", line: "연락할까 말까,\n화면만 켰다 껐다 했다면" };
-  const stance = preview.now_plan.stance;
-  const stanceScene =
-    stance === "light_contact"
-      ? { v: "w-thread", line: "끊어지지 않은 실을,\n서두르지 않고 천천히" }
-      : stance === "hold_boundary"
-        ? { v: "w-mirror", line: "나를 지키는 거리도\n이 관계를 아끼는 방법이에요" }
-        : { v: "w-phone", line: "지금은, 휴대폰을\n한 번 내려놓을 때" };
+  /* 판정 카드 4개 — 짧게, 1~2초 안에 읽히게 */
+  const verdictCards: Array<{ k: string; v: string }> = [
+    { k: sit === "lover" ? "지금 대화" : "지금 연락", v: CONTACT_VERDICT[stance] },
+    { k: "현재 관계", v: preview.relationship_state.label },
+    { k: "가장 위험한 행동", v: preview.verdict?.risk ?? shortAction(preview.cautions[0]?.action ?? "") },
+    { k: "지금 필요한 것", v: preview.verdict?.need ?? NEED_DEFAULT[stance] },
+  ];
+  /* 왜 이렇게 판단했는지 — 구버전 저장본은 기존 해석 문장으로 */
+  const reasons =
+    preview.reasons && preview.reasons.length
+      ? preview.reasons
+      : [firstSentence(preview.relationship_state.text), firstSentence(preview.partner_reading.text)];
+  const bridge = preview.bridge && preview.bridge.length ? preview.bridge : lock.bridge;
+  const donts = preview.cautions.slice(0, 3);
+
+  const ctaButton = (where: string, label: string, href = mainHref) => (
+    <Link
+      href={href}
+      onClick={() => onCtaClick(where)}
+      className="cta-glow inline-flex min-h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep px-5 py-3 text-center text-[0.97rem] font-semibold text-ivory transition-opacity active:opacity-85"
+    >
+      {label}
+    </Link>
+  );
 
   return (
     <div className="fade-in pb-28">
-      {/* ---------- full-bleed: 이름 제목 + 월화의 개인화 문장 3줄 ---------- */}
-      <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[88svh]">
-        <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
-        <p className="mt-4 text-[0.66rem] tracking-[0.3em] text-thread/90">
-          무료 개인화 미리보기
-        </p>
-        <p className="font-display mt-2 text-[1.35rem] font-semibold leading-snug text-ivory">
-          {name ? `${name}님에게 먼저 보인 흐름` : "당신에게 먼저 보인 흐름"}
-        </p>
-        <div className="mt-5 flex flex-col gap-3.5">
-          {preview.intro_lines.map((line, i) => (
-            <p
-              key={i}
-              className="text-[0.95rem] font-light leading-[2.05] text-ivory"
-            >
-              {line}
-            </p>
-          ))}
+      {/* ---------- 01. 결과 헤더 — 장식 없이 바로 결과 ---------- */}
+      <header className="px-6 pb-2 pt-10">
+        <div className="mx-auto max-w-md">
+          <p className="text-[0.66rem] tracking-[0.3em] text-gold/80">月下緣 · 무료 관계 분석</p>
+          <h1 className="font-display mt-3 text-[1.42rem] font-semibold leading-snug text-ivory">
+            {name ? `${name}님의 관계를 분석했어요` : "지금 두 사람의 상태를 먼저 볼게요"}
+          </h1>
+          <p className="mt-2 text-[0.84rem] font-light leading-[1.85] text-ivory-dim">
+            입력해주신 상황을 기준으로 현재 관계의 흐름을 분석했습니다.
+          </p>
         </div>
-        <p className="mt-4 text-right text-[0.78rem] text-gold/80">— 월화 月華</p>
-      </FullBleedReading>
+      </header>
 
-      {/* 개인화 3문장 다음에는 바로 첫 편지와 잠긴 결과로 이어진다.
-          가격/결제는 충분한 무료 미리보기를 본 뒤 처음 노출한다. */}
-
-      {/* ---------- 첫 편지: 실제 서두 노출 + 페이드 ---------- */}
-      <section className="mt-10 px-6">
-        <div className="mx-auto max-w-md overflow-hidden rounded-2xl border border-gold/25 bg-ink-soft">
-          <div className="px-6 pt-7">
-            <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">01</p>
-            <p className="font-display mt-1 text-[1.05rem] font-semibold text-ivory">
-              월화의 첫 편지
-            </p>
-          </div>
-          <div className="relative px-6 pb-6 pt-4">
-            <div className="flex flex-col gap-3">
-              {preview.preview_letter_excerpt.map((line, i) => (
-                <p
-                  key={i}
-                  className="text-[0.92rem] font-light leading-[2.05] text-ivory"
-                >
-                  {line}
-                </p>
-              ))}
-            </div>
-            {/* 이어지는 부분: 자리표시 문장 흐림 + 그라데이션 페이드 */}
-            <p
-              aria-hidden
-              className="mt-3 select-none text-[0.92rem] font-light leading-[2.05] text-ivory-dim blur-[4px]"
-            >
-              {BLUR_LINES[0]}
-            </p>
-            <p
-              aria-hidden
-              className="mt-2 select-none text-[0.92rem] font-light leading-[2.05] text-ivory-dim/70 blur-[7px]"
-            >
-              {BLUR_LINES[1]}
-            </p>
+      {/* ---------- 02. 관계 판정 카드 4개 ---------- */}
+      <section className="mt-5 px-6" aria-label="관계 판정">
+        <div className="mx-auto grid max-w-md grid-cols-2 gap-2.5">
+          {verdictCards.map((c, i) => (
             <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-ink-soft via-ink-soft/80 to-transparent"
-            />
-          </div>
-          <div className="border-t border-gold-dim/20 px-6 py-3.5 text-center">
-            <p className="text-[0.72rem] text-gold/80">이 편지는 전체 결과에서 이어집니다</p>
-          </div>
-        </div>
-      </section>
-
-      <SceneBreak
-        video={`/book/v3/${scene.v}.mp4`}
-        poster={`/book/v3/${scene.v}.webp`}
-        eyebrow={scene.eyebrow}
-        line={scene.line}
-      />
-
-      {/* ---------- A. 지금 두 사람의 자리 ---------- */}
-      <section className="mt-2 px-6">
-        <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-6">
-          <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">02 · 지금 두 사람의 자리</p>
-          <p className="font-display mt-2 text-[1.08rem] font-semibold leading-snug text-ivory">
-            {preview.relationship_state.label}
-          </p>
-          <p className="mt-3 text-[0.9rem] font-light leading-[2] text-ivory">
-            {preview.relationship_state.text}
-          </p>
+              key={c.k}
+              className={`min-w-0 rounded-2xl border px-4 py-4 ${
+                i === 0 ? "border-burgundy/70 bg-gradient-to-b from-[#2a1015] to-[#1a0c0f]" : "border-gold-dim/25 bg-ink-soft"
+              }`}
+            >
+              <p className="text-[0.7rem] tracking-wider text-ivory-dim">{c.k}</p>
+              <p className="mt-1.5 break-keep text-[0.98rem] font-semibold leading-[1.45] text-ivory">{c.v}</p>
+            </div>
+          ))}
         </div>
       </section>
       <div ref={stickyStartRef} aria-hidden />
 
-      {/* ---------- B. 상대 반응 해석 ---------- */}
-      <section className="mt-4 px-6">
-        <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-6">
-          <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">03 · 그 사람의 반응, 이렇게 읽혀요</p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {preview.partner_reading.modes.map((m) => (
-              <span
-                key={m}
-                className="rounded-full border border-thread/40 bg-thread/10 px-2.5 py-0.5 text-[0.72rem] text-thread"
-              >
-                {m}
-              </span>
-            ))}
-          </div>
-          <p className="mt-3 text-[0.9rem] font-light leading-[2] text-ivory">
-            {preview.partner_reading.text}
-          </p>
-        </div>
-      </section>
-
-      <SceneBreak
-        video="/book/v3/bed.mp4"
-        poster="/book/v3/bed.webp"
-        eyebrow="보내기 직전"
-        line={"썼다 지운 그 한 줄이,\n지금 가장 위험해요"}
-      />
-
-      {/* ---------- C. 지금 가장 조심할 행동 ---------- */}
-      <section className="mt-2 px-6">
-        <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft px-6 py-6">
-          <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">04 · 지금 가장 조심할 행동</p>
-          <ol className="mt-3 flex flex-col gap-3.5">
-            {preview.cautions.map((c, i) => (
-              <li key={i} className="flex gap-3">
-                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-thread/50 text-[0.68rem] text-thread">
-                  {i + 1}
-                </span>
-                <div>
-                  <p className="text-[0.9rem] font-medium leading-[1.7] text-ivory">{c.action}</p>
-                  <p className="mt-0.5 text-[0.82rem] font-light leading-[1.85] text-ivory-dim">{c.why}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      <SceneBreak
-        video={`/book/v3/${stanceScene.v}.mp4`}
-        poster={`/book/v3/${stanceScene.v}.webp`}
-        eyebrow="월화가 건네는 방향"
-        line={stanceScene.line}
-      />
-
-      {/* ---------- D. 지금 해야 할 행동 ---------- */}
-      <section className="mt-2 px-6">
-        <div className="mx-auto max-w-md rounded-2xl border border-gold/35 bg-gradient-to-b from-ink-soft to-ink px-6 py-6">
-          <p className="text-[0.7rem] font-medium tracking-wider text-gold/80">05 · 지금 해야 할 행동</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-gold/15 px-3 py-1 text-[0.8rem] font-medium text-gold">
-              {NOW_STANCE_LABELS[preview.now_plan.stance] ?? ""}
-            </span>
-            <span className="text-[0.76rem] text-ivory-dim/80">🔒 기간은 전체 결과에서</span>
-          </div>
-          <p className="mt-3 text-[0.9rem] font-light leading-[2] text-ivory">{preview.now_plan.why}</p>
-          {/* 언제까지·무엇을 보고·어떻게 다음 행동을 정할지는 유료 결과에서 (자리표시 문장만 흐림) */}
-          <div className="relative mt-4 overflow-hidden rounded-xl border border-gold-dim/25 bg-ink/60 px-4 py-3">
-            <p className="text-[0.72rem] tracking-wider text-gold/70">이 기간에 볼 것 · 다음 행동을 정하는 기준</p>
-            <div aria-hidden className="mt-2 select-none blur-[5px]">
-              <p className="text-[0.85rem] font-light leading-[1.8] text-ivory-dim">· 상대의 반응이 바뀌는 신호와 그때의 거리</p>
-              <p className="text-[0.85rem] font-light leading-[1.8] text-ivory-dim">· 먼저 움직여도 되는 조건과 멈춰야 하는 조건</p>
-              <p className="mt-1 text-[0.86rem] leading-[1.85] text-ivory-dim">이 기준이 채워지면 그때 한 번, 짧고 가볍게</p>
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center bg-ink/40">
-              {PAYMENTS_OPEN ? (
-                <Link
-                  href={mainHref}
-                  onClick={() => onCtaClick("lock05")}
-                  className="rounded-full border border-gold/40 bg-ink/85 px-4 py-1.5 text-[0.74rem] text-gold underline-offset-4 active:opacity-80"
-                >
-                  🔒 언제까지·무엇을 보고 정할지 열어보기 ›
-                </Link>
-              ) : (
-                <p className="rounded-full border border-gold/30 bg-ink/80 px-4 py-1.5 text-[0.74rem] text-gold">
-                  🔒 언제까지·무엇을 보고 정할지는 전체 결과에서
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <SceneBreak image="/wolhwa/wolhwa-gaze.webp" eyebrow="月華" line={"그 마음이 100이라는 것,\n월화는 알고 있어요"} />
-
-      {/* ---------- 월하연의 관점: 사랑의 총량 100 (약 20%) ---------- */}
-      <section className="mt-2 px-6">
-        <div className="mx-auto max-w-md rounded-2xl border border-thread/25 bg-[#140c0e] px-6 py-6">
-          <p className="text-[0.7rem] tracking-[0.25em] text-thread/90">월화가 보는 당신의 100</p>
-          <div className="mt-3 flex flex-col gap-2.5">
-            {preview.love100.map((l, i) => (
-              <p
-                key={i}
-                className={`text-[0.9rem] leading-[2] ${
-                  i === 0 ? "font-display text-ivory" : "font-light text-ivory"
-                }`}
-              >
-                {l}
+      {/* ---------- 03. 왜 이렇게 판단했는지 (입력한 사실 기반) ---------- */}
+      <section className="mt-10 px-6">
+        <div className="mx-auto max-w-md">
+          <p className="text-[0.72rem] tracking-wider text-gold/80">왜 이렇게 판단했는지</p>
+          <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-gold-dim/25 bg-ink-soft px-5 py-5">
+            {reasons.map((r, i) => (
+              <p key={i} className={`text-[0.92rem] leading-[1.95] ${i === 0 ? "text-ivory" : "font-light text-ivory"}`}>
+                {r}
               </p>
             ))}
+            {preview.partner_reading.modes.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {preview.partner_reading.modes.map((m) => (
+                  <span key={m} className="rounded-full border border-thread/40 bg-thread/10 px-2.5 py-0.5 text-[0.72rem] text-thread">
+                    상대 반응 · {m}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      <SceneBreak
-        video="/book/v3/w-final.mp4"
-        poster="/book/v3/w-final.webp"
-        eyebrow="다음 장"
-        line={name ? `여기서부터는,\n${name}님만의 이야기예요` : "여기서부터는,\n당신만의 이야기예요"}
-      />
-
-      {/* ---------- 마지막 결제 안내: 무료 결론 한 줄 → 남은 질문 3개 → 메시지 → 책(추가 선택) ---------- */}
-      <section className="mt-4 px-6 text-center">
-        <div className="mx-auto max-w-md rounded-2xl border border-thread/30 bg-gradient-to-b from-[#160d10] to-ink-soft px-6 py-7 text-left">
-          <p className="text-center text-[0.65rem] tracking-[0.3em] text-thread/90">
-            여기까지가 월화가 먼저 전한 이야기예요
-          </p>
-          {/* ① 무료 결론 — 무료 분석(05)과 같은 문장을 그대로. 새 결론·불안 문구를 더하지 않는다 */}
-          <div className="mt-5 rounded-xl border border-gold-dim/25 bg-ink/50 px-4 py-4">
-            <p className="text-[0.7rem] tracking-wider text-gold/80">
-              {name ? `${name}님에게 먼저 전한 결론` : "먼저 전한 결론"}
-              {stanceLabel && <span className="mt-1 block text-[0.8rem] text-gold">{stanceLabel}</span>}
-            </p>
-            <p className="mt-2 text-[0.9rem] leading-[1.95] text-ivory">{conclusion}</p>
-          </div>
-          {/* 결론 카드 저장·공유 (이름·사연 없이 결론 라벨과 반응 태그만) */}
-          {stanceLabel && (
-            <ShareStoryCard
-              orderNumber={orderNumber}
-              stance={stanceLabel}
-              tags={preview.partner_reading.modes}
-              line={stanceScene.line}
-            />
-          )}
-          {/* ② 내 상황에서 남은 질문 3개 */}
-          <p className="mt-6 text-[0.7rem] tracking-wider text-gold/80">
-            {name ? `${name}님 상황에서 남은 질문` : "내 상황에서 남은 질문"}
-          </p>
-          <ul className="mt-2.5 flex flex-col gap-2">
-            {copy.questions.map((q) => (
-              <li
-                key={q}
-                className="flex gap-2.5 rounded-xl border border-gold-dim/20 bg-ink-soft px-4 py-3 text-[0.88rem] leading-[1.7] text-ivory"
-              >
-                <span aria-hidden className="shrink-0 text-thread">Q</span>
-                <span className="min-w-0">{q}</span>
+      {/* ---------- 04. 오늘은 이것만 하지 마세요 (최대 3개) ---------- */}
+      <section className="mt-10 px-6">
+        <div className="mx-auto max-w-md">
+          <p className="font-display text-[1.08rem] font-semibold text-ivory">오늘은 이것만 하지 마세요</p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {donts.map((c, i) => (
+              <li key={i} className="rounded-xl border border-gold-dim/20 bg-ink-soft px-4 py-3">
+                <p className="flex gap-2 text-[0.92rem] font-medium leading-[1.6] text-ivory">
+                  <span aria-hidden className="text-thread">✕</span>
+                  <span className="min-w-0">{c.action}</span>
+                </p>
+                <p className="mt-1 pl-5 text-[0.8rem] font-light leading-[1.8] text-ivory-dim">{c.why}</p>
               </li>
             ))}
           </ul>
         </div>
+      </section>
 
-        {/* ③ 월화의 메시지 — 이 자리의 중심 상품 */}
-        <div className="mx-auto mt-6 max-w-md">
-          <p className="font-display text-[1.08rem] font-semibold text-ivory">
-            이제, 어떻게 움직일지 함께 정리해요.
-          </p>
-          <p className="mt-3 text-[0.86rem] font-light leading-[1.95] text-ivory-dim">
-            월화의 메시지에는 들려주신 사연을 바탕으로
-            <br />
-            지금 할 행동과 멈출 행동,
-            <br />
-            {copy.includes[0]},
-            <br />
-            {copy.includes[1]}을 담아요.
-          </p>
-          {want ? (
-            <p className="mt-4 text-[0.82rem] text-ivory-dim">
-              {want === "book" ? "고르신 상품 · 개인화 PDF 책" : "고르신 상품 · 메시지 + 책 패키지"}
-              <span className="ml-2 font-semibold text-ivory">{wantPrice.toLocaleString()}원</span>
-              {want === "bundle" && isPromoActive() && (
-                <span className="mt-1 block text-[0.74rem] text-gold/90">
-                  패키지 특가 {PROMO_DEADLINE_TEXT} · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원
-                </span>
-              )}
-            </p>
-          ) : (
-            <p className="mt-4 text-[0.82rem] text-ivory-dim">
-              월화의 메시지
-              {priceBadge(price).strike !== null && (
-                <span className="ml-2 line-through opacity-60">
-                  {priceBadge(price).strike!.toLocaleString()}원
-                </span>
-              )}
-              {priceBadge(price).label && (
-                <span className="ml-2 text-thread">{priceBadge(price).label}</span>
-              )}
-              <span className="font-display ml-2 text-[1.2rem] font-semibold text-ivory">
-                {price.toLocaleString()}원
-              </span>
-            </p>
-          )}
-          {!want && offerEndsAt && <OfferCountdown endsAt={offerEndsAt} className="mt-1.5" />}
-        </div>
-        {PAYMENTS_OPEN ? (
-          <>
-            <div ref={mainCtaRef} />
-            <Link
-              href={mainHref}
-              onClick={() => onCtaClick("main")}
-              className="cta-glow mt-5 inline-flex h-14 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85"
+      {/* ---------- 05. 감정 연결 (결제를 밀지 않음) ---------- */}
+      <SceneBreak
+        video={`/book/v3/${sit === "boundary" ? "w-mirror" : "w-phone"}.mp4`}
+        poster={`/book/v3/${sit === "boundary" ? "w-mirror" : "w-phone"}.webp`}
+        eyebrow="月華"
+        line={bridge[0] ?? ""}
+      />
+      <section className="px-6">
+        <div className="mx-auto flex max-w-md flex-col gap-3">
+          {bridge.slice(1).map((b, i, arr) => (
+            <p
+              key={i}
+              className={`text-[0.95rem] leading-[2] ${
+                i === arr.length - 1 ? "font-display font-semibold text-gold" : "font-light text-ivory"
+              }`}
             >
-              {mainLabel ?? "내 상황에 맞는 다음 행동 보기"}
-            </Link>
-            {want && (
-              <Link
-                href={messageHref}
-                className="mx-auto mt-3 block max-w-md text-[0.76rem] text-ivory-dim underline underline-offset-4"
-              >
-                메시지만 받기 · {priceText}
-              </Link>
-            )}
-            <div className="mx-auto mt-4 flex max-w-md flex-col gap-1 text-[0.74rem] leading-[1.8] text-ivory-dim">
-              {CTA_ASSURANCES.map((a) => (
-                <p key={a}>{a}</p>
-              ))}
-              <p className="text-ivory-dim/70">
-                열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불 ·{" "}
-                <Link href="/refund" className="underline underline-offset-2">환불정책</Link>
-              </p>
-            </div>
-
-            {/* ④ 책은 추가 선택으로 짧게 (책·패키지를 고르고 온 손님에게는 생략) */}
-            {BOOK_SALES_OPEN && !want && (
-              <div
-                ref={bookRef}
-                className="mx-auto mt-10 max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft/60 px-6 py-6 text-left"
-              >
-                <p className="font-display text-[0.98rem] font-semibold text-ivory">
-                  기다리는 동안 다시 펼쳐 볼 책도 필요하다면
-                </p>
-                <p className="mt-2.5 text-[0.82rem] font-light leading-[1.9] text-ivory-dim">
-                  상황별 문장과 체크리스트를 담은 PDF 책을 함께 받을 수 있어요.
-                  <br />
-                  {copy.bookPersonal}
-                </p>
-                {/* 실제 책 넘겨 보기 — 책 상세 페이지와 같은 뷰어 */}
-                <p className="mt-5 text-center text-[0.72rem] tracking-[0.25em] text-gold/80">실제 책을 넘겨 보세요</p>
-                <p className="mb-5 mt-1.5 text-center text-[0.72rem] text-ivory-dim">
-                  가상의 신청자 ‘지수’ 님 사연으로 만든 실제 PDF · 눌러서 넘길 수 있어요
-                </p>
-                <PageFlipper pages={BOOK_SAMPLE_PAGES} />
-                <Link
-                  href={`/book?order=${encodeURIComponent(orderNumber)}`}
-                  onClick={() => onCtaClick("book")}
-                  className="mt-4 flex h-11 items-center justify-center rounded-full border border-gold/40 text-[0.86rem] text-gold active:opacity-80"
-                >
-                  메시지 + 책 구성 보기
-                </Link>
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            {/* 결제 오픈 준비 중 — 카드사 심사 완료까지 결제를 닫아 둔 상태 */}
-            <div className="mx-auto mt-7 max-w-md rounded-2xl border border-gold-dim/35 bg-ink-soft/70 px-6 py-6 text-center">
-              <p className="text-[0.66rem] tracking-[0.3em] text-thread/90">
-                결제 오픈 준비 중
-              </p>
-              <p className="mt-3 text-[0.92rem] leading-[2] text-ivory">
-                {name ? `${name}님의 다음 장은 준비되어 있어요.` : "다음 장은 준비되어 있어요."}
-                <br />
-                카드·간편결제 심사가 끝나는 대로 열립니다.
-              </p>
-              <p className="mt-3 text-[0.8rem] font-light leading-[1.95] text-ivory-dim">
-                열리는 날, 입력하신 이메일로 가장 먼저 알려드릴게요.
-                <br />
-                {isPromoActive()
-                  ? `재오픈 기념 특가 ${RITUAL_PRICE_KRW.toLocaleString()}원은 ${PROMO_DEADLINE_TEXT}예요.`
-                  : "지금 신청하신 가격은 그대로 지켜둡니다."}
-              </p>
-            </div>
-            <p className="mx-auto mt-4 max-w-md text-[0.72rem] text-ivory-dim/70">
-              들려주신 이야기와 이 미리보기는 안전하게 보관돼요.
+              {b}
             </p>
-          </>
-        )}
+          ))}
+        </div>
+      </section>
+
+      {/* ---------- 06. 유료 결과 잠금 영역 ---------- */}
+      <section className="mt-12 px-6">
+        <div className="mx-auto max-w-md rounded-2xl border border-gold/30 bg-gradient-to-b from-[#170d10] to-ink-soft px-5 py-6">
+          <p className="font-display text-[1.2rem] font-semibold leading-snug text-ivory">{lock.title}</p>
+          <p className="mt-2 text-[0.85rem] font-light leading-[1.85] text-ivory-dim">{lock.desc}</p>
+          <ul className="mt-4 flex flex-col gap-2">
+            {lock.items.map((it) => (
+              <li key={it.t} className="rounded-xl border border-gold-dim/25 bg-ink/60 px-4 py-3">
+                <p className="text-[0.9rem] font-medium text-ivory">
+                  <span aria-hidden className="mr-1.5">🔒</span>
+                  {it.t}
+                </p>
+                <p aria-hidden className="mt-1 select-none text-[0.8rem] leading-[1.7] text-ivory-dim blur-[5px]">
+                  {it.ph}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {PAYMENTS_OPEN ? (
+        <>
+          {/* ---------- 07. 첫 번째 결제 CTA + 신뢰정보 ---------- */}
+          <section className="mt-6 px-6">
+            <div className="mx-auto max-w-md">
+              {!want && (
+                <p className="mb-2 text-center text-[0.8rem] text-ivory-dim">
+                  내 관계 전체 분석
+                  {badge.strike !== null && (
+                    <span className="ml-2 line-through opacity-60">{badge.strike.toLocaleString()}원</span>
+                  )}
+                  {badge.label && <span className="ml-2 text-thread">{badge.label}</span>}
+                  <span className="font-display ml-2 text-[1.15rem] font-semibold text-ivory">{priceText}</span>
+                </p>
+              )}
+              <div ref={mainCtaRef} />
+              {ctaButton("main", mainLabel)}
+              {!want && offerEndsAt && <OfferCountdown endsAt={offerEndsAt} className="mt-2 text-center" />}
+              <p className="mt-2.5 text-center text-[0.76rem] leading-[1.8] text-ivory-dim">
+                1회 결제 · 정기결제 없음 · 결제 후 결과 생성 · {CONTENT_VIEW_DAYS}일 동안 다시 열람
+              </p>
+              <ul className="mt-4 flex flex-col gap-1 rounded-xl border border-gold-dim/15 bg-ink/40 px-4 py-3 text-[0.72rem] leading-[1.8] text-ivory-dim/85">
+                <li>· 1회 결제입니다. 정기결제되지 않습니다.</li>
+                <li>· 결제 완료 후 결과가 생성됩니다. 보통 5분 안에 완성돼요.</li>
+                <li>· 결과는 {CONTENT_VIEW_DAYS}일 동안 다시 확인할 수 있습니다. 링크는 이메일로도 보내 드려요.</li>
+                <li>
+                  · 결제 및 환불 기준은{" "}
+                  <Link href="/guide" className="underline underline-offset-2">이용안내</Link>에서 확인할 수 있습니다. 열어보기 전이면{" "}
+                  {REFUND_WINDOW_DAYS}일 안에 전액 환불 ·{" "}
+                  <Link href="/refund" className="underline underline-offset-2">환불정책</Link>
+                </li>
+                <li>· 입력하신 사연은 결과를 만드는 데에만 사용됩니다.</li>
+              </ul>
+            </div>
+          </section>
+
+          {/* ---------- 상품 2개 비교 (책 단독 상품은 여기서 보여주지 않음) ---------- */}
+          {!want && (
+            <section className="mt-10 px-6">
+              <div className="mx-auto max-w-md">
+                <p className="text-center text-[0.72rem] tracking-wider text-gold/80">두 가지 중에 고르면 돼요</p>
+                <div className="mt-3 overflow-x-auto rounded-2xl border border-gold-dim/25 bg-ink-soft">
+                  <table className="w-full text-[0.8rem]">
+                    <thead>
+                      <tr className="border-b border-gold-dim/20">
+                        <th className="px-3 py-3 text-left font-normal text-ivory-dim">내용</th>
+                        <th className="px-2 py-3 text-center font-medium text-ivory">
+                          전체 분석
+                          <span className="block text-[0.74rem] font-normal text-ivory-dim">{priceText}</span>
+                        </th>
+                        <th className="bg-burgundy/15 px-2 py-3 text-center font-semibold text-gold">
+                          <span className="mb-1 inline-block rounded-full bg-thread/20 px-2 py-0.5 text-[0.62rem] text-thread">월화 추천</span>
+                          <span className="block">월화 패키지</span>
+                          <span className="block text-[0.74rem] font-normal text-ivory">
+                            {bundleNow < BUNDLE_REGULAR_PRICE_KRW && (
+                              <span className="mr-1 line-through opacity-60">{BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}</span>
+                            )}
+                            {bundleNow.toLocaleString()}원
+                          </span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lock.compare.map(([row, a]) => (
+                        <tr key={row} className="border-b border-gold-dim/10 last:border-0">
+                          <td className="px-3 py-2.5 text-ivory">{row}</td>
+                          <td className="px-2 py-2.5 text-center text-ivory-dim">{a ? "포함" : "–"}</td>
+                          <td className="bg-burgundy/10 px-2 py-2.5 text-center text-gold">포함</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="mt-3 text-center text-[0.76rem] leading-[1.8] text-ivory-dim">
+                  패키지 = 전체 분석 + 내 사연으로 만든 PDF 책 (내려받아 계속 보관)
+                  {offerOn && <span className="block text-thread">첫 구매 24시간 가격 · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원</span>}
+                </p>
+                <Link
+                  href={bundleHref}
+                  onClick={() => onCtaClick("bundle")}
+                  className="mt-3 flex h-12 items-center justify-center rounded-full border border-gold/45 text-[0.9rem] font-medium text-gold active:opacity-80"
+                >
+                  월화 패키지로 보기 · {bundleNow.toLocaleString()}원
+                </Link>
+                {BOOK_SALES_OPEN && (
+                  <Link
+                    href={`/book?order=${encodeURIComponent(orderNumber)}`}
+                    className="mt-2 block text-center text-[0.74rem] text-ivory-dim underline underline-offset-4"
+                  >
+                    PDF 책 실제 페이지 넘겨 보기
+                  </Link>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* ---------- 결제 직전 FAQ (접힘) ---------- */}
+          <section className="mt-10 px-6">
+            <div className="mx-auto max-w-md">
+              <p className="text-[0.72rem] tracking-wider text-gold/80">결제 전에 많이 묻는 것</p>
+              <div className="mt-2 divide-y divide-gold-dim/15 rounded-2xl border border-gold-dim/20 bg-ink-soft">
+                {FAQ.map((f) => (
+                  <details key={f.q} className="group px-4 py-3">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[0.88rem] text-ivory">
+                      <span>Q. {f.q}</span>
+                      <span aria-hidden className="text-ivory-dim transition-transform group-open:rotate-45">+</span>
+                    </summary>
+                    <p className="mt-2 text-[0.82rem] font-light leading-[1.85] text-ivory-dim">{f.a}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ---------- 하단 재결제 CTA (끝까지 읽은 손님) ---------- */}
+          <section className="mt-12 px-6">
+            <div ref={bookRef} className="mx-auto max-w-md text-center">
+              <p className="text-[0.92rem] font-light leading-[1.95] text-ivory">{lock.recap[0]}</p>
+              <p className="font-display mt-1 text-[1.02rem] font-semibold leading-[1.8] text-gold">{lock.recap[1]}</p>
+              <div className="mt-5">{ctaButton("bottom", want ? mainLabel : `${lock.bottomCta} · ${priceText}`)}</div>
+              {want && (
+                <Link
+                  href={messageHref}
+                  className="mt-3 block text-[0.76rem] text-ivory-dim underline underline-offset-4"
+                >
+                  전체 분석만 보기 · {priceText}
+                </Link>
+              )}
+            </div>
+            {/* 결론 카드 저장·공유 (이름·사연 없이 판정 라벨과 반응 태그만) */}
+            <div className="mx-auto mt-8 max-w-md">
+              <ShareStoryCard
+                orderNumber={orderNumber}
+                stance={NOW_STANCE_LABELS[stance] ?? ""}
+                tags={preview.partner_reading.modes}
+                line={CONTACT_VERDICT[stance]}
+              />
+            </div>
+          </section>
+        </>
+      ) : (
+        <section className="mt-7 px-6">
+          {/* 결제 오픈 준비 중 — 카드사 심사 완료까지 결제를 닫아 둔 상태 */}
+          <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/35 bg-ink-soft/70 px-6 py-6 text-center">
+            <p className="text-[0.66rem] tracking-[0.3em] text-thread/90">결제 오픈 준비 중</p>
+            <p className="mt-3 text-[0.92rem] leading-[2] text-ivory">
+              {name ? `${name}님의 다음 장은 준비되어 있어요.` : "다음 장은 준비되어 있어요."}
+              <br />
+              카드·간편결제 심사가 끝나는 대로 열립니다.
+            </p>
+            <p className="mt-3 text-[0.8rem] font-light leading-[1.95] text-ivory-dim">
+              열리는 날, 입력하신 이메일로 가장 먼저 알려드릴게요.
+              <br />
+              {isPromoActive()
+                ? `재오픈 기념 특가 ${RITUAL_PRICE_KRW.toLocaleString()}원은 ${PROMO_DEADLINE_TEXT}예요.`
+                : "지금 신청하신 가격은 그대로 지켜둡니다."}
+            </p>
+          </div>
+        </section>
+      )}
+      <div className="px-6">
         {/* 테스트 결제 모드 안내 (라이브 키 전환 시 컴포넌트 내부에서 끔) */}
         <DevPaymentNotice />
-      </section>
+      </div>
       {PAYMENTS_OPEN && typeof document !== "undefined" && createPortal(
         <div
           className={`fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim/25 bg-ink/95 px-4 pt-3 backdrop-blur transition-transform duration-300 ${
@@ -942,15 +927,15 @@ export default function PreviewExperience({
             href={mainHref}
             tabIndex={showSticky ? 0 : -1}
             onClick={() => onCtaClick("sticky")}
-            className="mx-auto flex h-12 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-medium text-ivory active:opacity-85"
+            className="mx-auto flex h-12 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-semibold text-ivory active:opacity-85"
           >
-            {mainLabel ?? `내 상황에 맞는 다음 행동 보기 · ${priceText}`}
+            {mainLabel}
           </Link>
           {!want && offerEndsAt ? (
             <OfferCountdown endsAt={offerEndsAt} className="mx-auto mt-1.5 max-w-md text-center !text-[0.7rem]" />
           ) : (
             <p className="mx-auto mt-1.5 max-w-md text-center text-[0.68rem] text-ivory-dim/80">
-              1회 결제 · 보통 5분 안에 완성 · 열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불
+              1회 결제 · 정기결제 없음 · {CONTENT_VIEW_DAYS}일 동안 다시 열람
             </p>
           )}
         </div>,
