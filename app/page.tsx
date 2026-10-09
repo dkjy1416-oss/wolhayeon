@@ -6,11 +6,8 @@ import { getPublicReviews } from "@/lib/reviews";
 
 import HeroSection from "@/components/home/HeroSection";
 import MomentsSection from "@/components/home/MomentsSection";
-import WhatYouGetSection from "@/components/home/WhatYouGetSection";
-import SampleAnswerSection from "@/components/home/SampleAnswerSection";
+import FreeAnalysisSection from "@/components/home/FreeAnalysisSection";
 import ProductsSection from "@/components/home/ProductsSection";
-import CompareSection from "@/components/home/CompareSection";
-import WolhwaNightsSection from "@/components/home/WolhwaNightsSection";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
 import FinalCTASection from "@/components/home/FinalCTASection";
 import StickyMobileCta from "@/components/home/StickyMobileCta";
@@ -40,13 +37,11 @@ export default async function Home() {
         <main>
           <HeroSection video={media.heroVideo} poster={media.heroPoster} clips={HERO_CLIPS} />
           <ResumeOrder className="mx-4 mt-6" />
+          {/* 10/9 개발지시서 12 — 첫 화면 → 고민 예시 → 무료로 확인할 것 → 결과 예시 → CTA → 후기·상세 */}
           <MomentsSection />
-          <WhatYouGetSection />
-          <SampleAnswerSection />
-          <CompareSection />
-          <ProductsSection />
-          <WolhwaNightsSection />
+          <FreeAnalysisSection />
           <RealReviewsSection reviews={reviews} />
+          <ProductsSection />
           <FinalCTASection />
           <DisclaimerSection />
         </main>
