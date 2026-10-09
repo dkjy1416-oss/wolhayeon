@@ -24,13 +24,36 @@ import {
 export interface Funnel {
   visitors: number;
   applyStart: number;
+  /** 질문 묶음 1~4 완료 (apply_step 도달 기준) */
+  q1: number;
+  q2: number;
+  q3: number;
+  q4: number;
   applied: number;
+  /** 미리보기 생성 완료 (신청일 기준) */
   preview: number;
+  /** 미리보기 열람 (화면을 실제로 연 주문) */
+  previewView: number;
   payClick: number;
   payPage: number;
+  /** 토스 결제창 진입 */
+  payWindow: number;
   paid: number;
+  /** 결제 실패 (토스 실패·승인 실패) */
+  payFail: number;
+  /** 결제창에서 사용자 취소 */
+  payCancel: number;
   revenue: number;
 }
+
+/** 질문 묶음 완료 지점 — 다음 묶음의 첫 질문에 도달하면 앞 묶음 완료로 본다 */
+export const QUESTION_CHECKPOINTS: Array<{ key: "q1" | "q2" | "q3" | "q4"; step: string; label: string }> = [
+  { key: "q1", step: "partner_name", label: "질문 1 완료 (내 정보)" },
+  { key: "q2", step: "relationship_type", label: "질문 2 완료 (상대 정보)" },
+  { key: "q3", step: "story", label: "질문 3 완료 (관계 상황)" },
+  { key: "q4", step: "email", label: "질문 4 완료 (사연)" },
+];
+const CANCEL_CODES = new Set(["USER_CANCEL", "PAY_PROCESS_CANCELED", "PAY_PROCESS_ABORTED"]);
 
 export interface SegRow {
   label: string;
@@ -48,7 +71,9 @@ export interface MarketingStats {
   today: Funnel;
   byDay: { day: string; f: Funnel }[];
   segments: { key: string; title: string; rows: SegRow[] }[];
-  sources: { label: string; visitors: number; applied: number; paid: number }[];
+  sources: { label: string; visitors: number; applied: number; preview: number; paid: number; revenue: number }[];
+  /** 결제창 진입 결제수단 */
+  payMethods: { label: string; count: number }[];
   devices: { label: string; visitors: number; applied: number; paid: number }[];
   payFails: { label: string; count: number }[];
   dropoff: { stage: string; lost: number; rate: number }[];
@@ -59,11 +84,19 @@ export interface MarketingStats {
 const empty = (): Funnel => ({
   visitors: 0,
   applyStart: 0,
+  q1: 0,
+  q2: 0,
+  q3: 0,
+  q4: 0,
   applied: 0,
   preview: 0,
+  previewView: 0,
   payClick: 0,
   payPage: 0,
+  payWindow: 0,
   paid: 0,
+  payFail: 0,
+  payCancel: 0,
   revenue: 0,
 });
 
@@ -103,8 +136,8 @@ const KNOWN_HOSTS: [RegExp, string][] = [
   [/t\.co$|twitter|x\.com/, "X(트위터)"],
 ];
 
-function sourceLabel(utm: string | null, host: string | null): string {
-  if (utm) return `캠페인: ${utm}`;
+function sourceLabel(utm: string | null, host: string | null, campaign?: string | null, content?: string | null): string {
+  if (utm) return [utm, campaign, content].filter(Boolean).join(" · ");
   if (!host) return "직접 방문 (주소 입력·북마크·앱 내 링크)";
   for (const [re, name] of KNOWN_HOSTS) if (re.test(host)) return name;
   return host;
@@ -131,7 +164,10 @@ interface EventRow {
   created_at: string;
   visitor_id: string;
   event: string;
+  path: string | null;
   utm_source: string | null;
+  utm_campaign: string | null;
+  utm_content?: string | null;
   first_ref_host: string | null;
   device: string | null;
   order_number: string | null;
@@ -153,7 +189,7 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
       .limit(5000),
     supabase
       .from("site_events")
-      .select("created_at, visitor_id, event, utm_source, first_ref_host, device, order_number")
+      .select("created_at, visitor_id, event, path, utm_source, utm_campaign, utm_content, first_ref_host, device, order_number")
       .gt("created_at", since)
       .limit(50000),
     supabase
@@ -167,7 +203,17 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
 
   const orders = ((oRes.data ?? []) as OrderRow[]).filter((o) => !isOperatorEmail(o.email));
   const realOrderSet = new Set(orders.map((o) => o.order_number));
-  const events = (eRes.data ?? []) as EventRow[];
+  /* utm_content 열이 아직 없으면(마이그레이션 전) 열 없이 다시 읽는다 */
+  let eData = eRes.data as EventRow[] | null;
+  if (eRes.error) {
+    const retry = await supabase
+      .from("site_events")
+      .select("created_at, visitor_id, event, path, utm_source, utm_campaign, first_ref_host, device, order_number")
+      .gt("created_at", since)
+      .limit(50000);
+    eData = (retry.data ?? []) as EventRow[];
+  }
+  const events = (eData ?? []) as EventRow[];
   const payEvents = ((pRes.data ?? []) as { created_at: string; order_number: string; event: string; code: string | null }[])
     .filter((p) => realOrderSet.has(p.order_number));
   const trackingSince = (firstRes.data?.[0] as { created_at?: string } | undefined)?.created_at ?? null;
@@ -184,7 +230,8 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
   const visitorSource = new Map<string, string>();
   const visitorDevice = new Map<string, string>();
   for (const e of [...ev].sort((a, b) => (a.created_at < b.created_at ? -1 : 1))) {
-    if (!visitorSource.has(e.visitor_id)) visitorSource.set(e.visitor_id, sourceLabel(e.utm_source, e.first_ref_host));
+    if (!visitorSource.has(e.visitor_id))
+      visitorSource.set(e.visitor_id, sourceLabel(e.utm_source, e.first_ref_host, e.utm_campaign, e.utm_content));
     if (!visitorDevice.has(e.visitor_id) && e.device) visitorDevice.set(e.visitor_id, e.device === "mobile" ? "모바일" : "PC");
   }
   const orderVisitor = new Map<string, string>();
@@ -192,11 +239,16 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
 
   /* 일별 퍼널 */
   const dayMap = new Map<string, Funnel>();
-  const sets = new Map<string, { v: Set<string>; s: Set<string>; c: Set<string>; pp: Set<string> }>();
+  type DaySets = Record<"v" | "s" | "c" | "pp" | "pv" | "pw" | "pf" | "pc" | "q1" | "q2" | "q3" | "q4", Set<string>>;
+  const newSets = (): DaySets => ({
+    v: new Set(), s: new Set(), c: new Set(), pp: new Set(), pv: new Set(), pw: new Set(), pf: new Set(), pc: new Set(),
+    q1: new Set(), q2: new Set(), q3: new Set(), q4: new Set(),
+  });
+  const sets = new Map<string, DaySets>();
   const getDay = (d: string) => {
     if (!dayMap.has(d)) {
       dayMap.set(d, empty());
-      sets.set(d, { v: new Set(), s: new Set(), c: new Set(), pp: new Set() });
+      sets.set(d, newSets());
     }
     return { f: dayMap.get(d)!, s: sets.get(d)! };
   };
@@ -207,11 +259,21 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
     if (e.event === "view") s.v.add(e.visitor_id);
     if (e.event === "apply_start") s.s.add(e.visitor_id);
     if (e.event === "payment_cta_click" && e.order_number) s.c.add(e.order_number);
+    if (e.event === "preview_view" && e.order_number) s.pv.add(e.order_number);
+    if (e.event === "apply_step" && e.path) {
+      const step = e.path.split("#")[1];
+      const cp = QUESTION_CHECKPOINTS.find((q) => q.step === step);
+      if (cp) s[cp.key].add(e.visitor_id);
+    }
   }
   for (const p of payEvents) {
     const { s } = getDay(kstDate(p.created_at));
     if (p.event === "preview_cta_click") s.c.add(p.order_number);
     if (p.event === "pay_page_view") s.pp.add(p.order_number);
+    if (p.event === "pay_request") s.pw.add(p.order_number);
+    const cancel = !!p.code && CANCEL_CODES.has(p.code);
+    if ((p.event === "pay_request_error" || p.event === "pay_fail") && cancel) s.pc.add(p.order_number);
+    else if (p.event === "pay_fail" || p.event === "confirm_failed" || p.event === "amount_mismatch") s.pf.add(p.order_number);
   }
   for (const o of orders) {
     const { f } = getDay(kstDate(o.created_at));
@@ -229,6 +291,14 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
     f.applyStart = s.s.size;
     f.payClick = s.c.size;
     f.payPage = s.pp.size;
+    f.previewView = s.pv.size;
+    f.payWindow = s.pw.size;
+    f.payFail = s.pf.size;
+    f.payCancel = s.pc.size;
+    f.q1 = s.q1.size;
+    f.q2 = s.q2.size;
+    f.q3 = s.q3.size;
+    f.q4 = s.q4.size;
   }
   const byDay = [...dayMap.entries()]
     .filter(([d]) => d >= kstDate(since))
@@ -245,6 +315,21 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
     ...ev.filter((e) => e.event === "payment_cta_click" && e.order_number).map((e) => e.order_number as string),
   ]).size;
   total.payPage = new Set(payEvents.filter((p) => p.event === "pay_page_view").map((p) => p.order_number)).size;
+  total.payWindow = new Set(payEvents.filter((p) => p.event === "pay_request").map((p) => p.order_number)).size;
+  total.previewView = new Set(ev.filter((e) => e.event === "preview_view" && e.order_number).map((e) => e.order_number as string)).size;
+  const isCancel = (p: { event: string; code: string | null }) =>
+    (p.event === "pay_request_error" || p.event === "pay_fail") && !!p.code && CANCEL_CODES.has(p.code);
+  total.payCancel = new Set(payEvents.filter(isCancel).map((p) => p.order_number)).size;
+  total.payFail = new Set(
+    payEvents
+      .filter((p) => !isCancel(p) && (p.event === "pay_fail" || p.event === "confirm_failed" || p.event === "amount_mismatch"))
+      .map((p) => p.order_number)
+  ).size;
+  for (const cp of QUESTION_CHECKPOINTS) {
+    total[cp.key] = new Set(
+      ev.filter((e) => e.event === "apply_step" && e.path?.split("#")[1] === cp.step).map((e) => e.visitor_id)
+    ).size;
+  }
   total.paid = orders.filter((o) => o.paid_at).length;
   total.revenue = orders.reduce((s, o) => s + (o.paid_at ? o.payment_amount ?? 0 : 0), 0);
   const today = dayMap.get(todayKey) ?? empty();
@@ -281,20 +366,26 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
 
   /* 유입 경로·기기 */
   const tally = (labelOf: (vid: string) => string | undefined) => {
-    const m = new Map<string, { label: string; visitors: number; applied: number; paid: number }>();
+    type Row = { label: string; visitors: number; applied: number; preview: number; paid: number; revenue: number };
+    const m = new Map<string, Row>();
+    const blank = (l: string): Row => ({ label: l, visitors: 0, applied: 0, preview: 0, paid: 0, revenue: 0 });
     const vis = new Set(ev.filter((e) => e.event === "view").map((e) => e.visitor_id));
     for (const vid of vis) {
       const l = labelOf(vid) ?? "알 수 없음";
-      const r = m.get(l) ?? { label: l, visitors: 0, applied: 0, paid: 0 };
+      const r = m.get(l) ?? blank(l);
       r.visitors += 1;
       m.set(l, r);
     }
     for (const o of orders) {
       const vid = orderVisitor.get(o.order_number);
       const l = vid ? labelOf(vid) ?? "알 수 없음" : "기록 이전/추적 안 됨";
-      const r = m.get(l) ?? { label: l, visitors: 0, applied: 0, paid: 0 };
+      const r = m.get(l) ?? blank(l);
       r.applied += 1;
-      if (o.paid_at) r.paid += 1;
+      if (o.preview_generated_at) r.preview += 1;
+      if (o.paid_at) {
+        r.paid += 1;
+        r.revenue += o.payment_amount ?? 0;
+      }
       m.set(l, r);
     }
     return [...m.values()].sort((a, b) => b.visitors + b.applied - (a.visitors + a.applied));
@@ -306,7 +397,8 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
   const failMap = new Map<string, Set<string>>();
   for (const p of payEvents) {
     if (!FAIL_LABELS[p.event]) continue;
-    const l = `${FAIL_LABELS[p.event]}${p.code ? ` (${p.code})` : ""}`;
+    const base = isCancel(p) ? "사용자 취소" : FAIL_LABELS[p.event];
+    const l = `${base}${p.code ? ` (${p.code})` : ""}`;
     if (!failMap.has(l)) failMap.set(l, new Set());
     failMap.get(l)!.add(p.order_number);
   }
@@ -314,6 +406,17 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
     .map(([label, s]) => ({ label, count: s.size }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
+
+  /* 결제창 진입 결제수단 (pay_request 코드 = 결제수단) */
+  const methodMap = new Map<string, Set<string>>();
+  const METHOD_LABELS: Record<string, string> = { CARD: "카드", TRANSFER: "계좌이체", VIRTUAL_ACCOUNT: "가상계좌", MOBILE_PHONE: "휴대폰", EASY_PAY: "간편결제", FOREIGN_EASY_PAY: "해외 간편결제" };
+  for (const p of payEvents) {
+    if (p.event !== "pay_request") continue;
+    const l = p.code ? METHOD_LABELS[p.code] ?? p.code : "결제위젯 (수단 미기록)";
+    if (!methodMap.has(l)) methodMap.set(l, new Set());
+    methodMap.get(l)!.add(p.order_number);
+  }
+  const payMethods = [...methodMap.entries()].map(([label, s]) => ({ label, count: s.size })).sort((a, b) => b.count - a.count);
 
   /* 단계별 이탈 */
   const stages: [string, number, number][] = [
@@ -360,6 +463,7 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
     byDay,
     segments,
     sources,
+    payMethods,
     devices,
     payFails,
     dropoff,

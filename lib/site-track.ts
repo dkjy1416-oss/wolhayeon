@@ -14,6 +14,7 @@ interface FirstTouch {
   s?: string; // utm_source
   m?: string; // utm_medium
   c?: string; // utm_campaign
+  x?: string; // utm_content (예: reel01 — 어떤 릴스가 결제를 만드는지)
   r?: string; // first referrer host
 }
 
@@ -61,13 +62,14 @@ function firstTouch(): FirstTouch {
     s: q.get("utm_source") ?? undefined,
     m: q.get("utm_medium") ?? undefined,
     c: q.get("utm_campaign") ?? undefined,
+    x: q.get("utm_content") ?? undefined,
     r: refHost() ?? undefined,
   };
   if (saved) {
     try {
       const ft = JSON.parse(saved) as FirstTouch;
       /* 새 캠페인 링크로 다시 들어오면 그 캠페인을 기준으로 갱신 */
-      if (cur.s && cur.s !== ft.s) {
+      if (cur.s && (cur.s !== ft.s || cur.c !== ft.c || cur.x !== ft.x)) {
         safeSet(FT_KEY, JSON.stringify(cur));
         return cur;
       }
@@ -94,6 +96,7 @@ export function sendSiteEvent(event: string, props?: Record<string, string>): vo
       us: ft.s ?? null,
       um: ft.m ?? null,
       uc: ft.c ?? null,
+      ux: ft.x ?? null,
       fr: ft.r ?? null,
       dev: window.innerWidth < 768 ? "mobile" : "desktop",
       order: props?.order ?? null,

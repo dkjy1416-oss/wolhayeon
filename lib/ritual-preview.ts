@@ -34,6 +34,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import {
   PreviewSchema,
+  PreviewV5Schema,
   PreviewStructSchema,
   PREVIEW_SYSTEM_PROMPT,
   buildPreviewUserPrompt,
@@ -334,7 +335,66 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
     "이걸 나눠 본다고 재회를 포기하라는 뜻은 아니에요. 정말 다시 만나고 싶다면, 외로움 때문에 움직이는 것과 관계를 다시 만들기 위해 움직이는 것을 구분해야 해요.",
   ];
 
+  /* ---------- v5: 판정 카드 · 근거 · 감정 연결 (AI 실패 시 기본값) ---------- */
+  const boundary = stance === "hold_boundary";
+  const lover = order.relationship_type === "current_lover";
+  const risk = boundary
+    ? "우회해서 연락하기"
+    : order.pain_points.includes("checking_sns")
+      ? "SNS 보고 즉흥 연락"
+      : order.pain_points.includes("waiting_contact")
+        ? "답을 재촉하는 연락"
+        : "감정 섞인 장문 메시지";
+  const need = boundary
+    ? "거리 존중하며 내 하루 지키기"
+    : stance === "light_contact"
+      ? "가볍게 답할 수 있는 거리"
+      : "상대의 피로부터 낮추기";
+  const CONTACT_FACT: Record<string, string> = {
+    in_contact: "지금도 연락은 이어지고 있어요",
+    occasional: "지금은 가끔만 연락이 닿아요",
+    no_contact: "지금은 연락이 멈춘 상태예요",
+    i_blocked: `지금은 ${name}님이 연락을 막아 둔 상태예요`,
+    blocked_by_partner: `${partner}님이 연락을 막아 둔 상태예요`,
+    both_blocked: "서로 연락을 막아 둔 상태예요",
+  };
+  const contactFact = CONTACT_FACT[order.contact_status] ?? "지금 연락 상태는 분명하지 않아요";
+  const elapsedFact = order.breakup_elapsed
+    ? `헤어진 지 ${optionLabel(BREAKUP_ELAPSED_OPTIONS, order.breakup_elapsed)}, `
+    : "";
+  const talkFact =
+    order.last_conversation === "never_personal"
+      ? "아직 개인적인 대화는 나눈 적이 없고"
+      : `마지막 대화가 ${lastTalk}였고`;
+  const reasons = [
+    sentence(`${elapsedFact}${talkFact} ${contactFact}.`, 165),
+    boundary
+      ? sentence(`지금 ${partner}님 쪽은 대화를 이어갈 여유보다 거리를 지키려는 마음이 더 커 보여요.`, 165)
+      : sentence(`이 흐름은 마음이 완전히 사라졌다기보다, 대화를 다시 시작하는 것 자체에 부담을 느끼는 쪽에 가까워요.`, 165),
+    sentence(`지금 감정을 더 설명하거나 답을 요구하면, ${partner}님은 관계보다 압박감을 먼저 느낄 수 있어요.`, 165),
+  ];
+  const bridge = boundary
+    ? [
+        "아무것도 하지 않는 지금이 가장 답답할 수 있어요.",
+        `하지만 지금은 거리를 좁히는 것보다, ${name}님의 하루가 흔들리지 않는 게 먼저예요.`,
+        "문제는 기다릴지 말지가 아니라, 얼마나 거리를 지키고 흔들릴 때 무엇을 하느냐예요.",
+      ]
+    : lover
+      ? [
+          "지금 아무 말도 하지 않는 게 가장 답답할 수 있어요.",
+          "하지만 대화가 다시 열리려면, 서운함을 설명하기보다 상대가 느끼는 부담을 먼저 낮추는 시간이 필요해요.",
+          "문제는 말할지 말지가 아니라, 언제 어떤 말로 다시 이야기를 꺼내느냐예요.",
+        ]
+      : [
+          "지금 아무것도 하지 않는 것이 가장 답답할 수 있어요.",
+          "하지만 관계가 다시 움직이려면, 연락보다 먼저 상대가 느끼는 감정의 압박을 낮추는 시간이 필요해요.",
+          "문제는 기다릴지 말지가 아니라, 얼마나 기다리고 어떤 말로 다시 시작하느냐예요.",
+        ];
+
   const preview: RitualPreview = {
+    verdict: { risk, need },
+    reasons,
+    bridge,
     intro_lines: [line1, line2, line3],
     preview_letter_excerpt: [letter1, letter2, letter3],
     relationship_state: state,
@@ -373,7 +433,7 @@ function getPreviewModelId(): string {
 /* 네 조각을 병렬로 생성 — Sonnet 단일 호출 44~49초 → 2분할 39초 → 4분할 목표 20초대 */
 const PARTS = [
   { label: "a1", keys: ["intro_lines", "preview_letter_excerpt"] },
-  { label: "a2", keys: ["love100", "cta_lead_text"] },
+  { label: "a2", keys: ["verdict", "reasons", "bridge"] },
   { label: "b1", keys: ["relationship_state", "partner_reading"] },
   { label: "b2", keys: ["cautions", "now_plan"] },
 ] as const;
@@ -452,7 +512,7 @@ async function buildAiPreview(
       console.error(`[preview] ai_round${round}_missing=${todo.join("+")} ms=${Date.now() - t0}`);
       continue;
     }
-    const parsed = PreviewSchema.safeParse(Object.assign({}, ...PARTS.map((p) => got[p.label])));
+    const parsed = PreviewV5Schema.safeParse(Object.assign({}, ...PARTS.map((p) => got[p.label])));
     if (!parsed.success) {
       const bad = new Set(parsed.error.issues.map((i) => String(i.path[0])));
       const paths = parsed.error.issues
