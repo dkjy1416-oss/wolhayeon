@@ -92,7 +92,7 @@ export default function FunnelBoard({ stats }: { stats: MarketingStats }) {
             ))}
           </ul>
           <p className="mt-3 text-[0.7rem] text-ivory-dim">
-            결제 실패 {w7.payFail}건 · 결제창에서 취소 {w7.payCancel}건 ·{" "}
+            날짜별 합계(결제는 결제한 날 기준) · 결제 실패 {w7.payFail}건 · 결제창에서 취소 {w7.payCancel}건 ·{" "}
             <Link href="/admin/stats" className="underline">자세히</Link>
           </p>
         </section>
