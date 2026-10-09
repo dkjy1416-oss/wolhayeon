@@ -4,7 +4,7 @@
  */
 import Link from "next/link";
 import type { Funnel, MarketingStats } from "@/lib/marketing-stats";
-import { won } from "@/lib/admin-util";
+import { won, kstDate } from "@/lib/admin-util";
 
 function sum(rows: Funnel[]): Funnel {
   const z: Funnel = {
@@ -26,7 +26,9 @@ export default function FunnelBoard({ stats }: { stats: MarketingStats }) {
   const yesterday = days[1]?.f ?? sum([]);
   const w7 = sum(days.slice(0, 7).map((d) => d.f));
   const prev = sum(days.slice(1, 2).map((d) => d.f));
-  const w30 = sum(days.slice(0, 30).map((d) => d.f));
+  /* 방문·미리보기 열람 기록이 시작된 날 이후만 (그 전 날짜가 섞이면 전환율이 비정상으로 보임) */
+  const trackFrom = stats.trackingSince ? kstDate(stats.trackingSince) : "";
+  const w30 = sum(days.slice(0, 30).filter((d) => d.day >= trackFrom).map((d) => d.f));
 
   const tiles: Array<[string, string, string, boolean?]> = [
     ["오늘 방문자", `${today.visitors}명`, `어제 ${yesterday.visitors}명`],
@@ -117,7 +119,9 @@ export default function FunnelBoard({ stats }: { stats: MarketingStats }) {
               ))}
             </tbody>
           </table>
-          <p className="mt-2 text-[0.68rem] text-ivory-dim/70">테스트 주문 제외 · 방문 기록은 10/1부터</p>
+          <p className="mt-2 text-[0.68rem] text-ivory-dim/70">
+            테스트 주문·책 쿠폰 자동 주문 제외 · 30일은 방문 기록이 시작된 {trackFrom.slice(5).replace("-", "/")}부터
+          </p>
         </section>
       </div>
     </>
