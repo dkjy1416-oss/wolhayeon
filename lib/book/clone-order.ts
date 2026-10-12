@@ -8,7 +8,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 
 /** 신청서에서 온 컬럼 (DB 실제 컬럼명) */
-const APPLICATION_COLUMNS = [
+export const APPLICATION_COLUMNS = [
   "applicant_name",
   "partner_name",
   "relationship_type",
