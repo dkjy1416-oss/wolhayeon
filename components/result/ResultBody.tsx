@@ -24,6 +24,7 @@ export default function ResultBody({
   maskedEmail,
   summary,
   reviewHref,
+  reviewCoupon = false,
 }: {
   token: string;
   name: string;
@@ -33,6 +34,8 @@ export default function ResultBody({
   maskedEmail: string | null;
   summary: React.ComponentProps<typeof SummaryCard> | null;
   reviewHref: string | null;
+  /** 12,900원 분석 결제 고객 — 후기를 남기면 책 추가 구매 쿠폰 */
+  reviewCoupon?: boolean;
 }) {
   const pb = c.bonus_playbook;
   const toc = [
@@ -158,15 +161,21 @@ export default function ResultBody({
         questions={c.bonus_journal_questions.questions}
       />
 
-      {!hasBook && <BookShelf token={token} hasBook={false} maskedEmail={maskedEmail} />}
+      {!hasBook && <BookShelf token={token} hasBook={false} maskedEmail={maskedEmail} reviewCoupon={reviewCoupon} />}
 
       {reviewHref && (
-        <section className="mx-auto max-w-md px-6 pb-4 pt-10 text-center">
+        <section id="review" className="mx-auto max-w-md scroll-mt-20 px-6 pb-4 pt-10 text-center">
           <p className="text-[0.84rem] font-light leading-[1.95] text-ivory-dim">
             읽어 보시고, 월화에게 한마디 남겨 주시겠어요?
             <br />
             좋았던 점도 아쉬웠던 점도 그대로 들려주세요.
           </p>
+          {reviewCoupon && (
+            <p className="mt-2 text-[0.78rem] leading-[1.8] text-gold/90">
+              후기를 남기면 별점·내용과 관계없이 책 추가 구매 쿠폰을 드려요
+              <span className="block text-ivory-dim">개인 맞춤 PDF 책 29,000원 → 27,000원 · 발급 후 14일</span>
+            </p>
+          )}
           <Link
             href={reviewHref}
             className="mt-4 inline-flex h-11 items-center justify-center rounded-full border border-gold/40 px-6 text-[0.84rem] text-gold"

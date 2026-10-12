@@ -14,10 +14,13 @@ export default function BookShelf({
   token,
   hasBook,
   maskedEmail,
+  reviewCoupon = false,
 }: {
   token: string;
   hasBook: boolean;
   maskedEmail: string | null;
+  /** 12,900원 분석 결제 고객 — 후기를 남기면 27,000원 추가 구매 쿠폰 */
+  reviewCoupon?: boolean;
 }) {
   const [state, setState] = useState<State>("checking");
   const [path, setPath] = useState<string | null>(null);
@@ -131,6 +134,11 @@ export default function BookShelf({
             {buying ? "결제 화면을 여는 중…" : "사연 다시 안 쓰고 책 받기 · 29,000원"}
           </button>
           {buyNote && <p className="mt-2 text-center text-[0.74rem] text-thread">{buyNote}</p>}
+          {reviewCoupon && (
+            <a href="#review" className="mt-2 block text-center text-[0.74rem] leading-[1.7] text-gold underline underline-offset-4">
+              아래에서 후기를 남기면 27,000원 추가 구매 쿠폰을 드려요
+            </a>
+          )}
           <Link
             href="/book"
             className="mt-2.5 flex h-11 items-center justify-center rounded-full border border-gold/40 text-[0.84rem] text-gold"
