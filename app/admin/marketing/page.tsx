@@ -115,7 +115,7 @@ function FunnelBars({ f }: { f: Funnel }) {
             {i > 0 && (
               <span className="ml-1 text-[0.68rem] text-ivory-dim">
                 {/* 신청 완료는 '무료 분석 시작' 대비 (질문 단계 기록은 10/7부터라 기간이 다름) */}
-                {pct(n, label === "분석 신청 완료" ? f.applyStart : label === "미리보기 열람" ? f.applied : label === "구매 버튼 클릭" ? f.previewView : steps[i - 1][1])}
+                {pct(n, label === "분석 신청 완료" ? f.applyStart : label === "미리보기 열람" ? f.applied : ["유료 안내 도달", "결과 예시 확인", "첫 구매 안내 도달", "구매 버튼 클릭"].includes(label) ? f.previewView : steps[i - 1][1])}
               </span>
             )}
           </span>
@@ -123,7 +123,7 @@ function FunnelBars({ f }: { f: Funnel }) {
       ))}
       <p className="pt-1 text-[0.72rem] text-ivory-dim">
         결제 실패 <b className="text-ivory">{f.payFail}</b>건 · 결제 취소 <b className="text-ivory">{f.payCancel}</b>건 · 상품 변경 <b className="text-ivory">{f.productChange ?? 0}</b>건
-        <span className="block text-ivory-dim/70">질문 1~4 단계는 10/7부터 기록 · 유료 안내·결과 예시·상품 변경은 10/12부터 기록 · 신청 완료는 무료 분석 시작 대비 · 미리보기 열람은 신청 완료 대비 · 구매 버튼 클릭은 미리보기 열람 대비 · 모든 단계는 같은 기간에 신청한 주문 기준(주문당 1회)</span>
+        <span className="block text-ivory-dim/70">질문 1~4 단계는 10/7부터 기록 · 유료 안내·결과 예시·상품 변경은 10/12부터 기록 · 신청 완료는 무료 분석 시작 대비 · 미리보기 열람은 신청 완료 대비 · 유료 안내·결과 예시·첫 구매 안내·구매 버튼은 미리보기 열람 대비 · 모든 단계는 같은 기간에 신청한 주문 기준(주문당 1회)</span>
       </p>
     </div>
   );
