@@ -24,6 +24,11 @@ export const CLIENT_PAY_EVENTS = [
   "widget_error", // 결제수단 위젯 로드 실패
   "pay_request", // "결제하기" 클릭 → 결제창 호출
   "pay_request_error", // 결제창 호출 실패/사용자 취소 (code: 토스 오류 코드)
+  "offer_seen", // 미리보기 '전체 분석에서 추가로 확인할 내용'까지 도달 (10/12)
+  "example_seen", // 결과 예시 카드를 봄 (code: contact | lover | boundary)
+  "package_open", // 'PDF 책도 함께 받고 싶다면' 펼침 (code: preview | pay)
+  "book_view", // 'PDF 책 실제 페이지 넘겨 보기' (구매 클릭과 구분)
+  "product_change", // 결제 화면에서 상품 변경 (code: 바뀐 상품)
 ] as const;
 
 /** 서버에서만 기록하는 이벤트 */

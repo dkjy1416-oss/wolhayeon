@@ -46,6 +46,22 @@ export interface Funnel {
   /** 결제창에서 사용자 취소 */
   payCancel: number;
   revenue: number;
+  /* 10/12 측정 기준 — 같은 신청 주문군(코호트) 기준, 주문당 1회 */
+  /** 미리보기 '전체 분석에서 추가로 확인할 내용' 도달 */
+  offerSeen?: number;
+  /** 결과 예시 카드 확인 */
+  exampleSeen?: number;
+  /** 첫 구매 안내(주 구매 버튼) 도달 */
+  endSeen?: number;
+  /** 결제수단 표시 (결제 페이지에서 토스 준비 완료) */
+  methodShown?: number;
+  /** 결제 화면에서 상품 변경 */
+  productChange?: number;
+  /** 유료 결과 제공 완료 (결과 메일 발송) */
+  delivered?: number;
+  /** 기간 안에 결제 완료된 매출 (결제일 기준 — 신청일과 무관) */
+  revenuePaid?: number;
+  paidByDate?: number;
 }
 
 /** 질문 묶음 완료 지점 — 다음 묶음의 첫 질문에 도달하면 앞 묶음 완료로 본다 */
@@ -151,6 +167,7 @@ function sourceLabel(utm: string | null, host: string | null, campaign?: string 
 }
 
 interface OrderRow {
+  delivered_at?: string | null;
   order_number: string;
   created_at: string;
   paid_at: string | null;
@@ -183,15 +200,18 @@ interface EventRow {
 
 export async function getMarketingStats(days: number): Promise<MarketingStats> {
   const supabase = getSupabaseAdmin();
-  const since = kstDaysAgoStartIso(days - 1);
+  /* 방문 기록은 10/1(KST)부터 — 그 이전 신청을 방문 전환율의 분모·분자에 섞지 않도록 기간 시작을 맞춘다 (10/12 개발지시서 11) */
+  const TRACKING_START_ISO = "2026-09-30T15:00:00.000Z";
+  const since0 = kstDaysAgoStartIso(days - 1);
+  const since = since0 < TRACKING_START_ISO ? TRACKING_START_ISO : since0;
   const todayKey = kstDate(new Date().toISOString());
 
-  const [oRes, eRes, pRes, firstRes] = await Promise.all([
+  const [oRes, eRes, pRes, firstRes, paidRes] = await Promise.all([
     fetchAll<OrderRow>((a, b) =>
       supabase
         .from("ritual_orders")
         .select(
-          "order_number, created_at, paid_at, preview_generated_at, email, payment_amount, product, applicant_gender, applicant_birth_year, life_stage, main_wish, pain_points, relationship_type, breakup_elapsed, current_emotion"
+          "order_number, created_at, paid_at, preview_generated_at, delivered_at, email, payment_amount, product, applicant_gender, applicant_birth_year, life_stage, main_wish, pain_points, relationship_type, breakup_elapsed, current_emotion"
         )
         .gt("created_at", since)
         .order("id")
@@ -215,7 +235,10 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
         .range(a, b)
     ),
     supabase.from("site_events").select("created_at").order("created_at", { ascending: true }).limit(1),
+    supabase.from("ritual_orders").select("order_number, payment_amount, email, paid_at").gt("paid_at", since).limit(1000),
   ]);
+  const paidRows = ((paidRes.data ?? []) as Array<{ order_number: string; payment_amount: number | null; email: string | null }>)
+    .filter((o) => !isOperatorEmail(o.email));
 
   /* 운영자 테스트 주문 제외 + 책 쿠폰 메일로 자동 만든 주문(손님이 직접 낸 신청 아님 · 결제 전)은 신청 수에서 제외 */
   const orders = ((oRes.data ?? []) as OrderRow[]).filter(
@@ -355,6 +378,16 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
       ev.filter((e) => e.event === "apply_step" && e.path?.split("#")[1] === cp.step).map((e) => e.visitor_id)
     ).size;
   }
+  const ordersWith = (ev: string) => new Set(payEvents.filter((p) => p.event === ev).map((p) => p.order_number)).size;
+  total.offerSeen = ordersWith("offer_seen");
+  total.exampleSeen = ordersWith("example_seen");
+  total.endSeen = ordersWith("preview_end_seen");
+  total.methodShown = ordersWith("widget_ready");
+  total.productChange = ordersWith("product_change");
+  total.delivered = orders.filter((o) => o.paid_at && o.delivered_at).length;
+  /* 매출은 결제일 기준 (기간 전에 신청하고 기간 안에 결제한 주문 포함) */
+  total.revenuePaid = paidRows.reduce((s, o) => s + (o.payment_amount ?? 0), 0);
+  total.paidByDate = paidRows.length;
   total.paid = orders.filter((o) => o.paid_at).length;
   total.revenue = orders.reduce((s, o) => s + (o.paid_at ? o.payment_amount ?? 0 : 0), 0);
   const today = dayMap.get(todayKey) ?? empty();

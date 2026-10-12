@@ -425,7 +425,7 @@ export const PRODUCTS: Record<
 > = {
   message: {
     name: "내 관계 전체 분석",
-    orderName: "월하연 메시지 (개인화 결과)",
+    orderName: "월하연 내 관계 전체 분석",
     tagline: "그래서 언제, 어떻게 움직일지까지",
     includes: [
       "현재 관계 상태 · 상대 감정 분석 · 지금 연락 여부",
@@ -447,7 +447,7 @@ export const PRODUCTS: Record<
   },
   bundle: {
     name: "월화 패키지",
-    orderName: "월하연 메시지 + 개인화 책 패키지",
+    orderName: "월하연 전체 분석 + PDF 책 패키지",
     tagline: "전체 분석 + 내 사연으로 만든 PDF 책",
     includes: [
       "내 관계 전체 분석 전부",
@@ -499,4 +499,9 @@ export function optionLabel(options: Option[], value: string | null): string {
 
 export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+}
+
+/** 상품별 '할인 끝난 뒤 가격' — 타이머·가격 요약이 모두 이 값을 쓴다 (10/12: 패키지 타이머에 16,900원이 뜨던 오류) */
+export function regularPriceFor(product: Product): number {
+  return product === "bundle" ? BUNDLE_REGULAR_PRICE_KRW : product === "book" ? BOOK_PRICE_KRW : RITUAL_REGULAR_PRICE_KRW;
 }

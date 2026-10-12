@@ -14,7 +14,12 @@ export type ClientPayEvent =
   | "widget_ready"
   | "widget_error"
   | "pay_request"
-  | "pay_request_error";
+  | "pay_request_error"
+  | "offer_seen"
+  | "example_seen"
+  | "package_open"
+  | "book_view"
+  | "product_change";
 
 export function logPayEvent(
   orderNumber: string,

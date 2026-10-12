@@ -10,7 +10,9 @@ export const OPERATOR_EMAILS = new Set([
 ]);
 
 export function isOperatorEmail(email: string | null | undefined): boolean {
-  return OPERATOR_EMAILS.has((email ?? "").toLowerCase());
+  const e = (email ?? "").toLowerCase();
+  /* 화면 재현용 테스트 주문(예: WH-20261012-S5E4R, wolha-screen-test-…@example.com)도 운영 성과에서 제외 */
+  return OPERATOR_EMAILS.has(e) || e.endsWith("@example.com") || e.endsWith("@example.org") || e.includes("screen-test");
 }
 
 /** ISO → KST 날짜 (YYYY-MM-DD) */
