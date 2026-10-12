@@ -8,6 +8,7 @@ import {
   BOOK_COUPON_PRICE_KRW,
   BOOK_COUPON_DEADLINE_TEXT,
   BOOK_PRICE_KRW,
+  BUNDLE_REGULAR_PRICE_KRW,
   isAllowedPrice,
   priceBadge,
   listPriceKRW,
@@ -21,6 +22,7 @@ import {
   isProduct,
   productPrice,
   PRODUCTS,
+  regularPriceFor,
   type Product,
 } from "@/lib/ritual-types";
 import ProductPicker from "@/components/pay/ProductPicker";
@@ -31,6 +33,8 @@ import OfferCountdown from "@/components/pay/OfferCountdown";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
 import { PayIncludes, PayReviews } from "@/components/pay/PayValueBlock";
+import SelectedProduct, { OtherProductOption } from "@/components/pay/SelectedProduct";
+import { logPayEventServer } from "@/lib/pay-events-server";
 import { getPublicReviews } from "@/lib/reviews";
 
 /** 주문번호 형식 (개인정보 아님 — URL에 넣을 수 있는 유일한 값) */
@@ -61,9 +65,9 @@ function Guard({
 export default async function CompletePage({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string; paytest?: string; product?: string }>;
+  searchParams: Promise<{ order?: string; paytest?: string; product?: string; changed?: string }>;
 }) {
-  const { order, paytest, product: productParam } = await searchParams;
+  const { order, paytest, product: productParam, changed } = await searchParams;
   /* 운영자 실결제 테스트용: 결제가 닫혀 있어도 ?paytest=1 이면 결제창 표시 */
   const paymentsOpen = PAYMENTS_OPEN || paytest === "1";
   /* 책·패키지 판매: 오픈 전에는 운영자 테스트(?paytest=1)에서만 */
@@ -125,7 +129,10 @@ export default async function CompletePage({
             .update(patch)
             .eq("order_number", orderNumber)
             .eq("payment_status", "pending");
-          if (!upd.error) row = { ...row, payment_amount: want, product: target };
+          if (!upd.error) {
+            row = { ...row, payment_amount: want, product: target };
+            if (target !== current) await logPayEventServer(orderNumber, "product_change", target);
+          }
         }
       }
     }
@@ -181,7 +188,7 @@ export default async function CompletePage({
   const payReviews = !alreadyPaid && paymentsOpen ? await getPublicReviews(2) : [];
 
   return (
-    <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col px-6 pb-16 pt-14">
+    <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col px-6 pb-36 pt-14">
       {!alreadyPaid && (
         <PayEventPing
           orderNumber={orderNumber}
@@ -289,6 +296,18 @@ export default async function CompletePage({
               </p>
             </div>
           ) : null}
+          {product !== "book" ? (
+            <SelectedProduct
+              product={product}
+              amount={row.payment_amount}
+              strike={product === "message" ? badge.strike : row.payment_amount < BUNDLE_REGULAR_PRICE_KRW ? BUNDLE_REGULAR_PRICE_KRW : null}
+              badgeLabel={product === "message" ? badge.label || null : row.payment_amount < BUNDLE_REGULAR_PRICE_KRW ? "첫 구매 24시간 가격" : null}
+              offerEnd={offerEnd}
+              after={regularPriceFor(product)}
+              changed={changed === "1"}
+            />
+          ) : (
+          <>
           {bookSales && !(product === "book" && row.payment_amount === BOOK_COUPON_PRICE_KRW) && (
           <div className="mt-9">
             <p className="mb-3 text-center text-[0.72rem] tracking-[0.25em] text-gold/80">
@@ -304,7 +323,7 @@ export default async function CompletePage({
             />
           </div>
           )}
-          {product === "message" && badge.strike !== null && (
+          {(product as Product) === "message" && badge.strike !== null && (
             <p className={`${isApologyCoupon ? "mt-5" : "mt-9"} text-center text-[0.8rem] text-ivory-dim`}>
               <span className="line-through opacity-60">
                 {badge.strike.toLocaleString()}원
@@ -312,7 +331,7 @@ export default async function CompletePage({
               <span className="ml-2 text-thread">{badge.label}</span>
             </p>
           )}
-          {product !== "message" && (
+          {(product as Product) !== "message" && (
             <p className="mt-9 text-center text-[0.8rem] text-ivory-dim">
               {PRODUCTS[product].name}
               {product === "book" && row.payment_amount === BOOK_COUPON_PRICE_KRW && (
@@ -323,7 +342,7 @@ export default async function CompletePage({
               )}
             </p>
           )}
-          <p className={`font-display ${product === "message" && badge.strike !== null ? "mt-1.5" : product === "message" ? "mt-9" : "mt-1.5"} text-center text-3xl font-semibold text-gold`}>
+          <p className={`font-display ${(product as Product) === "message" && badge.strike !== null ? "mt-1.5" : (product as Product) === "message" ? "mt-9" : "mt-1.5"} text-center text-3xl font-semibold text-gold`}>
             {row.payment_amount.toLocaleString()}
             <span className="ml-1 text-lg text-ivory-dim">원</span>
           </p>
@@ -343,6 +362,8 @@ export default async function CompletePage({
 
           <PayIncludes product={product} compact={bookSales && !(product === "book" && row.payment_amount === BOOK_COUPON_PRICE_KRW)} />
 
+          </>
+          )}
           <div className="mt-7">
             <TossCheckout
               clientKey={clientKey}
@@ -351,7 +372,15 @@ export default async function CompletePage({
               orderName={PRODUCTS[product].orderName}
             />
           </div>
-          {offerEnd && <OfferCountdown endsAt={offerEnd} className="mt-3 text-center" />}
+          {product === "book" && offerEnd && <OfferCountdown endsAt={offerEnd} after={regularPriceFor(product)} className="mt-3 text-center" />}
+          {product !== "book" && bookSales && (
+            <OtherProductOption
+              orderNumber={orderNumber}
+              current={product}
+              otherPrice={product === "message" ? bundleNowPrice : messagePrice}
+              extraQuery={paytest === "1" ? "&paytest=1" : ""}
+            />
+          )}
           <InAppBrowserNotice orderNumber={orderNumber} />
           <PayReviews reviews={payReviews} />
 
