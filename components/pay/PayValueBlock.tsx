@@ -54,6 +54,7 @@ export function PayReviews({ reviews }: { reviews: PublicReview[] }) {
             </blockquote>
             <figcaption className="mt-1.5 text-[0.68rem] text-ivory-dim">
               {r.name} · {r.product} 구매 · {r.month}
+                      {r.incentive && <span className="block text-[0.66rem] text-ivory-dim/70">후기 작성 혜택(책 할인 쿠폰)을 받은 구매자 후기</span>}
             </figcaption>
           </figure>
         ))}
