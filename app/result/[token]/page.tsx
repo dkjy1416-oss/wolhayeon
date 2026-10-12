@@ -37,6 +37,12 @@ function NotAvailable() {
   );
 }
 
+/** 연락 전략(part_06)에 들어 있는 첫 메시지 예시 문장 하나 — 따옴표 안 문장만, 없으면 null */
+function firstQuote(text: string): string | null {
+  const m = text.match(/[“"]([^”"\n]{6,90})[”"]/);
+  return m ? m[1].trim() : null;
+}
+
 export default async function ResultPage({
   params,
 }: {
@@ -117,6 +123,9 @@ export default async function ResultPage({
         period: pv.data.now_plan.period,
         decideRule: pv.data.now_plan.decide_rule,
         cautions: pv.data.cautions.map((x) => x.action).slice(0, 3),
+        /* 10/12: 첫 화면에 메시지 초안·반응별 대응까지 — 거리 지키기(hold_boundary)는 연락 전략이 없으므로 제외 */
+        contactPlan: pv.data.now_plan.stance !== "hold_boundary",
+        draft: firstQuote(parsed.data.part_06_controllable_now.content),
       };
     }
   } catch {
