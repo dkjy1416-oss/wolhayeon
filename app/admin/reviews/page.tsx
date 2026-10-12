@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { listReviewsForAdmin } from "@/lib/reviews";
 import ReviewAdminList from "@/components/admin/ReviewAdminList";
+import UpgradeInviteConsole from "@/components/admin/UpgradeInviteConsole";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function AdminReviewsPage() {
         수정은 오타·개인정보(실명, 연락처 등) 가리기처럼 뜻을 바꾸지 않는 범위에서만 해 주세요. 손님 후기의 뜻을 바꾸거나 지어낸 후기를 올리면
         표시·광고법 위반이 될 수 있어요.
       </p>
+      <UpgradeInviteConsole />
       {list === null ? (
         <p className="rounded-xl border border-thread/40 bg-thread/5 px-5 py-4 text-sm">
           후기 표를 불러오지 못했어요. Supabase에 REVIEWS.sql 을 아직 실행하지 않았다면 먼저 실행해 주세요.
