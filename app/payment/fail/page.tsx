@@ -8,7 +8,8 @@ const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 /** 자주 발생하는 토스 오류 코드만 부드러운 문구로 변환.
     그 외 내부 오류 메시지는 사용자에게 그대로 노출하지 않음. */
 const FRIENDLY: Record<string, string> = {
-  PAY_PROCESS_CANCELED: "결제를 중단하셨습니다. 준비되시면 다시 시도해주세요.",
+  PAY_PROCESS_CANCELED: "결제가 완료되지 않았습니다. 선택한 상품과 신청 내용은 유지됩니다. 다시 결제할 수 있습니다.",
+  USER_CANCEL: "결제가 완료되지 않았습니다. 선택한 상품과 신청 내용은 유지됩니다. 다시 결제할 수 있습니다.",
   PAY_PROCESS_ABORTED: "결제가 진행되지 못했습니다. 잠시 후 다시 시도해주세요.",
   REJECT_CARD_COMPANY:
     "카드사에서 결제를 거절했습니다. 다른 결제수단을 이용해주세요.",
