@@ -198,6 +198,14 @@ export default async function PaymentSuccessPage({
           retryOrder={result.orderNumber}
         />
       );
+    case "coupon_invalid":
+      return (
+        <ErrorView
+          message={`${result.message} 결제는 진행되지 않았고 돈은 빠져나가지 않았어요. 정상 가격(29,000원)으로 받으시려면 책 소개 화면에서 다시 골라 주세요.`}
+          retryOrder={null}
+          title="추가 구매 혜택을 적용할 수 없어요."
+        />
+      );
     case "confirm_failed":
       return (
         <ErrorView
