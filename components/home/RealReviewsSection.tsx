@@ -22,6 +22,7 @@ export default function RealReviewsSection({ reviews }: { reviews: PublicReview[
             <blockquote className="mt-2 whitespace-pre-wrap text-[0.88rem] font-light leading-[1.9] text-ivory">{r.body}</blockquote>
             <figcaption className="mt-3 text-[0.72rem] text-ivory-dim">
               {r.name} · {r.product} 구매 · {r.month}
+                      {r.incentive && <span className="block text-[0.66rem] text-ivory-dim/70">후기 작성 혜택(책 할인 쿠폰)을 받은 구매자 후기</span>}
             </figcaption>
           </figure>
         ))}
