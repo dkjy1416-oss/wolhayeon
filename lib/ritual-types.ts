@@ -394,7 +394,7 @@ export function priceSentence(now: number = Date.now()): string {
 /* ---------- 상품 (메시지 / 개인화 책 / 패키지) ---------- */
 export type Product = "message" | "book" | "bundle";
 export const BOOK_PRICE_KRW = 29000;
-/** 패키지 특가 — 메시지 특가와 같은 날(PROMO_END_MS) 마감 */
+/** 패키지 특가 — 메시지 특가와 같은 날(PROMO_END_MS) 마감 (이후 무료 미리보기 후 24시간 할인가로 사용) */
 export const BUNDLE_PRICE_KRW = 39900;
 /** 패키지 정가 — 특가 마감 후 (따로 사면 45,900원보다 3,000원 저렴) */
 export const BUNDLE_REGULAR_PRICE_KRW = 42900;
@@ -403,6 +403,18 @@ export const BUNDLE_REGULAR_PRICE_KRW = 42900;
 export const BOOK_COUPON_PRICE_KRW = 26000;
 export const BOOK_COUPON_END_MS = Date.parse("2026-10-11T23:59:59+09:00");
 export const BOOK_COUPON_DEADLINE_TEXT = "10월 11일(일)까지";
+
+/** 분석 구매자의 책 추가 구매 — 패키지 기준가 39,900원 − 기존 분석 결제액 12,900원 = 27,000원 (10/12 운영자 결정).
+ *  자격(12,900원 분석 결제·환불 아님·책/패키지 미구매)은 서버에서 주문 DB로만 확인한다 (lib/book/book-upgrade.ts). */
+export const BOOK_UPGRADE_BASE_KRW = BUNDLE_PRICE_KRW;
+export const BOOK_UPGRADE_SOURCE_KRW = RITUAL_PRICE_KRW;
+export const BOOK_UPGRADE_PRICE_KRW = BOOK_UPGRADE_BASE_KRW - BOOK_UPGRADE_SOURCE_KRW;
+/** 쿠폰(추가 구매 주문) 유효기간 — 발급(주문 생성) 후 14일 */
+export const BOOK_UPGRADE_VALID_MS = 14 * 24 * 60 * 60 * 1000;
+export function bookUpgradeEndsAt(createdAt: unknown): number | null {
+  const t = typeof createdAt === "string" ? Date.parse(createdAt) : NaN;
+  return Number.isFinite(t) ? t + BOOK_UPGRADE_VALID_MS : null;
+}
 
 /** 지금 패키지 가격 (특가 기간이면 39,900원, 이후 42,900원) */
 export function bundlePrice(now: number = Date.now()): number {
@@ -470,9 +482,13 @@ export function productPrice(
 ): number {
   if (product === "book") {
     /* 책 쿠폰 주문은 마감(10/11) 전까지 쿠폰가 유지 */
-    return storedAmount === BOOK_COUPON_PRICE_KRW && now <= BOOK_COUPON_END_MS
-      ? BOOK_COUPON_PRICE_KRW
-      : BOOK_PRICE_KRW;
+    if (storedAmount === BOOK_COUPON_PRICE_KRW && now <= BOOK_COUPON_END_MS) return BOOK_COUPON_PRICE_KRW;
+    /* 추가 구매 주문은 발급 후 14일까지 (자격 자체는 서버에서 따로 확인) */
+    if (storedAmount === BOOK_UPGRADE_PRICE_KRW) {
+      const end = bookUpgradeEndsAt(createdAt);
+      if (end !== null && now <= end) return BOOK_UPGRADE_PRICE_KRW;
+    }
+    return BOOK_PRICE_KRW;
   }
   if (product === "bundle") return bundlePriceFor(now, createdAt);
   return resolveOrderPrice(storedAmount, now, createdAt);
@@ -486,7 +502,8 @@ export function isAllowedPrice(amount: unknown): amount is number {
     amount === BOOK_PRICE_KRW ||
     amount === BOOK_COUPON_PRICE_KRW ||
     amount === BUNDLE_PRICE_KRW ||
-    amount === BUNDLE_REGULAR_PRICE_KRW
+    amount === BUNDLE_REGULAR_PRICE_KRW ||
+    amount === BOOK_UPGRADE_PRICE_KRW
   );
 }
 

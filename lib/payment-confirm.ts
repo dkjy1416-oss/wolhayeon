@@ -29,6 +29,7 @@ import {
   BOOK_COUPON_PRICE_KRW,
   BUNDLE_PRICE_KRW,
   BUNDLE_REGULAR_PRICE_KRW,
+  BOOK_UPGRADE_PRICE_KRW,
   isAllowedPrice,
   productPrice,
   PROMO_GRACE_MS,
@@ -38,6 +39,8 @@ import { verifyPaidOwnership } from "@/lib/payment-ownership";
 import { track } from "@vercel/analytics/server";
 import { logPayEventServer } from "@/lib/pay-events-server";
 import { sendOpsAlert } from "@/lib/ops-alert";
+import { upgradeOrderStatus } from "@/lib/book/book-upgrade";
+import { UPGRADE_REASON_TEXT } from "@/lib/book/upgrade-rules";
 
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
@@ -87,6 +90,7 @@ export type PaymentConfirmOutcome =
   | { status: "invalid_request" }
   | { status: "amount_mismatch" }
   | { status: "promo_expired"; orderNumber: string }
+  | { status: "coupon_invalid"; orderNumber: string; message: string }
   | { status: "confirm_pending"; orderNumber: string }
   | { status: "confirm_failed"; message: string }
   | { status: "server_error" };
@@ -222,6 +226,16 @@ export async function confirmOrderPayment(params: {
       return { status: "amount_mismatch" };
     }
 
+    /* 5-1) 책 추가 구매(27,000원)는 승인 직전에 자격을 주문 DB로 다시 확인
+           (기한 · 기존 분석 결제 유지 · 책/패키지 미구매). 안 맞으면 승인하지 않는다(청구 없음). */
+    if (product === "book" && row.payment_amount === BOOK_UPGRADE_PRICE_KRW) {
+      const up = await upgradeOrderStatus(orderNumber);
+      if (!up.ok) {
+        await logPayEventServer(orderNumber, "amount_mismatch", `upgrade_${up.reason}`);
+        return { status: "coupon_invalid", orderNumber, message: UPGRADE_REASON_TEXT[up.reason] };
+      }
+    }
+
     /* 6) 토스 승인 — 금액은 DB 값 사용 */
     const confirm = await confirmTossPayment({
       paymentKey: key,
@@ -320,7 +334,7 @@ export async function confirmOrderPayment(params: {
 function productForAmount(amount: number): "message" | "book" | "bundle" | null {
   if (amount === APOLOGY_PRICE_KRW || amount === RITUAL_PRICE_KRW || amount === RITUAL_REGULAR_PRICE_KRW)
     return "message";
-  if (amount === BOOK_PRICE_KRW || amount === BOOK_COUPON_PRICE_KRW) return "book";
+  if (amount === BOOK_PRICE_KRW || amount === BOOK_COUPON_PRICE_KRW || amount === BOOK_UPGRADE_PRICE_KRW) return "book";
   if (amount === BUNDLE_PRICE_KRW || amount === BUNDLE_REGULAR_PRICE_KRW) return "bundle";
   return null;
 }

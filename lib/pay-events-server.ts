@@ -38,7 +38,9 @@ export type ServerPayEvent =
   | "confirm_failed" // 승인 API 실패 (code)
   | "amount_mismatch" // 금액 불일치로 승인 거부
   | "confirm_pending" // 승인 응답 유실 — 자동 재확인 대기
-  | "apology_sent"; // 결제 오류 사과 쿠폰 메일 발송
+  | "apology_sent" // 결제 오류 사과 쿠폰 메일 발송
+  | "upgrade_invite_sent" // 책 추가 구매 안내 메일 발송 (후기 남기기 → 쿠폰)
+  | "upgrade_issued"; // 후기 작성 후 책 추가 구매 쿠폰(주문) 발급 (code: 발급된 책 주문번호)
 
 export type PayEvent = (typeof CLIENT_PAY_EVENTS)[number] | ServerPayEvent;
 

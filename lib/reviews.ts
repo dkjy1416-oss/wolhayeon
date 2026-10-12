@@ -11,6 +11,8 @@ export interface PublicReview {
   name: string;
   product: string;
   month: string;
+  /** 후기 작성 혜택(책 추가 구매 쿠폰)을 받고 쓴 후기 — 공개 시 표시 의무 */
+  incentive: boolean;
 }
 
 export interface AdminReview {
@@ -23,6 +25,7 @@ export interface AdminReview {
   consent_public: boolean;
   status: "pending" | "approved" | "hidden";
   created_at: string;
+  incentive?: string | null;
 }
 
 export const PRODUCT_LABEL: Record<string, string> = {
@@ -41,7 +44,7 @@ export async function getPublicReviews(limit = 12): Promise<PublicReview[]> {
   try {
     const r = await getSupabaseAdmin()
       .from("reviews")
-      .select("id, rating, body, display_name, product, approved_at, created_at")
+      .select("id, rating, body, display_name, product, approved_at, created_at, incentive")
       .eq("status", "approved")
       .eq("consent_public", true)
       .order("approved_at", { ascending: false })
@@ -54,6 +57,7 @@ export async function getPublicReviews(limit = 12): Promise<PublicReview[]> {
       name: ((x.display_name as string | null) ?? "").trim() || "익명",
       product: PRODUCT_LABEL[x.product as string] ?? "월하연",
       month: monthLabel((x.approved_at as string | null) ?? (x.created_at as string)),
+      incentive: Boolean(x.incentive),
     }));
   } catch {
     return [];
@@ -64,7 +68,7 @@ export async function listReviewsForAdmin(): Promise<AdminReview[] | null> {
   try {
     const r = await getSupabaseAdmin()
       .from("reviews")
-      .select("id, order_number, product, rating, body, display_name, consent_public, status, created_at")
+      .select("id, order_number, product, rating, body, display_name, consent_public, status, created_at, incentive")
       .order("created_at", { ascending: false })
       .limit(200);
     if (r.error || !r.data) return null;
