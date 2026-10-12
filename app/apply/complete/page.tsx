@@ -6,6 +6,7 @@ import {
   RITUAL_REGULAR_PRICE_KRW,
   APOLOGY_PRICE_KRW,
   BOOK_COUPON_PRICE_KRW,
+  BOOK_UPGRADE_PRICE_KRW,
   BOOK_COUPON_DEADLINE_TEXT,
   BOOK_PRICE_KRW,
   BUNDLE_REGULAR_PRICE_KRW,
@@ -36,6 +37,9 @@ import { PayIncludes, PayReviews } from "@/components/pay/PayValueBlock";
 import SelectedProduct, { OtherProductOption } from "@/components/pay/SelectedProduct";
 import { logPayEventServer } from "@/lib/pay-events-server";
 import { getPublicReviews } from "@/lib/reviews";
+import UpgradeSelected, { UpgradeUnavailable } from "@/components/pay/UpgradeSelected";
+import { upgradeOrderStatus } from "@/lib/book/book-upgrade";
+import { UPGRADE_REASON_TEXT } from "@/lib/book/upgrade-rules";
 
 /** 주문번호 형식 (개인정보 아님 — URL에 넣을 수 있는 유일한 값) */
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
@@ -109,8 +113,12 @@ export default async function CompletePage({
          금액은 항상 서버가 상품 규칙으로 정한다. */
       if (row && row.payment_status === "pending" && isAllowedPrice(row.payment_amount)) {
         const current: Product = isProduct(row.product) ? row.product : "message";
-        /* 책 쿠폰(26,000원) 주문은 책 전용 — 상품을 바꾸면 쿠폰이 사라지므로 바꾸지 않는다 */
-        const couponLocked = current === "book" && row.payment_amount === BOOK_COUPON_PRICE_KRW;
+        /* 책 쿠폰(26,000원)·추가 구매(27,000원) 주문은 책 전용 — 상품을 바꾸면 쿠폰이 사라지므로 바꾸지 않는다 */
+        const couponLocked =
+          current === "book" &&
+          (row.payment_amount === BOOK_COUPON_PRICE_KRW || row.payment_amount === BOOK_UPGRADE_PRICE_KRW);
+        /* 추가 구매 주문은 금액을 다시 계산하지 않는다 — 기한·자격이 안 맞으면 아래에서 이유를 보여 준다(정상가로 조용히 바꾸지 않음) */
+        const isUpgradeOrder = current === "book" && row.payment_amount === BOOK_UPGRADE_PRICE_KRW;
         const target: Product =
           bookSales && !couponLocked && isProduct(productParam) ? productParam : current;
         /* 책·패키지에서 메시지로 돌아오면 저장 금액이 책값이므로 메시지 기본가로 계산 */
@@ -118,8 +126,8 @@ export default async function CompletePage({
           current !== "message" && target === "message"
             ? row.message_amount ?? RITUAL_PRICE_KRW
             : row.payment_amount;
-        const want = productPrice(target, base, Date.now(), offerAnchor(row));
-        if (want !== row.payment_amount || target !== current) {
+        const want = isUpgradeOrder ? row.payment_amount : productPrice(target, base, Date.now(), offerAnchor(row));
+        if (!isUpgradeOrder && (want !== row.payment_amount || target !== current)) {
           /* 메시지 → 책·패키지로 바꿀 때 원래 메시지 금액(사과 쿠폰 9,900원 등)을 기억해 두었다가
              다시 메시지로 돌아오면 그대로 적용 */
           const patch: Record<string, unknown> = { payment_amount: want, product: target };
@@ -182,6 +190,10 @@ export default async function CompletePage({
       (product === "bundle" && row.payment_amount === FIRST_OFFER_BUNDLE_PRICE_KRW))
       ? firstOfferEndsAt(anchor)
       : null;
+
+  /* 책 추가 구매(27,000원) — 결제 전 자격을 주문 DB로 확인 */
+  const isUpgrade = product === "book" && row.payment_amount === BOOK_UPGRADE_PRICE_KRW && !alreadyPaid;
+  const upgrade = isUpgrade ? await upgradeOrderStatus(orderNumber) : null;
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
   /* 결제 화면 후기 — 결제가 열려 있고 아직 결제 전일 때만 (실제 구매자·공개 동의 후기만, 없으면 숨김) */
@@ -274,6 +286,8 @@ export default async function CompletePage({
             홈으로 돌아가기
           </Link>
         </>
+      ) : upgrade && !upgrade.ok ? (
+        <UpgradeUnavailable reason={UPGRADE_REASON_TEXT[upgrade.reason]} />
       ) : !amountValid ? (
         <p className="mt-10 text-center text-sm leading-[1.9] text-ivory-dim">
           주문 금액 정보에 문제가 있어 결제를 진행할 수 없습니다.
@@ -296,7 +310,9 @@ export default async function CompletePage({
               </p>
             </div>
           ) : null}
-          {product !== "book" ? (
+          {upgrade && upgrade.ok ? (
+            <UpgradeSelected amount={row.payment_amount} endsAt={upgrade.endsAt} />
+          ) : product !== "book" ? (
             <SelectedProduct
               product={product}
               amount={row.payment_amount}
