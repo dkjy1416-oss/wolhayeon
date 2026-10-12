@@ -7,6 +7,8 @@ export default function SummaryCard({
   period,
   decideRule,
   cautions,
+  contactPlan = false,
+  draft = null,
 }: {
   name: string;
   stateLabel: string;
@@ -15,6 +17,8 @@ export default function SummaryCard({
   period: string;
   decideRule: string;
   cautions: string[];
+  contactPlan?: boolean;
+  draft?: string | null;
 }) {
   return (
     <section className="px-5 pt-2">
@@ -41,19 +45,15 @@ export default function SummaryCard({
             </div>
           )}
           <div className="grid grid-cols-[5.2rem_1fr] gap-3 px-5 py-3.5">
-            <dt className="text-[0.74rem] text-gold/80">지금 할 일</dt>
+            <dt className="text-[0.74rem] text-gold/80">먼저 할 일</dt>
             <dd>
               <span className="rounded-md bg-gold px-2 py-0.5 text-[0.74rem] font-medium text-ink">{stanceLabel}</span>
               <span className="font-display ml-2 text-[1rem] text-ivory">{period}</span>
             </dd>
           </div>
-          <div className="grid grid-cols-[5.2rem_1fr] gap-3 px-5 py-3.5">
-            <dt className="text-[0.74rem] text-gold/80">다음 판단</dt>
-            <dd className="font-light leading-[1.8] text-ivory-dim">{decideRule}</dd>
-          </div>
           {cautions.length > 0 && (
             <div className="grid grid-cols-[5.2rem_1fr] gap-3 px-5 py-3.5">
-              <dt className="text-[0.74rem] text-gold/80">멈출 것</dt>
+              <dt className="text-[0.74rem] text-gold/80">피할 행동</dt>
               <dd>
                 <ul className="space-y-1">
                   {cautions.map((c) => (
@@ -63,6 +63,30 @@ export default function SummaryCard({
                     </li>
                   ))}
                 </ul>
+              </dd>
+            </div>
+          )}
+          <div className="grid grid-cols-[5.2rem_1fr] gap-3 px-5 py-3.5">
+            <dt className="text-[0.74rem] text-gold/80">{contactPlan ? "연락 조건" : "다음 판단"}</dt>
+            <dd className="font-light leading-[1.8] text-ivory-dim">{decideRule}</dd>
+          </div>
+          {contactPlan && (
+            <div className="grid grid-cols-[5.2rem_1fr] gap-3 px-5 py-3.5">
+              <dt className="text-[0.74rem] text-gold/80">메시지 초안</dt>
+              <dd className="leading-[1.8] text-ivory">
+                {draft ? <span className="rounded-md bg-ink/70 px-2 py-1">“{draft}”</span> : null}
+                <a href="#strategy" className={`${draft ? "mt-1.5 " : ""}block text-[0.76rem] text-gold underline underline-offset-4`}>
+                  여섯 · 연락 전략에서 전체 문장 보기
+                </a>
+              </dd>
+            </div>
+          )}
+          {contactPlan && (
+            <div className="grid grid-cols-[5.2rem_1fr] gap-3 px-5 py-3.5">
+              <dt className="text-[0.74rem] text-gold/80">반응별 대응</dt>
+              <dd className="font-light leading-[1.8] text-ivory-dim">
+                반가운 답 · 단답 · 무응답일 때 각각 할 일과 기다릴 기간
+                <a href="#strategy" className="block text-[0.76rem] text-gold underline underline-offset-4">바로 보기</a>
               </dd>
             </div>
           )}
