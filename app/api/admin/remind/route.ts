@@ -94,7 +94,7 @@ function buildEmail(name: string, openUrl: string, fromEmail: string, endMs: num
     `아래 링크를 누르면 다시 입력할 필요 없이 내 미리보기로 바로 이어집니다.`,
     openUrl,
     ``,
-    `1회 결제 · 결제 후 보통 5분 안에 완성 · 결과를 열어보기 전이면 7일 안에 전액 환불`,
+    `1회 결제 · 결제 후 보통 1~3분이면 완성 · 결과를 열어보기 전이면 7일 안에 전액 환불`,
     ``,
     `— 월하연 月下緣`,
     ``,
@@ -131,7 +131,7 @@ function buildEmail(name: string, openUrl: string, fromEmail: string, endMs: num
     </a>
     <p style="font-size:12px;line-height:1.9;color:#a9a294;text-align:center;margin:14px 0 0;">
       다시 입력할 필요 없이 내 미리보기로 바로 이어져요<br/>
-      1회 결제 · 결제 후 보통 5분 안에 완성 · 열어보기 전이면 7일 안에 전액 환불
+      1회 결제 · 결제 후 보통 1~3분이면 완성 · 열어보기 전이면 7일 안에 전액 환불
     </p>
     <p style="font-size:12px;color:#8d8779;line-height:1.9;margin:36px 0 0;">
       이 메일은 월하연 소식 수신에 동의하신 분께 발송되었습니다.<br/>
