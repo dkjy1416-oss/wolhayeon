@@ -273,6 +273,7 @@ export default function ReviewAdminList({ initial }: { initial: AdminReview[] })
                 {STATUS[r.status]}
               </span>
               {!r.consent_public && <span className="text-thread">공개 동의 안 함 (공개 불가)</span>}
+              {r.incentive && <span className="text-gold">쿠폰 혜택 후기 (공개 시 표시됨)</span>}
             </div>
 
             {editing === r.id ? (
