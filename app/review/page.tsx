@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { verifyReviewToken } from "@/lib/review-auth";
 import ReviewForm from "@/components/review/ReviewForm";
+import { checkUpgradeForOrder } from "@/lib/book/book-upgrade";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -46,8 +47,9 @@ export default async function ReviewPage({
   }
 
   let name = "";
-  let initial: { rating: number; body: string; name: string; consent: boolean } | null = null;
+  let initial: { rating: number; body: string; name: string; consent: boolean; helped?: string[]; impressions?: string[] } | null = null;
   let locked = false;
+  let couponOffer = false;
   try {
     const supabase = getSupabaseAdmin();
     const ord = await supabase
@@ -59,7 +61,7 @@ export default async function ReviewPage({
     name = (ord.data.applicant_name as string | null)?.trim() ?? "";
     const prev = await supabase
       .from("reviews")
-      .select("rating, body, display_name, consent_public, status")
+      .select("rating, body, display_name, consent_public, status, choices")
       .eq("order_number", o)
       .maybeSingle();
     if (prev.data) {
@@ -69,8 +71,12 @@ export default async function ReviewPage({
         body: prev.data.body as string,
         name: (prev.data.display_name as string | null) ?? "",
         consent: prev.data.consent_public as boolean,
+        helped: (prev.data.choices as { helped?: string[] } | null)?.helped ?? [],
+        impressions: (prev.data.choices as { impressions?: string[] } | null)?.impressions ?? [],
       };
     }
+    /* 12,900원 분석 결제 고객 → 후기를 남기면 책 추가 구매 쿠폰 (별점·내용과 무관) */
+    couponOffer = (await checkUpgradeForOrder(o)).ok;
   } catch {
     return <Invalid />;
   }
@@ -92,7 +98,7 @@ export default async function ReviewPage({
           이미 남겨 주신 후기가 있어요. 고마워요.
         </div>
       ) : (
-        <ReviewForm o={o} t={t} initial={initial} />
+        <ReviewForm o={o} t={t} initial={initial} couponOffer={couponOffer} />
       )}
     </Shell>
   );
