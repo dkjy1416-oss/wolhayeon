@@ -7,6 +7,7 @@ import { sendOpsAlert } from "@/lib/ops-alert";
 import type SummaryCard from "@/components/result/SummaryCard";
 import ResultBody from "@/components/result/ResultBody";
 import { PreviewSchema, NOW_STANCE_LABELS } from "@/lib/ritual-preview-schema";
+import { checkUpgradeForOrder } from "@/lib/book/book-upgrade";
 import { reviewPath } from "@/lib/review-auth";
 
 /** 항상 동적 서버 조회 — 정적 생성/공용 캐시 금지 */
@@ -57,6 +58,7 @@ export default async function ResultPage({
 
   let name = "";
   let reviewHref: string | null = null;
+  let reviewCoupon = false;
   let viewWindow: string | null = null;
   let hasBook = false;
   let maskedEmail: string | null = null;
@@ -107,6 +109,9 @@ export default async function ResultPage({
 
     name = o.data.applicant_name;
     reviewHref = o.data.order_number ? reviewPath(o.data.order_number as string) : null;
+    if (reviewHref && o.data.product !== "bundle" && o.data.product !== "book") {
+      reviewCoupon = (await checkUpgradeForOrder(o.data.order_number as string)).ok;
+    }
     content = parsed.data;
     viewWindow = formatViewWindow(o.data.paid_at);
     hasBook = o.data.product === "bundle" || o.data.product === "book";
@@ -149,6 +154,7 @@ export default async function ResultPage({
       maskedEmail={maskedEmail}
       summary={summary}
       reviewHref={reviewHref}
+      reviewCoupon={reviewCoupon}
     />
   );
 }
