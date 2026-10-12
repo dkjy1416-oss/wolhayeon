@@ -18,12 +18,16 @@ import {
   RITUAL_REGULAR_PRICE_KRW,
   isPromoActive,
   productPrice,
+  BOOK_UPGRADE_PRICE_KRW,
   offerAnchor,
   isFirstOfferActive,
   FIRST_OFFER_BUNDLE_PRICE_KRW,
 } from "@/lib/ritual-types";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getPublicReviews } from "@/lib/reviews";
+import { upgradeOrderStatus } from "@/lib/book/book-upgrade";
+import type { UpgradeStatus } from "@/lib/book/upgrade-rules";
+import { UpgradeBanner, UpgradeOffer } from "@/components/book/UpgradeOffer";
 
 export const dynamic = "force-dynamic";
 
@@ -256,8 +260,12 @@ export default async function BookPage({
 }) {
   const { order } = await searchParams;
   const orderNumber = order && ORDER_RE.test(order) ? order : null;
+  /* 분석 구매자 책 추가 구매(27,000원) 주문으로 들어온 경우 — 자격은 서버(주문 DB)로 확인 */
+  let upgrade: UpgradeStatus | null = null;
   const hrefFor = (product: "book" | "bundle") =>
-    orderNumber
+    upgrade && !upgrade.ok
+      ? `/apply?want=${product}`
+      : orderNumber
       ? `/apply/complete?order=${encodeURIComponent(orderNumber)}&product=${product}`
       : `/apply?want=${product}`;
   /* 미리보기에서 넘어온 손님(주문번호 있음)은 그 주문 기준 가격 — 첫 구매 24시간이면 메시지·패키지 할인가 */
@@ -268,9 +276,12 @@ export default async function BookPage({
     try {
       const r = await getSupabaseAdmin()
         .from("ritual_orders")
-        .select("created_at, remind_sent_at, payment_status")
+        .select("created_at, remind_sent_at, payment_status, product, payment_amount")
         .eq("order_number", orderNumber)
         .maybeSingle();
+      if (r.data && r.data.product === "book" && r.data.payment_amount === BOOK_UPGRADE_PRICE_KRW) {
+        upgrade = await upgradeOrderStatus(orderNumber);
+      }
       if (r.data && r.data.payment_status === "pending") {
         const anchor = offerAnchor(r.data);
         offerOn = !isPromoActive() && isFirstOfferActive(anchor);
@@ -288,7 +299,13 @@ export default async function BookPage({
   const reviews = await getPublicReviews(12);
   const avg = reviews.length ? reviews.reduce((a, r) => a + r.rating, 0) / reviews.length : 0;
 
-  const PriceCards = ({ id }: { id: string }) => (
+  const upgradeOk = upgrade !== null && upgrade.ok;
+  const PriceCards = ({ id }: { id: string }) =>
+    upgrade && upgrade.ok ? (
+      <div id={id} className="scroll-mt-24">
+        <UpgradeOffer endsAt={upgrade.endsAt} href={hrefFor("book")} />
+      </div>
+    ) : (
     <div id={id} className="scroll-mt-24 space-y-3">
       <Link
         href={hrefFor("bundle")}
@@ -352,7 +369,7 @@ export default async function BookPage({
         1회 결제 · 정기결제 없음 · 결제 후 1~3분이면 완성 · PDF 링크 60일
       </p>
     </div>
-  );
+    );
 
   return (
     <div className="min-h-screen bg-[#080607]">
@@ -360,6 +377,7 @@ export default async function BookPage({
         <Header ctaHref="#pick" ctaLabel="내 책 받기" />
         <main className="pb-20">
           <ResumeOrder hasOrderParam={!!orderNumber} />
+          {upgrade && <UpgradeBanner status={upgrade} href={hrefFor("book")} />}
           {/* ===== 0. 첫 화면 — 월화가 붙잡는 장면 (영상) ===== */}
           <section className="relative">
             <LoopVideo
@@ -382,10 +400,18 @@ export default async function BookPage({
               연락하지 말아야 할 때
             </h1>
             <div className="mt-4 flex items-center justify-center gap-2 text-[0.78rem]">
-              <span className="rounded-full border border-gold/40 px-3 py-1 text-gold">책 {BOOK_PRICE_KRW.toLocaleString()}원</span>
-              <span className="rounded-full border border-gold-dim/30 px-3 py-1 text-ivory-dim">
-                메시지와 함께 {bundleNow.toLocaleString()}원
-              </span>
+              {upgradeOk ? (
+                <span className="rounded-full border border-gold/40 px-3 py-1 text-gold">
+                  분석 구매자 추가 구매 {BOOK_UPGRADE_PRICE_KRW.toLocaleString()}원
+                </span>
+              ) : (
+                <>
+                  <span className="rounded-full border border-gold/40 px-3 py-1 text-gold">책 {BOOK_PRICE_KRW.toLocaleString()}원</span>
+                  <span className="rounded-full border border-gold-dim/30 px-3 py-1 text-ivory-dim">
+                    메시지와 함께 {bundleNow.toLocaleString()}원
+                  </span>
+                </>
+              )}
             </div>
             <a
               href="#pick"
@@ -751,6 +777,7 @@ export default async function BookPage({
                     <blockquote className="mt-2 whitespace-pre-wrap text-[0.86rem] font-light leading-[1.9] text-ivory">{r.body}</blockquote>
                     <figcaption className="mt-3 text-[0.72rem] text-ivory-dim">
                       {r.name} · {r.product} 구매 · {r.month}
+                      {r.incentive && <span className="block text-[0.66rem] text-ivory-dim/70">후기 작성 혜택(책 할인 쿠폰)을 받은 구매자 후기</span>}
                     </figcaption>
                   </figure>
                 ))}
@@ -836,7 +863,10 @@ export default async function BookPage({
           </section>
         </main>
         <Footer />
-        <BookStickyBuy href={hrefFor("book")} label={`내 책 받기 · ${BOOK_PRICE_KRW.toLocaleString()}원`} />
+        <BookStickyBuy
+          href={hrefFor("book")}
+          label={upgradeOk ? `쿠폰 적용해서 책 받기 · ${BOOK_UPGRADE_PRICE_KRW.toLocaleString()}원` : `내 책 받기 · ${BOOK_PRICE_KRW.toLocaleString()}원`}
+        />
       </div>
     </div>
   );
