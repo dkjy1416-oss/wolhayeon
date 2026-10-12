@@ -87,6 +87,15 @@ export default function TossCheckout(props: {
   );
 }
 
+/** 결제창 닫기·취소는 '결제 미완료'로 안내 (주문·선택 상품은 DB에 그대로 남아 있음 — 다시 누르면 같은 금액으로 열림) */
+const CANCEL_CODES = new Set(["USER_CANCEL", "PAY_PROCESS_CANCELED", "PAY_PROCESS_ABORTED"]);
+function payErrorMessage(e: unknown): string {
+  const code = errorCode(e);
+  if (code && CANCEL_CODES.has(code))
+    return "결제가 완료되지 않았습니다. 선택한 상품과 신청 내용은 유지됩니다. 다시 결제할 수 있습니다.";
+  return e instanceof Error && e.message ? e.message : "결제가 진행되지 않았습니다. 다시 시도해주세요.";
+}
+
 function RefundNotice() {
   return (
     <div className="mt-5 rounded-xl border border-gold-dim/25 bg-ink-soft px-4 py-3 text-center">
@@ -191,10 +200,7 @@ function TossWindowCheckout({
       // Redirect 방식 — 성공 시 이 아래는 실행되지 않음
     } catch (e) {
       logPayEvent(orderNumber, "pay_request_error", errorCode(e));
-      const msg =
-        e instanceof Error && e.message
-          ? e.message
-          : "결제가 진행되지 않았습니다. 다시 시도해주세요.";
+      const msg = payErrorMessage(e);
       setErrorMsg(msg);
       setPaying(false);
     }
@@ -385,10 +391,7 @@ function TossWidgetCheckout({
     } catch (e) {
       // 구매자가 결제창을 닫은 경우 등 (USER_CANCEL 등 코드로 구분)
       logPayEvent(orderNumber, "pay_request_error", errorCode(e));
-      const msg =
-        e instanceof Error && e.message
-          ? e.message
-          : "결제가 진행되지 않았습니다. 다시 시도해주세요.";
+      const msg = payErrorMessage(e);
       setErrorMsg(msg);
       setPaying(false);
     }
