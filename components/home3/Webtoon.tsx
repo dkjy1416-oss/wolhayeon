@@ -48,21 +48,28 @@ export function ArtBubble({
   flip = false,
   className = "",
   delay = 0,
+  inline = false,
 }: {
   children: React.ReactNode;
   kind?: keyof typeof BUBBLE;
   flip?: boolean;
   className?: string;
   delay?: number;
+  /** 흐름 안에 놓기 (absolute 대신 relative) */
+  inline?: boolean;
 }) {
   return (
-    <div className={`wt-pop absolute z-10 ${className}`} style={{ animationDelay: `${delay}ms` }}>
+    <div className={`wt-pop ${inline ? "relative" : "absolute"} z-10 ${className}`} style={{ animationDelay: `${delay}ms` }}>
       <div className="wt-float relative" style={{ animationDelay: `${delay + 700}ms` }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={BUBBLE[kind]} alt="" aria-hidden className={`block h-auto w-full select-none drop-shadow-[0_10px_24px_rgba(0,0,0,0.45)] ${flip ? "-scale-x-100" : ""}`} />
+        <img src={BUBBLE[kind]} alt="" aria-hidden className={`block h-auto w-full select-none drop-shadow-[0_8px_20px_rgba(0,0,0,0.5)] ${flip ? "-scale-x-100" : ""}`} />
         <p
-          className={`font-display absolute inset-0 flex items-center justify-center text-center text-[0.95rem] font-semibold leading-[1.5] tracking-[-0.01em] text-[#2a2326] ${
-            kind === "caption" ? "px-[18%] pb-[1%] text-[#4a2a22]" : kind === "thought" ? "px-[15%] pb-[24%]" : "px-[15%] pb-[12%]"
+          className={`absolute inset-0 flex items-center justify-center text-center font-semibold leading-[1.55] tracking-[-0.01em] text-[#2b2225] ${
+            kind === "caption"
+              ? "px-[9%] pb-[3%] text-[clamp(0.9rem,3.6vw,1.02rem)]"
+              : kind === "thought"
+                ? "px-[16%] pb-[22%] text-[clamp(0.92rem,3.8vw,1.05rem)]"
+                : "px-[13%] pt-[15%] text-[clamp(0.95rem,4vw,1.08rem)]"
           }`}
         >
           <span>{children}</span>
@@ -72,27 +79,41 @@ export function ArtBubble({
   );
 }
 
-/** 한 컷 — 천천히 다가가는 그림 + 말풍선 */
+/** 한 컷 — 천천히 다가가는 그림. say: 얼굴 아래(그림 아랫부분)에 걸쳐 놓는 말풍선 — 꼬리가 위의 월화를 가리킴 */
 export function Cut({
   src,
   alt,
   ratio = "aspect-[3/4]",
   pos = "object-center",
+  say,
+  right = false,
   children,
 }: {
   src: string;
   alt: string;
   ratio?: string;
   pos?: string;
+  say?: React.ReactNode;
+  /** 말풍선을 오른쪽으로 (꼬리도 오른쪽) */
+  right?: boolean;
   children?: React.ReactNode;
 }) {
   const ref = useInView<HTMLDivElement>(0.25);
   return (
-    <div ref={ref} className={`wt-cut relative ${ratio} w-full overflow-hidden`}>
-      <div className="wt-zoom absolute inset-0 [mask-image:linear-gradient(to_bottom,transparent,black_9%,black_88%,transparent)]">
-        <Image src={src} alt={alt} fill sizes="480px" className={`object-cover ${pos}`} />
+    <div ref={ref} className="relative">
+      <div className={`wt-cut relative ${ratio} w-full overflow-hidden`}>
+        <div className="wt-zoom absolute inset-0 [mask-image:linear-gradient(to_bottom,transparent,black_9%,black_88%,transparent)]">
+          <Image src={src} alt={alt} fill sizes="480px" className={`object-cover ${pos}`} />
+        </div>
+        {children}
       </div>
-      {children}
+      {say && (
+        <div className="relative z-10 -mt-[24%] pb-8">
+          <ArtBubble inline flip={right} delay={200} className={`w-[74%] ${right ? "ml-[22%]" : "ml-[4%]"}`}>
+            {say}
+          </ArtBubble>
+        </div>
+      )}
     </div>
   );
 }
@@ -136,8 +157,8 @@ export function Petals({ n = 9 }: { n?: number }) {
 export function Beat({ children, kind = "thought", className = "" }: { children: React.ReactNode; kind?: keyof typeof BUBBLE; className?: string }) {
   const ref = useInView<HTMLDivElement>(0.5);
   return (
-    <div ref={ref} className={`relative z-[6] h-60 ${className}`}>
-      <ArtBubble kind={kind} className="left-[26%] top-2 w-[48%]">
+    <div ref={ref} className={`relative z-[6] py-6 ${className}`}>
+      <ArtBubble inline kind={kind} className={`mx-auto ${kind === "caption" ? "w-[78%]" : "w-[64%]"}`}>
         {children}
       </ArtBubble>
     </div>
