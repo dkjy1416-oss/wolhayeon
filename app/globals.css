@@ -322,3 +322,31 @@ body {
 .paper .shadow-paper {
   box-shadow: 0 1px 2px rgba(49, 43, 45, 0.06), 0 8px 28px rgba(105, 38, 59, 0.07);
 }
+
+/* ===== 10/16 4차 — 웹툰 효과 (말풍선 톡 · 천천히 다가가는 컷 · 내레이션 · 꽃잎) ===== */
+.wt-pop { opacity: 0; transform: scale(0.6) translateY(12px); transform-origin: 20% 90%; }
+.wt-in .wt-pop { animation: wt-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+@keyframes wt-pop {
+  0% { opacity: 0; transform: scale(0.6) translateY(12px); }
+  70% { opacity: 1; transform: scale(1.04) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.wt-zoom { transform: scale(1.12); transition: transform 7s cubic-bezier(0.2, 0.6, 0.2, 1); }
+.wt-in .wt-zoom, .wt-in.wt-zoom { transform: scale(1); }
+.wt-rise { opacity: 0; transform: translateY(calc(-50% + 14px)); transition: opacity 1s ease, transform 1s ease; }
+.wt-in .wt-rise { opacity: 1; transform: translateY(-50%); }
+.wt-float { animation: wt-float 4.5s ease-in-out infinite; }
+@keyframes wt-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.wt-petal { animation-name: wt-petal; animation-timing-function: linear; animation-iteration-count: infinite; }
+@keyframes wt-petal {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { transform: translate(-60px, 110vh) rotate(540deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wt-pop, .wt-in .wt-pop { animation: none; opacity: 1; transform: none; }
+  .wt-zoom { transform: none; transition: none; }
+  .wt-rise { opacity: 1; transform: translateY(-50%); transition: none; }
+  .wt-petal { display: none; }
+  .wt-float { animation: none; }
+}
