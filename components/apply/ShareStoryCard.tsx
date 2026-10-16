@@ -11,7 +11,7 @@ import { logPayEvent } from "@/lib/pay-events";
 
 const W = 1080;
 const H = 1920;
-const SERIF = '"ChosunIlboMyungjo", "Noto Serif KR", serif';
+const SERIF = '"Gowun Batang", "Noto Serif KR", serif';
 const SANS = '"Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", sans-serif';
 
 function loadImage(src: string): Promise<HTMLImageElement | null> {

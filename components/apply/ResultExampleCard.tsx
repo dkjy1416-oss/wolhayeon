@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 전체 분석 결과 예시 (10/12 개발지시서 4) — 흐림 처리만으로 설득하지 않고, 유료 결과의 '형식과 구체성'을 보여준다.
+ * 전체 리추얼 구성 예시 (10/12 개발지시서 4) — 흐림 처리만으로 설득하지 않고, 유료 결과의 '형식과 구체성'을 보여준다.
  * - 가상 사연으로 만든 예시 (실제 고객 사연·개인정보 아님) — 화면에 분명히 표시
  * - 실제 전체 결과(part_06 연락 전략: 타이밍 조건 · 첫 메시지 예시 · 반가운 답/단답/무응답 대응)에 들어가는 형식만 사용
  * - 재회·상대 마음·특정 날짜 연락을 보장하는 표현 없음
@@ -81,9 +81,9 @@ export default function ResultExampleCard({ kind, orderNumber }: { kind: Kind; o
   }, [orderNumber, kind]);
 
   return (
-    <div ref={ref} className="rounded-2xl border border-gold/35 bg-ink-soft px-5 py-5">
+    <div ref={ref} className="rounded-2xl border border-gold-dim bg-ink-soft px-5 py-5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[0.72rem] tracking-wider text-gold/90">전체 분석 결과 예시</p>
+        <p className="text-[0.72rem] tracking-wider text-gold/90">전체 리추얼 구성 예시</p>
         <span className="shrink-0 rounded-full border border-ivory/20 px-2 py-0.5 text-[0.62rem] text-ivory-dim">
           가상 사연으로 만든 예시
         </span>
