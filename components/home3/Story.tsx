@@ -6,7 +6,8 @@ import Image from "next/image";
 import LoopVideo from "@/components/book/LoopVideo";
 import TrackedCtaLink from "@/components/TrackedCtaLink";
 import { V2, MOMENTS } from "@/components/home2/media";
-import { Big, Bubble, Cta, Hl, Panel, V3 } from "./parts";
+import { Big, Cta, Hl, V3 } from "./parts";
+import { ArtBubble, Beat, Cut, Gutter, Petals } from "./Webtoon";
 
 export function Hook() {
   return (
@@ -125,7 +126,14 @@ export function MeetWolhwa() {
   return (
     <section className="pb-14">
       <div className="relative">
-        <Panel src={V2.greet} alt="손을 내밀며 맞이하는 월화" say={<>당신의 이야기를<br />끝까지 들어 드릴게요.</>} pos="top-6" ratio="aspect-[4/5]" />
+        <Cut src={V2.greet} alt="손을 내밀며 맞이하는 월화" ratio="aspect-[4/5]" pos="object-top">
+          <ArtBubble className="left-[4%] top-[7%] w-[60%]">
+            당신의 이야기를
+            <br />
+            끝까지 들어 드릴게요.
+          </ArtBubble>
+          <Petals n={7} />
+        </Cut>
         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#120e10] to-transparent" />
       </div>
       <div className="mx-5 -mt-10 relative rounded-[1.4rem] border border-gold/30 bg-[#1d181b] px-5 py-5">
@@ -145,12 +153,55 @@ export function MeetWolhwa() {
 
 export function Webtoon() {
   return (
-    <section className="flex flex-col gap-1.5 pb-14">
-      <Panel src={V3.smile} alt="미소 짓는 월화" say={<>혹시…<br />아직 망설이고 계신가요?</>} pos="top-6" />
-      <Panel src={V2.listen} alt="편지를 읽는 월화" say={<>관계에는<br />타이밍이 있어요.</>} side="right" pos="bottom-8" />
-      <Panel src={V2.write} alt="편지를 쓰는 월화" say={<>오늘 보내지 않은 한 줄이,<br />내일의 대화를 지켜 주기도 해요.</>} pos="top-6" />
-      <Panel src={V2.offer} alt="봉투를 건네는 월화" say={<>오늘 밤,<br />같이 천천히 정리해 볼까요?</>} side="right" pos="bottom-8" />
-      <div className="mt-8">
+    <section className="relative pb-14">
+      <Gutter>{"그날 밤에도,\n보내지 못한 메시지가 남아 있었어요"}</Gutter>
+      <Beat>
+        연락해도…
+        <br />
+        괜찮을까?
+      </Beat>
+      <Cut src={V3.smile} alt="미소 짓는 월화">
+        <ArtBubble className="left-[4%] top-[9%] w-[60%]" delay={150}>
+          혹시…
+          <br />
+          아직 망설이고 계신가요?
+        </ArtBubble>
+      </Cut>
+      <Gutter>{"읽고, 지우고,\n다시 쓰고"}</Gutter>
+      <Cut src={V2.listen} alt="편지를 읽는 월화">
+        <ArtBubble kind="caption" className="left-[6%] top-[8%] w-[56%]">
+          월화는 사연을
+          <br />
+          끝까지 읽어요
+        </ArtBubble>
+        <ArtBubble flip className="right-[4%] bottom-[12%] w-[58%]" delay={450}>
+          관계에는
+          <br />
+          타이밍이 있어요.
+        </ArtBubble>
+      </Cut>
+      <Gutter>{"서두르지 않아도\n괜찮아요"}</Gutter>
+      <Cut src={V2.write} alt="편지를 쓰는 월화">
+        <ArtBubble className="left-[4%] top-[9%] w-[66%]" delay={150}>
+          오늘 보내지 않은 한 줄이,
+          <br />
+          내일의 대화를
+          <br />
+          지켜 주기도 해요.
+        </ArtBubble>
+        <Petals />
+      </Cut>
+      <Gutter tall>{"그리고 오늘 밤,\n당신에게 건네는 한 통의 편지"}</Gutter>
+      <Cut src={V2.offer} alt="봉투를 건네는 월화">
+        <ArtBubble flip className="right-[4%] bottom-[12%] w-[60%]" delay={150}>
+          오늘 밤,
+          <br />
+          같이 천천히 정리해 볼까요?
+        </ArtBubble>
+        <Petals n={6} />
+      </Cut>
+      <Gutter />
+      <div className="relative z-[6] mt-2">
         <Cta placement="webtoon" />
       </div>
     </section>
@@ -234,7 +285,13 @@ export function Prepared() {
         </Big>
       </div>
       <div className="relative mt-6">
-        <Panel src={V3.explain} alt="책을 펼쳐 설명하는 월화" say={<>사주를 몰라도 괜찮아요.<br />겪은 이야기만 들려주세요.</>} side="right" pos="top-6" />
+        <Cut src={V3.explain} alt="책을 펼쳐 설명하는 월화">
+          <ArtBubble flip className="right-[4%] top-[7%] w-[62%]">
+            사주를 몰라도 괜찮아요.
+            <br />
+            겪은 이야기만 들려주세요.
+          </ArtBubble>
+        </Cut>
         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#120e10] to-transparent" />
       </div>
       <div className="relative -mt-16 px-5 text-center">
