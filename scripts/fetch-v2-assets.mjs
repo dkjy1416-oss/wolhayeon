@@ -24,6 +24,9 @@ const IMAGES = [
   ["ritual-3.webp", "hf_20261016_074342_f624c4ac-18fd-4404-a5c2-4efcccd4b953.png"],
   ["set.webp", "hf_20261016_074341_18b76d18-3707-4804-a15c-ecb2013f40a3.png"],
   ["moon.webp", "hf_20261016_074342_983ab802-03f6-444c-9c7f-96deb532c220.png"],
+  ["explain.webp", "hf_20261016_081834_ba9fe3d9-bd0d-40d0-b675-0309167e4216.png"],
+  ["smile.webp", "hf_20261016_081834_ae5c5c9a-a02b-47df-b246-5d54c9693d60.png"],
+  ["hands.webp", "hf_20261016_081833_13ad7394-41e8-48e4-b721-769a80f38c49.png"],
 ];
 const VIDEOS = [
   ["greet.mp4", "hf_20261016_074650_4c876ec8-7ee2-4569-a43e-7531d7277b63.mp4", 720],
