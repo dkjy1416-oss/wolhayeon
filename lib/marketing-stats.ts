@@ -97,6 +97,10 @@ export interface MarketingStats {
   dropoff: { stage: string; lost: number; rate: number }[];
   hours: number[];
   insights: string[];
+  /** 10/16: 구매 버튼을 처음 누른 때의 첫 구매 혜택 남은 시간 구간별 (주문당 1회) */
+  offerBuckets?: { label: string; cta: number; payPage: number; payWindow: number; paid: number }[];
+  /** 10/16: 결제 화면을 연 브라우저(인앱 포함)별 — 결제 페이지 → 토스 호출 → 결제 */
+  browsers?: { label: string; payPage: number; payWindow: number; paid: number }[];
 }
 
 const empty = (): Funnel => ({
@@ -168,6 +172,7 @@ function sourceLabel(utm: string | null, host: string | null, campaign?: string 
 
 interface OrderRow {
   delivered_at?: string | null;
+  remind_sent_at?: string | null;
   order_number: string;
   created_at: string;
   paid_at: string | null;
@@ -211,7 +216,7 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
       supabase
         .from("ritual_orders")
         .select(
-          "order_number, created_at, paid_at, preview_generated_at, delivered_at, email, payment_amount, product, applicant_gender, applicant_birth_year, life_stage, main_wish, pain_points, relationship_type, breakup_elapsed, current_emotion"
+          "order_number, created_at, paid_at, preview_generated_at, delivered_at, remind_sent_at, email, payment_amount, product, applicant_gender, applicant_birth_year, life_stage, main_wish, pain_points, relationship_type, breakup_elapsed, current_emotion"
         )
         .gt("created_at", since)
         .order("id")
@@ -512,7 +517,45 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
   const peakH = hours.indexOf(Math.max(...hours));
   if (Math.max(...hours) > 0) insights.push(`신청이 가장 많은 시간대는 ${peakH}시 무렵이에요 — 홍보 게시물은 그 1~2시간 전에 올리는 게 좋아요.`);
 
+  /* ---- 10/16 지시문 14: 혜택 잔여 구간 · 브라우저(인앱)별 ---- */
+  const firstAt = new Map<string, Map<string, { at: string; code: string | null }>>();
+  for (const p of [...payEvents].sort((a, b) => (a.created_at < b.created_at ? -1 : 1))) {
+    let m = firstAt.get(p.event);
+    if (!m) firstAt.set(p.event, (m = new Map()));
+    if (!m.has(p.order_number)) m.set(p.order_number, { at: p.created_at, code: p.code });
+  }
+  const hasEv = (ev: string, o: string) => firstAt.get(ev)?.has(o) ?? false;
+  const orderBy = new Map(orders.map((o) => [o.order_number, o]));
+  const BUCKETS = ["24~6시간 남음", "6~1시간 남음", "1시간 미만", "혜택 종료 후"];
+  const bucketRows = BUCKETS.map((label) => ({ label, cta: 0, payPage: 0, payWindow: 0, paid: 0 }));
+  for (const [o, { at }] of firstAt.get("preview_cta_click") ?? new Map()) {
+    const row = orderBy.get(o);
+    if (!row) continue;
+    const anchorIso = row.remind_sent_at && row.remind_sent_at > row.created_at ? row.remind_sent_at : row.created_at;
+    const left = Date.parse(anchorIso) + 24 * 3600e3 - Date.parse(at);
+    const i = left > 6 * 3600e3 ? 0 : left > 3600e3 ? 1 : left > 0 ? 2 : 3;
+    const b = bucketRows[i];
+    b.cta += 1;
+    if (hasEv("pay_page_view", o)) b.payPage += 1;
+    if (hasEv("pay_request", o)) b.payWindow += 1;
+    if (row.paid_at) b.paid += 1;
+  }
+  const BROWSER_LABEL: Record<string, string> = { instagram: "인스타그램 앱", kakaotalk: "카카오톡 앱", naver: "네이버 앱", facebook: "페이스북 앱", line: "라인 앱", none: "일반 브라우저" };
+  const browserMap = new Map<string, { label: string; payPage: number; payWindow: number; paid: number }>();
+  for (const [o] of firstAt.get("pay_page_view") ?? new Map()) {
+    const code = firstAt.get("inapp_browser")?.get(o)?.code ?? "unknown";
+    const label = BROWSER_LABEL[code] ?? (code === "unknown" ? "기록 없음" : code);
+    const r = browserMap.get(label) ?? { label, payPage: 0, payWindow: 0, paid: 0 };
+    r.payPage += 1;
+    if (hasEv("pay_request", o)) r.payWindow += 1;
+    if (orderBy.get(o)?.paid_at) r.paid += 1;
+    browserMap.set(label, r);
+  }
+  const browsers = [...browserMap.values()].sort((a, b) => b.payPage - a.payPage);
+
   return {
+    offerBuckets: bucketRows,
+    browsers,
     days,
     since,
     trackingSince,

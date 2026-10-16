@@ -3,6 +3,7 @@
  */
 import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { isOperatorEmail } from "@/lib/admin-util";
 
 export interface PublicReview {
   id: number;
@@ -29,7 +30,7 @@ export interface AdminReview {
 }
 
 export const PRODUCT_LABEL: Record<string, string> = {
-  message: "메시지",
+  message: "관계 리추얼",
   book: "책",
   bundle: "메시지 + 책",
 };
@@ -44,13 +45,23 @@ export async function getPublicReviews(limit = 12): Promise<PublicReview[]> {
   try {
     const r = await getSupabaseAdmin()
       .from("reviews")
-      .select("id, rating, body, display_name, product, approved_at, created_at, incentive")
+      .select("id, order_number, rating, body, display_name, product, approved_at, created_at, incentive")
       .eq("status", "approved")
       .eq("consent_public", true)
       .order("approved_at", { ascending: false })
       .limit(limit);
     if (r.error || !r.data) return [];
-    return r.data.map((x) => ({
+    /* 실제 결제 주문의 후기만 — 운영자·테스트 주문에 연결된 후기는 공개하지 않는다 (10/16 지시문 2.1) */
+    const nums = r.data.map((x) => x.order_number as string).filter(Boolean);
+    const ord = nums.length
+      ? await getSupabaseAdmin().from("ritual_orders").select("order_number, email, payment_status").in("order_number", nums)
+      : { data: [] as Array<{ order_number: string; email: string | null; payment_status: string }> };
+    const real = new Set(
+      ((ord.data ?? []) as Array<{ order_number: string; email: string | null; payment_status: string }>)
+        .filter((o) => o.payment_status === "paid" && !isOperatorEmail(o.email))
+        .map((o) => o.order_number)
+    );
+    return r.data.filter((x) => real.has(x.order_number as string)).map((x) => ({
       id: x.id as number,
       rating: x.rating as number,
       body: x.body as string,

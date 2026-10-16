@@ -5,6 +5,7 @@
  * (페르소나·금지 사항·안전 분기·개인화 기준·JSON 출력 형식)
  */
 import type { RitualOrderRow } from "@/lib/supabase/types";
+import { situationGuideSection } from "@/lib/situation-guide";
 import {
   RELATIONSHIP_TYPE_OPTIONS,
   RELATIONSHIP_DURATION_OPTIONS,
@@ -348,6 +349,11 @@ part_07의 title과 meaning, part_09의 단계, part_10의 문장이
 
   if (!highRisk && !blocked) {
     sections.push(contactTimingSection(order));
+  }
+
+  /* 10/16: 재회 상황별 대응 가이드 데이터베이스(내부 작성 가이드)를 참고 자료로 — 안전 분기에서는 쓰지 않음 */
+  if (!highRisk) {
+    sections.push(situationGuideSection(order));
   }
 
   if (introLines && introLines.length === 3) {
