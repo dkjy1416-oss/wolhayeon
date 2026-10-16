@@ -1,12 +1,7 @@
 @import "tailwindcss";
 
-/* 제목 글꼴 — 조선일보명조 (눈누 제공 웹폰트, 웹 임베딩·상업적 사용 허용) */
-@font-face {
-  font-family: "ChosunIlboMyungjo";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_one@1.0/Chosunilbo_myungjo.woff") format("woff");
-  font-weight: normal;
-  font-display: swap;
-}
+/* 제목 글꼴 — 고운바탕 (Google Fonts · OFL · app/layout.tsx 에서 불러옴, 글자 범위별 자동 분할) — 10/16 리디자인
+   편지·노트처럼 읽히는 바탕체. 본문은 프리텐다드. */
 
 @theme {
   /* 월하연 brand palette — 월화 캐릭터 시트 기준 */
@@ -20,7 +15,7 @@
   --color-gold: #c9a96a; /* muted gold accent */
   --color-gold-dim: #75613f; /* hairlines */
 
-  --font-serif-kr: "ChosunIlboMyungjo", "Noto Serif KR", serif;
+  --font-serif-kr: "Gowun Batang", "Noto Serif KR", "Nanum Myeongjo", serif;
   --font-sans-kr: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
     "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
@@ -41,7 +36,6 @@ body {
 .font-display {
   font-family: var(--font-serif-kr);
   letter-spacing: -0.01em;
-  /* 조선일보명조는 한 굵기뿐 — 가짜 굵게 처리하지 않고 원래 모양 그대로 */
   font-synthesis-weight: none;
 }
 
@@ -287,4 +281,44 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .wh-indeterminate { animation: none; width: 100%; opacity: 0.5; }
+}
+
+/* ===== 10/16 리디자인 — '밤에 펼치는 편지와 리추얼 노트' 밝은 종이 테마 =====
+   .paper 안에서는 같은 색 이름(ink·ivory·gold…)이 종이 톤으로 바뀐다.
+   (ink = 바탕, ivory = 본문 글자) — 기존 컴포넌트를 그대로 밝은 톤으로 옮기기 위한 범위 지정 */
+.paper {
+  --color-ink: #f7f3ef; /* 웜 아이보리 바탕 */
+  --color-ink-soft: #fffdfa; /* 카드 면 */
+  --color-ivory: #312b2d; /* 본문 */
+  --color-ivory-dim: #6a5f61; /* 보조 본문 (아이보리 위 대비 5.9:1) */
+  --color-gold: #8a6a33; /* 글자용 골드 — 아이보리 위 대비 확보 */
+  --color-gold-dim: #d9c9a8; /* 선·테두리 */
+  --color-burgundy: #69263b; /* 주 강조 */
+  --color-burgundy-deep: #511c2d;
+  --color-thread: #a3243a;
+  background-color: var(--color-ink);
+  color: var(--color-ivory);
+}
+/* 강조색 면 위의 글자는 항상 밝게 */
+.paper .from-burgundy,
+.paper .bg-burgundy,
+.paper .bg-thread {
+  color: #fbf7f2;
+}
+.paper .bg-gold {
+  color: #fffdfa;
+}
+/* 종이 테마 안의 어두운 장면(히어로·리추얼) — 원래 밤 색 이름으로 되돌림 */
+.paper .night {
+  --color-ink: #201d20;
+  --color-ink-soft: #2a2528;
+  --color-ivory: #f3ece4;
+  --color-ivory-dim: #c7bcb2;
+  --color-gold: #d9b878;
+  --color-gold-dim: #6b5a3e;
+  background-color: var(--color-ink);
+  color: var(--color-ivory);
+}
+.paper .shadow-paper {
+  box-shadow: 0 1px 2px rgba(49, 43, 45, 0.06), 0 8px 28px rgba(105, 38, 59, 0.07);
 }
