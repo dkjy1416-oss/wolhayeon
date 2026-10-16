@@ -29,7 +29,7 @@ export function forgetOrder() {
   }
 }
 
-function readOrder(): { o: string; n: string } | null {
+export function readOrder(): { o: string; n: string } | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
