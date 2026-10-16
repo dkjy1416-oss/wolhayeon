@@ -64,12 +64,12 @@ export function ArtBubble({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={BUBBLE[kind]} alt="" aria-hidden className={`block h-auto w-full select-none drop-shadow-[0_8px_20px_rgba(0,0,0,0.5)] ${flip ? "-scale-x-100" : ""}`} />
         <p
-          className={`absolute inset-0 flex items-center justify-center text-center font-semibold leading-[1.55] tracking-[-0.01em] text-[#2b2225] ${
+          className={`absolute flex items-center justify-center text-center font-bold leading-[1.45] tracking-[-0.02em] text-[#1f181b] [word-break:keep-all] ${
             kind === "caption"
-              ? "px-[9%] pb-[3%] text-[clamp(0.9rem,3.6vw,1.02rem)]"
+              ? "inset-y-[12%] left-[7%] right-[13%] text-[clamp(0.95rem,4vw,1.1rem)]"
               : kind === "thought"
-                ? "px-[16%] pb-[22%] text-[clamp(0.92rem,3.8vw,1.05rem)]"
-                : "px-[13%] pt-[15%] text-[clamp(0.95rem,4vw,1.08rem)]"
+                ? "top-[8%] bottom-[30%] left-[12%] right-[12%] text-[clamp(0.98rem,4.2vw,1.15rem)]"
+                : "top-[22%] bottom-[8%] left-[11%] right-[11%] text-[clamp(0.98rem,4.2vw,1.2rem)]"
           }`}
         >
           <span>{children}</span>
@@ -108,8 +108,8 @@ export function Cut({
         {children}
       </div>
       {say && (
-        <div className="relative z-10 -mt-[24%] pb-8">
-          <ArtBubble inline flip={right} delay={200} className={`w-[74%] ${right ? "ml-[22%]" : "ml-[4%]"}`}>
+        <div className="relative z-10 -mt-[20%] pb-6">
+          <ArtBubble inline flip={right} delay={200} className={`w-[72%] ${right ? "ml-[24%]" : "ml-[4%]"}`}>
             {say}
           </ArtBubble>
         </div>
@@ -158,7 +158,7 @@ export function Beat({ children, kind = "thought", className = "" }: { children:
   const ref = useInView<HTMLDivElement>(0.5);
   return (
     <div ref={ref} className={`relative z-[6] py-6 ${className}`}>
-      <ArtBubble inline kind={kind} className={`mx-auto ${kind === "caption" ? "w-[78%]" : "w-[64%]"}`}>
+      <ArtBubble inline kind={kind} className={`mx-auto ${kind === "caption" ? "w-[86%]" : "w-[60%]"}`}>
         {children}
       </ArtBubble>
     </div>
