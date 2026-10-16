@@ -14,7 +14,7 @@ export default function GuidePage() {
           나만의 리추얼과 24시간·7일·21일 가이드를 포함한 콘텐츠를 제공합니다.
         </p>
         <p>
-          AI와 자동화 기술을 활용해 콘텐츠를 생성하며,
+          월하연의 콘텐츠는
           <strong> 특정 상대방의 감정·연락·재회·행동 또는 미래 결과를 보장하지 않습니다.</strong>
         </p>
       </LegalSection>
@@ -35,7 +35,7 @@ export default function GuidePage() {
         </p>
         <p>
           ④ <strong>전체 결과 생성</strong> — 결과는 자동으로 생성됩니다.
-          보통 수 분 안에 완료되지만 네트워크와 AI 처리 상황에 따라 더 걸릴 수 있습니다.
+          보통 수 분 안에 완료되지만 처리 상황에 따라 더 걸릴 수 있습니다.
         </p>
         <p>
           ⑤ <strong>결과 이메일</strong> — 생성이 완료되면 신청 시 등록한 이메일로도
