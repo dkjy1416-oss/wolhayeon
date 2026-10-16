@@ -41,6 +41,7 @@ import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import ShareStoryCard from "@/components/apply/ShareStoryCard";
 import OfferCountdown from "@/components/pay/OfferCountdown";
 import ResultExampleCard from "@/components/apply/ResultExampleCard";
+import LoopVideo from "@/components/book/LoopVideo";
 import { DELIVERY_TIME_TEXT, DELIVERY_DELAY_TEXT, HOW_IT_WORKS } from "@/lib/service-facts";
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
@@ -204,10 +205,6 @@ const ROLE_PAID: Record<Situation, string> = {
 
 /** 결제 직전 FAQ — 실제 운영 기준과 일치하는 고정 문구 */
 const FAQ = [
-  {
-    q: "실제 상담사와 채팅하는 건가요?",
-    a: "아니에요. 입력한 사연을 바탕으로 AI가 작성하는 개인화 디지털 콘텐츠예요. 사람이 결과를 하나하나 검수하지는 않고, 자동 점검에 걸린 결과만 운영자가 확인해요.",
-  },
   {
     q: "결과가 모두 똑같은가요?",
     a: "아닙니다. 입력한 관계 상태, 마지막 연락, 상대 반응 등을 기준으로 결과 내용이 달라집니다.",
@@ -685,12 +682,18 @@ export default function PreviewExperience({
       {/* ---------- 01. 결과 헤더 — 장식 없이 바로 결과 ---------- */}
       <header className="px-6 pb-2 pt-10">
         <div className="mx-auto max-w-[640px]">
-          <p className="text-[0.72rem] tracking-[0.2em] text-gold">月下緣 · 무료 미리보기</p>
-          <h1 className="font-display mt-3 text-[1.5rem] font-bold leading-snug text-ivory">
-            {name ? `${name}님의 사연을 읽었어요` : "들려준 사연을 읽었어요"}
-          </h1>
+          <div className="flex items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/wolhwa/v2/listen.webp" alt="" aria-hidden className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-full border-2 border-gold-dim object-cover object-[50%_18%]" />
+            <div className="min-w-0">
+              <p className="text-[0.72rem] tracking-[0.2em] text-gold">月下緣 · 무료 미리보기</p>
+              <h1 className="font-display mt-1.5 text-[1.45rem] font-bold leading-snug text-ivory">
+                {name ? `${name}님의 사연을 읽었어요` : "들려준 사연을 읽었어요"}
+              </h1>
+            </div>
+          </div>
           <p className="mt-2 text-[0.92rem] leading-[1.75] text-ivory-dim">
-            입력한 사연을 바탕으로 지금의 흐름과 오늘 할 수 있는 것을 먼저 정리했어요. AI가 작성한 개인화 콘텐츠예요.
+            입력한 사연을 바탕으로 지금의 흐름과 오늘 할 수 있는 것을 먼저 정리했어요.
           </p>
           {facts.length > 0 && (
             <div className="mt-5 rounded-2xl border border-gold-dim bg-ink-soft px-5 py-4">
@@ -832,7 +835,10 @@ export default function PreviewExperience({
           <section className="mt-6 px-6">
             <div className="mx-auto max-w-[640px]">
               {!want && (
-                <div className="mb-3 rounded-2xl border-2 border-burgundy bg-ink-soft px-5 py-4">
+                <div className="mb-3 overflow-hidden rounded-2xl border-2 border-burgundy bg-ink-soft">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/wolhwa/v2/set.webp" alt="편지 · 리추얼 카드 · 실천 가이드" className="block aspect-[16/9] w-full object-cover" />
+                  <div className="px-5 py-4">
                   <p className="text-[0.78rem] font-semibold text-burgundy">{offerEndsAt ? "이 사연의 첫 구매 혜택" : PRODUCTS.message.name}</p>
                   <p className="mt-1 text-[0.92rem] text-ivory">{PRODUCTS.message.name}</p>
                   <p className="mt-0.5 text-[0.8rem] leading-[1.6] text-ivory-dim">내 사연을 반영한 관계 읽기 · 월화의 편지 · 개인 리추얼 · 단계별 실천 가이드</p>
@@ -844,6 +850,7 @@ export default function PreviewExperience({
                     )}
                   </p>
                   {offerEndsAt && <OfferCountdown endsAt={offerEndsAt} after={regularPriceFor("message")} showEnd className="mt-1" />}
+                  </div>
                 </div>
               )}
               <div ref={mainCtaRef} />
@@ -873,9 +880,19 @@ export default function PreviewExperience({
           </section>
 
           {/* ---------- 08. 월화의 짧은 위로 (영상 없이 짧은 문장만) ---------- */}
-          <section className="mt-10 px-6">
-            <p className="mx-auto max-w-[640px] text-[0.76rem] tracking-[0.2em] text-gold">月華 · 월화의 한마디</p>
-            <p className="font-display mx-auto mt-2 max-w-[640px] text-[1.15rem] leading-[1.8] text-ivory">{bridge[0] ?? ""}</p>
+          <section className="night mx-auto mt-10 max-w-[640px] overflow-hidden px-0 sm:rounded-2xl">
+            <div className="relative">
+              <LoopVideo
+                src={`/book/v3/${sit === "boundary" ? "w-mirror" : "w-phone"}.mp4`}
+                poster={`/book/v3/${sit === "boundary" ? "w-mirror" : "w-phone"}.webp`}
+                className="block aspect-[4/3] w-full object-cover"
+              />
+              <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#201d20] via-[#201d20]/70 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 px-6 pb-5">
+                <p className="text-[0.76rem] tracking-[0.2em] text-gold">月華 · 월화의 한마디</p>
+                <p className="font-display mt-2 text-[1.12rem] leading-[1.75] text-ivory">{bridge[0] ?? ""}</p>
+              </div>
+            </div>
           </section>
           <section className="px-6">
             <div className="mx-auto flex max-w-[640px] flex-col gap-3">
