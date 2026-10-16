@@ -67,7 +67,7 @@ export default function UpgradeSelected({ amount, endsAt }: { amount: number; en
         </li>
       </ul>
       <p className="mt-2 text-center text-[0.7rem] leading-[1.7] text-ivory-dim/80">
-        1회 결제 · 정기결제 없음 · AI가 사연을 바탕으로 작성하는 개인화 디지털 콘텐츠 · 결제를 취소하면 쿠폰은 그대로 남아요
+        1회 결제 · 정기결제 없음 · 결제를 취소하면 쿠폰은 그대로 남아요
       </p>
     </section>
   );

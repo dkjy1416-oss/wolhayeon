@@ -49,7 +49,16 @@ export default function SelectedProduct({
       )}
       <p className="text-[0.8rem] font-semibold text-ivory-dim">선택한 상품</p>
       <div className="mt-2.5 shadow-paper rounded-2xl border-2 border-burgundy bg-ink-soft px-5 py-5">
-        <p className="text-[1.02rem] font-semibold text-ivory">{p.name}</p>
+        <div className="flex items-center gap-3.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={product === "message" ? "/wolhwa/v2/set.webp" : "/book/v2/cover-3d.webp"}
+            alt=""
+            aria-hidden
+            className="h-16 w-16 shrink-0 rounded-xl object-cover"
+          />
+          <p className="min-w-0 text-[1.02rem] font-semibold text-ivory">{p.name}</p>
+        </div>
         <p className="mt-0.5 text-[0.78rem] font-light text-ivory-dim">{p.tagline}</p>
         <ul className="mt-3 flex flex-col gap-1.5">
           {CORE[product].map((x) => (
@@ -80,7 +89,7 @@ export default function SelectedProduct({
         </li>
       </ul>
       <p className="mt-2 text-center text-[0.7rem] leading-[1.7] text-ivory-dim/80">
-        1회 결제 · 정기결제 없음 · AI가 사연을 바탕으로 작성하는 디지털 콘텐츠 · {DELIVERY_DELAY_TEXT}
+        1회 결제 · 정기결제 없음 · 내 사연으로 만드는 개인화 콘텐츠 · {DELIVERY_DELAY_TEXT}
       </p>
     </section>
   );
