@@ -27,11 +27,17 @@ import {
   bundlePrice,
   FIRST_OFFER_BUNDLE_PRICE_KRW,
   regularPriceFor,
+  optionLabel,
+  RELATIONSHIP_DURATION_OPTIONS,
+  BREAKUP_ELAPSED_OPTIONS,
+  LAST_CONVERSATION_OPTIONS,
+  CONTACT_STATUS_OPTIONS,
+  PARTNER_NEW_RELATIONSHIP_OPTIONS,
+  PRODUCTS,
 } from "@/lib/ritual-types";
 import DevPaymentNotice from "@/components/apply/DevPaymentNotice";
 import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import PreviewWaiting from "@/components/apply/PreviewWaiting";
-import SceneBreak from "@/components/apply/SceneBreak";
 import ShareStoryCard from "@/components/apply/ShareStoryCard";
 import OfferCountdown from "@/components/pay/OfferCountdown";
 import ResultExampleCard from "@/components/apply/ResultExampleCard";
@@ -40,6 +46,7 @@ import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
+import { pickSituationGuides, type GuidePick } from "@/lib/situation-guide";
 import { CONTENT_VIEW_DAYS } from "@/lib/content-access-policy";
 import { REFUND_WINDOW_DAYS } from "@/lib/refund-policy";
 import {
@@ -194,12 +201,6 @@ const ROLE_PAID: Record<Situation, string> = {
   lover: "다시 이야기할 기준 · 첫마디 초안 · 반응별 대응까지",
   boundary: "내가 지킬 거리 기준 · 흔들릴 때 행동 · 상황별 대응까지",
 };
-const MAIN_CTA: Record<Situation, string> = {
-  wait: "내 연락 기준과 메시지 확인하기",
-  light: "내 연락 기준과 메시지 확인하기",
-  lover: "내 대화 기준과 첫마디 확인하기",
-  boundary: "내 거리 기준과 다음 행동 확인하기",
-};
 
 /** 결제 직전 FAQ — 실제 운영 기준과 일치하는 고정 문구 */
 const FAQ = [
@@ -303,10 +304,26 @@ export default function PreviewExperience({
   const started = useRef(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* 내 사연에서 반영한 사실 (10/16 지시문 6) — 이 기기의 신청 데이터 중 선택 항목 라벨만 (자유 입력 원문은 쓰지 않음) */
+  const [facts, setFacts] = useState<string[]>([]);
+  const [guides, setGuides] = useState<GuidePick[]>([]);
   useEffect(() => {
-    /* 같은 브라우저 세션의 신청 데이터에서 표시용 이름만 */
+    /* 같은 브라우저 세션의 신청 데이터에서 표시용 이름·선택 항목만 */
     try {
-      setName(loadApplication().applicant_name?.trim() ?? "");
+      const a = loadApplication();
+      setName(a.applicant_name?.trim() ?? "");
+      const f: string[] = [];
+      const dur = optionLabel(RELATIONSHIP_DURATION_OPTIONS, a.relationship_duration || null);
+      const el = optionLabel(BREAKUP_ELAPSED_OPTIONS, a.breakup_elapsed || null);
+      if (dur || el) f.push([dur && `함께한 기간 ${dur}`, el && `헤어진 지 ${el}`].filter(Boolean).join(" · "));
+      const lc = optionLabel(LAST_CONVERSATION_OPTIONS, a.last_conversation || null);
+      if (lc) f.push(`마지막 대화 · ${lc}`);
+      const cs = optionLabel(CONTACT_STATUS_OPTIONS, a.contact_status || null);
+      if (cs) f.push(`지금 연락 상태 · ${cs}`);
+      const nr = optionLabel(PARTNER_NEW_RELATIONSHIP_OPTIONS, a.partner_new_relationship || null);
+      if (nr && f.length < 3) f.push(`상대의 새 사람 · ${nr}`);
+      setFacts(f.filter(Boolean).slice(0, 3));
+      setGuides(pickSituationGuides(a));
     } catch {
       /* 이름 없이 진행 */
     }
@@ -523,7 +540,7 @@ export default function PreviewExperience({
   if (phase === "expired") {
     const o = encodeURIComponent(orderNumber);
     return (
-      <div className="fade-in">
+      <div className="fade-in mx-auto max-w-lg">
         <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[92svh]">
           <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
           <p className="font-display mt-5 text-[1.2rem] leading-[1.8] text-ivory">
@@ -562,7 +579,7 @@ export default function PreviewExperience({
   /* ---------- 실패: full-bleed 유지 + 재시도만 (개인화 실패 시 결제 버튼 금지) ---------- */
   if (phase === "delayed") {
     return (
-      <div className="fade-in">
+      <div className="fade-in mx-auto max-w-lg">
         <FullBleedReading src={readingVideo} poster={readingPoster} minH="min-h-[86svh]">
           <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
           <p className="font-display mt-5 text-[1.15rem] leading-[1.85] text-ivory">
@@ -601,7 +618,11 @@ export default function PreviewExperience({
     if (!showLoading) {
       return <div className="min-h-[100svh] bg-ink" />;
     }
-    return <PreviewWaiting name={name} slow={slowNote} />;
+    return (
+      <div className="mx-auto max-w-lg">
+        <PreviewWaiting name={name} slow={slowNote} />
+      </div>
+    );
   }
 
   /* ---------- ready: 무료 = 이해 → 잠금(실행) → 결제 (10/9 개발지시서) ---------- */
@@ -626,7 +647,7 @@ export default function PreviewExperience({
       ? `${name ? `${name}님의 ` : "나의 "}책 받기 · ${BOOK_PRICE_KRW.toLocaleString()}원`
       : want === "bundle"
         ? `월화 패키지로 보기 · ${bundleNow.toLocaleString()}원`
-        : `${MAIN_CTA[sit]} · ${priceText}`;
+        : `전체 리추얼 구성 받기 · ${priceText}`;
   const onCtaClick = (where: string) => {
     trackEvent("payment_cta_click", { order: orderNumber });
     logPayEvent(orderNumber, "preview_cta_click", where);
@@ -660,28 +681,55 @@ export default function PreviewExperience({
   );
 
   return (
-    <div className="fade-in pb-28">
+    <div className="paper fade-in min-h-[100svh] pb-28">
       {/* ---------- 01. 결과 헤더 — 장식 없이 바로 결과 ---------- */}
       <header className="px-6 pb-2 pt-10">
-        <div className="mx-auto max-w-md">
-          <p className="text-[0.66rem] tracking-[0.3em] text-gold/80">月下緣 · 무료 관계 분석</p>
-          <h1 className="font-display mt-3 text-[1.42rem] font-semibold leading-snug text-ivory">
-            {name ? `${name}님의 관계를 분석했어요` : "지금 두 사람의 상태를 먼저 볼게요"}
+        <div className="mx-auto max-w-[640px]">
+          <p className="text-[0.72rem] tracking-[0.2em] text-gold">月下緣 · 무료 미리보기</p>
+          <h1 className="font-display mt-3 text-[1.5rem] font-bold leading-snug text-ivory">
+            {name ? `${name}님의 사연을 읽었어요` : "들려준 사연을 읽었어요"}
           </h1>
-          <p className="mt-2 text-[0.84rem] font-light leading-[1.85] text-ivory-dim">
-            입력해주신 상황을 기준으로 현재 관계의 흐름을 분석했습니다.
+          <p className="mt-2 text-[0.92rem] leading-[1.75] text-ivory-dim">
+            입력한 사연을 바탕으로 지금의 흐름과 오늘 할 수 있는 것을 먼저 정리했어요. AI가 작성한 개인화 콘텐츠예요.
           </p>
+          {facts.length > 0 && (
+            <div className="mt-5 rounded-2xl border border-gold-dim bg-ink-soft px-5 py-4">
+              <p className="text-[0.76rem] font-semibold tracking-[0.08em] text-gold">내 사연에서 반영한 사실</p>
+              <ul className="mt-2 flex flex-col gap-1.5 text-[0.95rem] leading-[1.6] text-ivory">
+                {facts.map((f) => (
+                  <li key={f} className="flex gap-2">
+                    <span aria-hidden className="text-thread">·</span>
+                    <span className="min-w-0">{f}</span>
+                  </li>
+                ))}
+              </ul>
+              {guides.length > 0 && (
+                <div className="mt-3 border-t border-gold-dim pt-3">
+                  <p className="text-[0.76rem] font-semibold tracking-[0.08em] text-gold">전체 구성에서 참고할 상황 가이드</p>
+                  <ul className="mt-1.5 flex flex-col gap-1 text-[0.9rem] leading-[1.55] text-ivory">
+                    {guides.map((g) => (
+                      <li key={g.n}>
+                        {g.title}
+                        <span className="block text-[0.78rem] text-ivory-dim">{g.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="mt-2 text-[0.8rem] leading-[1.6] text-ivory-dim">이 사실들 때문에, 아래 판단은 ‘지금 무엇을 먼저 확인할지’를 기준으로 썼어요.</p>
+            </div>
+          )}
         </div>
       </header>
 
       {/* ---------- 02. 관계 판정 카드 4개 ---------- */}
       <section className="mt-5 px-6" aria-label="관계 판정">
-        <div className="mx-auto grid max-w-md grid-cols-2 gap-2.5">
+        <div className="mx-auto grid max-w-[640px] grid-cols-2 gap-2.5">
           {verdictCards.map((c, i) => (
             <div
               key={c.k}
               className={`min-w-0 rounded-2xl border px-4 py-4 ${
-                i === 0 ? "border-burgundy/70 bg-gradient-to-b from-[#2a1015] to-[#1a0c0f]" : "border-gold-dim/25 bg-ink-soft"
+                i === 0 ? "border-burgundy/60 bg-[#f6e9ec]" : "border-gold-dim bg-ink-soft"
               }`}
             >
               <p className="text-[0.7rem] tracking-wider text-ivory-dim">{c.k}</p>
@@ -694,8 +742,8 @@ export default function PreviewExperience({
 
       {/* ---------- 03. 왜 이렇게 판단했는지 (입력한 사실 기반) ---------- */}
       <section className="mt-10 px-6">
-        <div className="mx-auto max-w-md">
-          <p className="text-[0.72rem] tracking-wider text-gold/80">왜 이렇게 판단했는지</p>
+        <div className="mx-auto max-w-[640px]">
+          <p className="text-[0.76rem] font-semibold tracking-wider text-gold">왜 이렇게 판단했는지 · 입력한 사실 기준</p>
           <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-gold-dim/25 bg-ink-soft px-5 py-5">
             {reasons.map((r, i) => (
               <p key={i} className={`text-[0.92rem] leading-[1.95] ${i === 0 ? "text-ivory" : "font-light text-ivory"}`}>
@@ -717,7 +765,7 @@ export default function PreviewExperience({
 
       {/* ---------- 04. 오늘은 이것만 하지 마세요 (최대 3개) ---------- */}
       <section className="mt-10 px-6">
-        <div className="mx-auto max-w-md">
+        <div className="mx-auto max-w-[640px]">
           <p className="font-display text-[1.08rem] font-semibold text-ivory">오늘은 이것만 하지 마세요</p>
           <ul className="mt-3 flex flex-col gap-2">
             {donts.map((c, i) => (
@@ -733,28 +781,36 @@ export default function PreviewExperience({
         </div>
       </section>
 
-      {/* ---------- 05. 전체 분석에서 추가로 확인할 내용 (무료·유료 역할) — 10/12 개발지시서 3 ---------- */}
+      {/* ---------- 05. 무료 미리보기 vs 전체 리추얼 구성 (10/16 지시문 6) ---------- */}
       <section className="mt-12 px-6">
-        <div ref={offerRef} className="mx-auto max-w-md rounded-2xl border border-gold/30 bg-gradient-to-b from-[#170d10] to-ink-soft px-5 py-6">
-          <p className="font-display text-[1.2rem] font-semibold leading-snug text-ivory">{lock.title}</p>
-          <p className="mt-2 text-[0.85rem] font-light leading-[1.85] text-ivory-dim">{lock.desc}</p>
-          <div className="mt-4 flex flex-col gap-2 text-[0.8rem] leading-[1.7]">
-            <p className="rounded-xl border border-gold-dim/20 bg-ink/50 px-3.5 py-2.5 text-ivory-dim">
-              <b className="font-semibold text-ivory">무료 미리보기</b> · 지금 상황과 오늘 피할 행동을 이해하기
-            </p>
-            <p className="rounded-xl border border-gold/35 bg-burgundy/15 px-3.5 py-2.5 text-ivory">
-              <b className="font-semibold text-gold">전체 분석</b> · {ROLE_PAID[sit]}
-            </p>
+        <div ref={offerRef} className="shadow-paper mx-auto max-w-[640px] rounded-2xl border border-gold-dim bg-ink-soft px-5 py-6">
+          <p className="font-display text-[1.25rem] font-bold leading-snug text-ivory">{lock.title}</p>
+          <p className="mt-2 text-[0.92rem] leading-[1.75] text-ivory-dim">{lock.desc}</p>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-[0.86rem] leading-[1.6]">
+            <div className="rounded-xl bg-ink px-3.5 py-3">
+              <p className="text-[0.78rem] font-semibold text-ivory-dim">무료 미리보기 · 지금 받음</p>
+              <ul className="mt-1.5 flex flex-col gap-1 text-ivory">
+                <li>· 사연에서 읽히는 현재 흐름</li>
+                <li>· 오늘 피할 행동</li>
+                <li>· 결과 일부</li>
+              </ul>
+            </div>
+            <div className="rounded-xl border border-burgundy/40 bg-[#f6e9ec] px-3.5 py-3">
+              <p className="text-[0.78rem] font-semibold text-burgundy">전체 리추얼 구성</p>
+              <ul className="mt-1.5 flex flex-col gap-1 text-ivory">
+                <li>· 관계 흐름·반복 패턴 상세 읽기</li>
+                <li>· 월화의 편지 · 나만의 리추얼</li>
+                <li>· 첫날·7일·21일 실천 가이드</li>
+                <li>· {ROLE_PAID[sit]}</li>
+              </ul>
+            </div>
           </div>
-          <p className="mt-5 text-[0.72rem] tracking-wider text-gold/80">전체 분석에서 추가로 확인할 내용</p>
+          <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">내 사연으로 이어서 열리는 것</p>
           <ul className="mt-2 flex flex-col gap-2">
-            {lock.items.map((it) => (
-              <li key={it.t} className="rounded-xl border border-gold-dim/25 bg-ink/60 px-4 py-2.5">
-                <p className="text-[0.88rem] font-medium text-ivory">
-                  <span aria-hidden className="mr-1.5">🔒</span>
-                  {it.t}
-                </p>
-                <p aria-hidden className="mt-0.5 select-none text-[0.78rem] leading-[1.6] text-ivory-dim blur-[5px]">
+            {lock.items.slice(0, 3).map((it) => (
+              <li key={it.t} className="rounded-xl border border-gold-dim bg-ink px-4 py-2.5">
+                <p className="text-[0.92rem] font-medium text-ivory">{it.t}</p>
+                <p aria-hidden className="mt-0.5 select-none text-[0.82rem] leading-[1.6] text-ivory-dim blur-[4px]">
                   {it.ph}
                 </p>
               </li>
@@ -767,27 +823,31 @@ export default function PreviewExperience({
         <>
           {/* ---------- 06. 전체 분석 결과 예시 (가상 사연) ---------- */}
           <section className="mt-6 px-6">
-            <div className="mx-auto max-w-md">
+            <div className="mx-auto max-w-[640px]">
               <ResultExampleCard kind={sit === "lover" ? "lover" : sit === "boundary" ? "boundary" : "contact"} orderNumber={orderNumber} />
             </div>
           </section>
 
           {/* ---------- 07. 가격 · 제공 방식 · 구매 버튼 ---------- */}
           <section className="mt-6 px-6">
-            <div className="mx-auto max-w-md">
+            <div className="mx-auto max-w-[640px]">
               {!want && (
-                <p className="mb-2 text-center text-[0.8rem] text-ivory-dim">
-                  내 관계 전체 분석
-                  {badge.strike !== null && (
-                    <span className="ml-2 line-through opacity-60">{badge.strike.toLocaleString()}원</span>
-                  )}
-                  {badge.label && <span className="ml-2 text-thread">{badge.label}</span>}
-                  <span className="font-display ml-2 text-[1.15rem] font-semibold text-ivory">{priceText}</span>
-                </p>
+                <div className="mb-3 rounded-2xl border-2 border-burgundy bg-ink-soft px-5 py-4">
+                  <p className="text-[0.78rem] font-semibold text-burgundy">{offerEndsAt ? "이 사연의 첫 구매 혜택" : PRODUCTS.message.name}</p>
+                  <p className="mt-1 text-[0.92rem] text-ivory">{PRODUCTS.message.name}</p>
+                  <p className="mt-0.5 text-[0.8rem] leading-[1.6] text-ivory-dim">내 사연을 반영한 관계 읽기 · 월화의 편지 · 개인 리추얼 · 단계별 실천 가이드</p>
+                  <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
+                    {badge.strike !== null && <span className="text-[0.9rem] text-ivory-dim line-through">{badge.strike.toLocaleString()}원</span>}
+                    <span className="font-display text-[1.7rem] text-burgundy">{priceText}</span>
+                    {badge.strike !== null && badge.strike > price && (
+                      <span className="rounded-full bg-[#f1e6e9] px-2.5 py-0.5 text-[0.76rem] font-semibold text-burgundy">{(badge.strike - price).toLocaleString()}원 할인</span>
+                    )}
+                  </p>
+                  {offerEndsAt && <OfferCountdown endsAt={offerEndsAt} after={regularPriceFor("message")} showEnd className="mt-1" />}
+                </div>
               )}
               <div ref={mainCtaRef} />
               {ctaButton("main", mainLabel)}
-              {!want && offerEndsAt && <OfferCountdown endsAt={offerEndsAt} after={regularPriceFor("message")} className="mt-2 text-center" />}
               <ul className="mt-4 grid grid-cols-2 gap-2 text-center text-[0.74rem] leading-[1.5] text-ivory">
                 <li className="rounded-xl border border-gold-dim/20 bg-ink/50 px-2 py-2.5">1회 결제<span className="block text-ivory-dim">정기결제 없음</span></li>
                 <li className="rounded-xl border border-gold-dim/20 bg-ink/50 px-2 py-2.5">결과 제공<span className="block text-ivory-dim">결제 후 {DELIVERY_TIME_TEXT}</span></li>
@@ -812,16 +872,13 @@ export default function PreviewExperience({
             </div>
           </section>
 
-          {/* ---------- 08. 월화의 짧은 위로 (구매 안내 뒤로 이동 · 작게) ---------- */}
-          <SceneBreak
-            video={`/book/v3/${sit === "boundary" ? "w-mirror" : "w-phone"}.mp4`}
-            poster={`/book/v3/${sit === "boundary" ? "w-mirror" : "w-phone"}.webp`}
-            eyebrow="月華"
-            line={bridge[0] ?? ""}
-            aspect="aspect-[4/3]"
-          />
+          {/* ---------- 08. 월화의 짧은 위로 (영상 없이 짧은 문장만) ---------- */}
+          <section className="mt-10 px-6">
+            <p className="mx-auto max-w-[640px] text-[0.76rem] tracking-[0.2em] text-gold">月華 · 월화의 한마디</p>
+            <p className="font-display mx-auto mt-2 max-w-[640px] text-[1.15rem] leading-[1.8] text-ivory">{bridge[0] ?? ""}</p>
+          </section>
           <section className="px-6">
-            <div className="mx-auto flex max-w-md flex-col gap-3">
+            <div className="mx-auto flex max-w-[640px] flex-col gap-3">
               {bridge.slice(1).map((b, i, arr) => (
                 <p
                   key={i}
@@ -839,7 +896,7 @@ export default function PreviewExperience({
           {!want && (
             <section className="mt-10 px-6">
               <details
-                className="group mx-auto max-w-md rounded-2xl border border-gold-dim/25 bg-ink-soft"
+                className="group mx-auto max-w-[640px] rounded-2xl border border-gold-dim/25 bg-ink-soft"
                 onToggle={(e) => {
                   if ((e.currentTarget as HTMLDetailsElement).open) logPayEvent(orderNumber, "package_open", "preview");
                 }}
@@ -857,7 +914,7 @@ export default function PreviewExperience({
                 <div className="border-t border-gold-dim/15 px-5 pb-5 pt-4">
                   <ul className="flex flex-col gap-2.5 text-[0.82rem] leading-[1.75]">
                     <li>
-                      <b className="font-semibold text-ivory">내 관계 전체 분석</b>
+                      <b className="font-semibold text-ivory">월화의 관계 리추얼</b>
                       <span className="block font-light text-ivory-dim">지금 제출한 사연에 대한 판단과 다음 행동 · 웹 화면으로 {CONTENT_VIEW_DAYS}일 열람</span>
                     </li>
                     <li>
@@ -895,7 +952,7 @@ export default function PreviewExperience({
 
           {/* ---------- 결제 직전 FAQ (접힘) ---------- */}
           <section className="mt-10 px-6">
-            <div className="mx-auto max-w-md">
+            <div className="mx-auto max-w-[640px]">
               <p className="text-[0.72rem] tracking-wider text-gold/80">결제 전에 많이 묻는 것</p>
               <div className="mt-2 divide-y divide-gold-dim/15 rounded-2xl border border-gold-dim/20 bg-ink-soft">
                 {FAQ.map((f) => (
@@ -913,7 +970,7 @@ export default function PreviewExperience({
 
           {/* ---------- 하단 재결제 CTA (끝까지 읽은 손님) ---------- */}
           <section className="mt-12 px-6">
-            <div ref={bookRef} className="mx-auto max-w-md text-center">
+            <div ref={bookRef} className="mx-auto max-w-[640px] text-center">
               <p className="text-[0.92rem] font-light leading-[1.95] text-ivory">{lock.recap[0]}</p>
               <p className="font-display mt-1 text-[1.02rem] font-semibold leading-[1.8] text-gold">{lock.recap[1]}</p>
               <div className="mt-5">{ctaButton("bottom", mainLabel)}</div>
@@ -922,12 +979,12 @@ export default function PreviewExperience({
                   href={messageHref}
                   className="mt-3 block text-[0.76rem] text-ivory-dim underline underline-offset-4"
                 >
-                  전체 분석만 보기 · {priceText}
+                  관계 리추얼만 받기 · {priceText}
                 </Link>
               )}
             </div>
             {/* 결론 카드 저장·공유 (이름·사연 없이 판정 라벨과 반응 태그만) */}
-            <div className="mx-auto mt-8 max-w-md">
+            <div className="mx-auto mt-8 max-w-[640px]">
               <ShareStoryCard
                 orderNumber={orderNumber}
                 stance={NOW_STANCE_LABELS[stance] ?? ""}
@@ -940,7 +997,7 @@ export default function PreviewExperience({
       ) : (
         <section className="mt-7 px-6">
           {/* 결제 오픈 준비 중 — 카드사 심사 완료까지 결제를 닫아 둔 상태 */}
-          <div className="mx-auto max-w-md rounded-2xl border border-gold-dim/35 bg-ink-soft/70 px-6 py-6 text-center">
+          <div className="mx-auto max-w-[640px] rounded-2xl border border-gold-dim/35 bg-ink-soft/70 px-6 py-6 text-center">
             <p className="text-[0.66rem] tracking-[0.3em] text-thread/90">결제 오픈 준비 중</p>
             <p className="mt-3 text-[0.92rem] leading-[2] text-ivory">
               {name ? `${name}님의 다음 장은 준비되어 있어요.` : "다음 장은 준비되어 있어요."}
@@ -963,7 +1020,7 @@ export default function PreviewExperience({
       </div>
       {PAYMENTS_OPEN && typeof document !== "undefined" && createPortal(
         <div
-          className={`fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim/25 bg-ink/95 px-4 pt-3 backdrop-blur transition-transform duration-300 ${
+          className={`paper fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim bg-ink/95 px-4 pt-3 backdrop-blur transition-transform duration-300 ${
             showSticky ? "translate-y-0" : "translate-y-full"
           }`}
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
@@ -973,14 +1030,14 @@ export default function PreviewExperience({
             href={mainHref}
             tabIndex={showSticky ? 0 : -1}
             onClick={() => onCtaClick("sticky")}
-            className="mx-auto flex h-12 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-semibold text-ivory active:opacity-85"
+            className="mx-auto flex h-12 w-full max-w-[640px] items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-semibold text-ivory active:opacity-85"
           >
             {mainLabel}
           </Link>
           {!want && offerEndsAt ? (
-            <OfferCountdown endsAt={offerEndsAt} after={regularPriceFor("message")} className="mx-auto mt-1.5 max-w-md text-center !text-[0.7rem]" />
+            <OfferCountdown endsAt={offerEndsAt} after={regularPriceFor("message")} className="mx-auto mt-1.5 max-w-[640px] text-center !text-[0.74rem]" />
           ) : (
-            <p className="mx-auto mt-1.5 max-w-md text-center text-[0.68rem] text-ivory-dim/80">
+            <p className="mx-auto mt-1.5 max-w-[640px] text-center text-[0.68rem] text-ivory-dim/80">
               1회 결제 · 정기결제 없음 · {CONTENT_VIEW_DAYS}일 동안 다시 열람
             </p>
           )}
