@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/fetch-v2-assets.mjs && next build",
     "start": "next start"
   },
   "dependencies": {
