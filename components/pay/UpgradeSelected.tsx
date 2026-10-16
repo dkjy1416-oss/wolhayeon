@@ -23,7 +23,7 @@ export default function UpgradeSelected({ amount, endsAt }: { amount: number; en
   return (
     <section className="mt-8">
       <p className="text-center text-[0.72rem] tracking-[0.25em] text-gold/80">선택한 상품</p>
-      <div className="mt-2.5 rounded-2xl border border-gold/60 bg-gradient-to-b from-[#1d1512] to-ink-soft px-5 py-5">
+      <div className="mt-2.5 shadow-paper rounded-2xl border-2 border-burgundy bg-ink-soft px-5 py-5">
         <span className="inline-block rounded-full border border-thread/50 px-2 py-0.5 text-[0.66rem] text-thread">
           기존 분석 구매자 추가 구매 혜택
         </span>
@@ -53,7 +53,7 @@ export default function UpgradeSelected({ amount, endsAt }: { amount: number; en
           <span className="text-[0.8rem] text-ivory-dim">최종 결제 금액</span>
           <span className="text-right">
             <span className="mr-2 text-[0.78rem] text-ivory-dim/70 line-through">{BOOK_PRICE_KRW.toLocaleString()}원</span>
-            <span className="font-display text-[1.6rem] font-semibold text-gold">{amount.toLocaleString()}</span>
+            <span className="font-display text-[1.6rem] font-semibold text-burgundy">{amount.toLocaleString()}</span>
             <span className="ml-0.5 text-[0.9rem] text-ivory-dim">원</span>
           </span>
         </div>

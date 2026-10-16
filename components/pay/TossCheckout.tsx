@@ -221,8 +221,8 @@ function TossWindowCheckout({
   const optionCls = (active: boolean) =>
     `flex w-full items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors ${
       active
-        ? "border-gold/60 bg-gold/10 text-ivory"
-        : "border-ivory/15 bg-ink/40 text-ivory-dim"
+        ? "border-burgundy bg-burgundy/5 text-ivory"
+        : "border-gold-dim bg-ink-soft text-ivory-dim"
     }`;
 
   return (
@@ -288,7 +288,7 @@ function TossWindowCheckout({
       {typeof document !== "undefined" &&
         createPortal(
           <div
-            className={`fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim/25 bg-ink/95 px-4 pt-3 backdrop-blur transition-transform duration-300 ${
+            className={`paper fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim bg-ink/95 px-4 pt-3 backdrop-blur transition-transform duration-300 ${
               !payBtnVisible && ready ? "translate-y-0" : "translate-y-full"
             }`}
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}

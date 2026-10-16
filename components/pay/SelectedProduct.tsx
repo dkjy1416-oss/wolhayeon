@@ -11,12 +11,12 @@ import OfferCountdown from "@/components/pay/OfferCountdown";
 
 const CORE: Record<"message" | "bundle", string[]> = {
   message: [
-    "현재 관계 상태 · 상대 반응 해석 · 지금 연락 여부",
-    "연락을 고려할 조건 · 첫 메시지 초안 · 반가운 답/단답/무응답별 대응",
-    "24시간 · 7일 · 21일 행동 플랜",
+    "내 사연을 반영한 관계 읽기 · 월화의 편지",
+    "나만의 리추얼 — 의미 · 준비물 · 진행 순서",
+    "첫날·7일·21일 실천 가이드 · 상황에 맞는 연락 기준과 메시지 초안",
   ],
   bundle: [
-    "내 관계 전체 분석 전부 (웹 화면 · 30일 열람)",
+    "월화의 관계 리추얼 전부 (웹 화면 · 30일 열람)",
     "내 사연으로 만든 PDF 책 약 120쪽 — 여러 상황에서 다시 펼치는 문장 · 체크리스트",
     "7일/21일 기록장 · 60일 안에 내려받아 계속 보관",
   ],
@@ -47,8 +47,8 @@ export default function SelectedProduct({
           선택한 상품이 ‘{p.name}’(으)로 바뀌었어요 · 결제 금액도 함께 바뀌었어요
         </p>
       )}
-      <p className="text-center text-[0.72rem] tracking-[0.25em] text-gold/80">선택한 상품</p>
-      <div className="mt-2.5 rounded-2xl border border-gold/60 bg-gradient-to-b from-[#1d1512] to-ink-soft px-5 py-5">
+      <p className="text-[0.8rem] font-semibold text-ivory-dim">선택한 상품</p>
+      <div className="mt-2.5 shadow-paper rounded-2xl border-2 border-burgundy bg-ink-soft px-5 py-5">
         <p className="text-[1.02rem] font-semibold text-ivory">{p.name}</p>
         <p className="mt-0.5 text-[0.78rem] font-light text-ivory-dim">{p.tagline}</p>
         <ul className="mt-3 flex flex-col gap-1.5">
@@ -65,12 +65,12 @@ export default function SelectedProduct({
             {strike !== null && strike > amount && (
               <span className="mr-2 text-[0.78rem] text-ivory-dim/70 line-through">{strike.toLocaleString()}원</span>
             )}
-            <span className="font-display text-[1.6rem] font-semibold text-gold">{amount.toLocaleString()}</span>
+            <span className="font-display text-[1.6rem] font-semibold text-burgundy">{amount.toLocaleString()}</span>
             <span className="ml-0.5 text-[0.9rem] text-ivory-dim">원</span>
             {badgeLabel && <span className="block text-[0.7rem] text-thread">{badgeLabel}</span>}
           </span>
         </div>
-        {offerEnd && <OfferCountdown endsAt={offerEnd} after={after} className="mt-1.5 text-right" />}
+        {offerEnd && <OfferCountdown endsAt={offerEnd} after={after} showEnd className="mt-2 text-right" />}
       </div>
       <ul className="mt-3 grid grid-cols-2 gap-2 text-center text-[0.74rem] leading-[1.5] text-ivory">
         <li className="rounded-xl border border-gold-dim/20 bg-ink/50 px-2 py-2.5">결과 제공<span className="block text-ivory-dim">결제 후 {DELIVERY_TIME_TEXT}</span></li>
@@ -111,8 +111,8 @@ export function OtherProductOption({
       <div className="border-t border-gold-dim/15 px-5 pb-4 pt-3">
         <p className="text-[0.8rem] leading-[1.8] text-ivory-dim">
           {current === "message"
-            ? "월화 패키지 = 내 관계 전체 분석 + 내 사연으로 만든 PDF 책. 분석은 지금 사연에 대한 판단과 다음 행동, 책은 흔들릴 때마다 다시 펼치는 문장·체크리스트·기록 도구예요. 연락 시점·문장 이야기는 일부 겹쳐요."
-            : "내 관계 전체 분석만 받으면 PDF 책은 빠지고, 지금 사연에 대한 판단과 다음 행동을 웹 화면으로 받아요."}
+            ? "월화 패키지 = 월화의 관계 리추얼 + 내 사연으로 만든 PDF 책. 분석은 지금 사연에 대한 판단과 다음 행동, 책은 흔들릴 때마다 다시 펼치는 문장·체크리스트·기록 도구예요. 연락 시점·문장 이야기는 일부 겹쳐요."
+            : "월화의 관계 리추얼만 받으면 PDF 책은 빠지고, 지금 사연에 대한 판단과 다음 행동을 웹 화면으로 받아요."}
         </p>
         <Link
           href={href}
