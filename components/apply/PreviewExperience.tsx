@@ -1043,6 +1043,7 @@ export default function PreviewExperience({
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
           aria-hidden={!showSticky}
         >
+          {!want && offerEndsAt && <OfferCountdown bar endsAt={offerEndsAt} after={regularPriceFor("message")} className="mx-auto mb-2 max-w-[640px]" />}
           <Link
             href={mainHref}
             tabIndex={showSticky ? 0 : -1}
@@ -1052,7 +1053,9 @@ export default function PreviewExperience({
             {mainLabel}
           </Link>
           {!want && offerEndsAt ? (
-            <OfferCountdown endsAt={offerEndsAt} after={regularPriceFor("message")} className="mx-auto mt-1.5 max-w-[640px] text-center !text-[0.74rem]" />
+            <p className="mx-auto mt-1.5 max-w-[640px] text-center text-[0.68rem] text-ivory-dim/80">
+              종료 후 {regularPriceFor("message").toLocaleString()}원 · 1회 결제 · 정기결제 없음
+            </p>
           ) : (
             <p className="mx-auto mt-1.5 max-w-[640px] text-center text-[0.68rem] text-ivory-dim/80">
               1회 결제 · 정기결제 없음 · {CONTENT_VIEW_DAYS}일 동안 다시 열람
