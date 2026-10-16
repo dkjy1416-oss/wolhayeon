@@ -17,12 +17,15 @@ export default function OfferCountdown({
   after,
   className = "",
   showEnd = false,
+  bar = false,
 }: {
   endsAt: number;
   after: number;
   className?: string;
   /** 실제 종료 시각(KST)도 함께 — '종료: 10월 16일 오전 2:00 · 종료 후 16,900원' */
   showEnd?: boolean;
+  /** 하단 고정 버튼 위 한 줄 — '할인혜택 종료까지 08:45:53' */
+  bar?: boolean;
 }) {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
@@ -40,6 +43,13 @@ export default function OfferCountdown({
     return (
       <p className={`text-[0.74rem] text-ivory-dim ${className}`}>
         첫 구매 혜택이 종료되어 현재 {after.toLocaleString()}원입니다
+      </p>
+    );
+  }
+  if (bar) {
+    return (
+      <p className={`text-center text-[0.9rem] font-semibold text-ivory ${className}`}>
+        할인혜택 종료까지 <span className="tabular-nums text-[#ffd84d]">{fmt(left)}</span>
       </p>
     );
   }
