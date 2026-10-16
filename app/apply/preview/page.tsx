@@ -42,7 +42,7 @@ export default async function ApplyPreviewPage({
   }
 
   return (
-    <main className="mx-auto min-h-[100svh] w-full max-w-lg overflow-hidden">
+    <main className="min-h-[100svh] w-full overflow-hidden">
       <PreviewExperience
         orderNumber={orderNumber}
         previewToken={
