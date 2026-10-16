@@ -11,9 +11,9 @@ import Image from "next/image";
 import { useEffect, useRef } from "react";
 
 export const BUBBLE = {
-  speech: "/wolhwa/v2/bubble-speech.webp",
-  thought: "/wolhwa/v2/bubble-thought.webp",
-  caption: "/wolhwa/v2/bubble-caption.webp",
+  speech: "/wolhwa/v2/bubble-speech.webp?v=3",
+  thought: "/wolhwa/v2/bubble-thought.webp?v=3",
+  caption: "/wolhwa/v2/bubble-caption.webp?v=3",
 };
 
 /** 화면에 들어오면 .wt-in 을 붙인다 (한 번만) */
