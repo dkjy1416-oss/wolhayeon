@@ -28,7 +28,7 @@ export default function WhyStory() {
             </p>
             <p className="font-display mt-5 text-[1.15rem] text-burgundy">생년월일보다, 두 사람이 겪은 이야기를 먼저 봅니다.</p>
             <p className="mt-3 text-[0.84rem] leading-[1.7] text-ivory-dim">
-              결과는 AI가 작성하는 개인화 콘텐츠예요. 상대의 속마음이나 재회 결과를 확정하지 않아요.
+              상대의 속마음이나 재회 결과를 확정하지 않아요.
             </p>
 
             {/* 입력 → 기준 → 결과 일부 */}

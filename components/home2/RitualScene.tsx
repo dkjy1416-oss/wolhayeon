@@ -1,45 +1,44 @@
-/** 06. 리추얼을 실제로 이해시키기 — 준비물 · 순서 · 마친 뒤 한 줄 (가상 예시 · 실제 결과 part_07~09 형식) */
+/** 06. 리추얼을 그림으로 — 적기 · 나누기 · 접어 두기 (예시 · 실제 결과 part_07~09 형식) */
 import Image from "next/image";
+import { V2 } from "./media";
+
+const STEPS = [
+  { img: V2.ritual1, t: "보내고 싶은 말을 끝까지 적기", d: "휴대폰 대신 종이에, 하고 싶은 말을 한 번 다 꺼내요." },
+  { img: V2.ritual2, t: "있었던 일과 내 감정을 나누기", d: "적은 문장에 밑줄을 그어, 사실과 마음을 따로 봐요." },
+  { img: V2.ritual3, t: "접어 두고 오늘 할 일 하나", d: "봉투에 넣어 묶고, 오늘 지킬 행동 하나만 남겨요." },
+];
 
 export default function RitualScene() {
   return (
     <section className="night px-5 py-16 md:px-8 md:py-24">
-      <div className="mx-auto grid max-w-[1120px] items-center gap-10 md:grid-cols-[0.9fr_1.1fr] md:gap-14">
-        <div className="relative mx-auto aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[24px]">
-          <Image src="/wolhwa/ritual-letter.webp" alt="촛불 아래 접힌 편지와 펜" fill sizes="(min-width: 768px) 420px, 90vw" className="object-cover" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[0.8rem] tracking-[0.14em] text-gold">리추얼이란</p>
-          <h2 className="font-display font-bold mt-2 text-[1.55rem] leading-[1.45] text-ivory [text-wrap:balance] md:text-[2rem]">
-            월하연에서 말하는 리추얼은 이런 시간입니다.
-          </h2>
-          <p className="mt-4 max-w-[36rem] text-[1rem] leading-[1.8] text-ivory-dim">
-            내 감정을 적고, 준비물을 두고, 짧은 순서에 따라 마음과 행동을 정리하는 개인적인 실천이에요. 상대의 마음이나 연락을 바꾸는 효능을 약속하지 않아요.
-            전체 구성에는 내 사연에 맞춘 리추얼의 의미 · 준비물 · 진행 순서가 들어가요.
-          </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-[0.8fr_1.2fr]">
-            <div className="rounded-2xl border border-gold-dim bg-ink-soft px-5 py-4">
-              <p className="text-[0.76rem] tracking-[0.12em] text-gold">준비물</p>
-              <ul className="mt-2 flex flex-col gap-1 text-[0.95rem] text-ivory">
-                <li>종이 한 장</li>
-                <li>펜</li>
-                <li>작은 봉투</li>
-              </ul>
-            </div>
-            <div className="rounded-2xl border border-gold-dim bg-ink-soft px-5 py-4">
-              <p className="text-[0.76rem] tracking-[0.12em] text-gold">진행 순서 (일부)</p>
-              <ol className="mt-2 flex flex-col gap-1.5 text-[0.95rem] leading-[1.6] text-ivory">
-                <li>1. 보내고 싶은 말을 종이에 끝까지 적기</li>
-                <li>2. 있었던 일과 내 감정을 나눠 밑줄 긋기</li>
-                <li>3. 오늘 지킬 작은 행동 하나를 정하기</li>
-              </ol>
-            </div>
-          </div>
-          <p className="font-display mt-4 rounded-2xl border border-gold/40 px-5 py-4 text-[1.02rem] leading-[1.7] text-ivory">
-            마친 뒤 적는 한 줄 · “오늘은 보내지 않고, 내 하루를 지켰다.”
-          </p>
-          <p className="mt-2 text-[0.78rem] text-ivory-dim">가상 예시 · 실제 리추얼의 이름과 순서는 내 사연에 따라 달라져요</p>
-        </div>
+      <div className="mx-auto max-w-[1120px]">
+        <p className="text-[0.8rem] tracking-[0.14em] text-gold">나만의 리추얼</p>
+        <h2 className="font-display font-bold mt-2 text-[1.55rem] leading-[1.45] text-ivory [text-wrap:balance] md:text-[2rem]">
+          보내고 싶은 밤, 휴대폰 대신 펼치는 순서
+        </h2>
+        <p className="mt-3 max-w-[38rem] text-[0.98rem] leading-[1.8] text-ivory-dim">
+          준비물을 두고 짧은 순서를 따라 마음과 행동을 정리하는 시간이에요. 전체 구성에는 내 사연에 맞춘 리추얼의 의미 · 준비물 · 순서가 들어가요.
+        </p>
+        <ol className="mt-8 grid gap-4 md:grid-cols-3">
+          {STEPS.map((s, i) => (
+            <li key={s.t} className="overflow-hidden rounded-[20px] bg-[#2a2528]">
+              <div className="relative aspect-[4/5] w-full">
+                <Image src={s.img} alt={s.t} fill sizes="(min-width: 768px) 360px, 92vw" className="object-cover" />
+                <span className="font-display absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-[#201d20]/80 text-[1rem] text-gold">
+                  {i + 1}
+                </span>
+              </div>
+              <div className="px-5 py-4">
+                <p className="font-display text-[1.08rem] font-bold text-ivory">{s.t}</p>
+                <p className="mt-1 text-[0.9rem] leading-[1.7] text-ivory-dim">{s.d}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <p className="font-display mt-6 rounded-2xl border border-gold/40 px-5 py-4 text-center text-[1.05rem] leading-[1.7] text-ivory">
+          마친 뒤 적는 한 줄 · “오늘은 보내지 않고, 내 하루를 지켰다.”
+        </p>
+        <p className="mt-2 text-center text-[0.78rem] text-ivory-dim">예시 · 실제 리추얼의 이름과 순서는 내 사연에 따라 달라져요</p>
       </div>
     </section>
   );

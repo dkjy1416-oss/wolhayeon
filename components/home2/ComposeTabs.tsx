@@ -2,7 +2,9 @@
 
 /** 03. 무엇을 받는가 — 편지 · 관계 읽기 · 리추얼 · 실천 가이드를 읽을 수 있는 예시 카드로 (가상 사연) */
 import { useState } from "react";
+import Image from "next/image";
 import { TABS, EXAMPLE_STORY } from "./content";
+import { V2 } from "./media";
 
 export default function ComposeTabs() {
   const [i, setI] = useState(0);
@@ -20,6 +22,10 @@ export default function ComposeTabs() {
 
         <div className="mt-8 grid gap-6 md:grid-cols-[280px_1fr] md:gap-10">
           <div className="min-w-0">
+            <div className="shadow-paper relative mb-4 aspect-[4/5] w-full overflow-hidden rounded-2xl">
+              <Image src={V2.set} alt="편지 · 리추얼 카드 · 실천 가이드가 놓인 책상" fill sizes="(min-width: 768px) 280px, 92vw" className="object-cover" />
+              <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#201d20]/85 to-transparent px-4 pb-3 pt-10 text-[0.84rem] text-[#f3ece4]">편지 · 나만의 리추얼 · 첫날~21일 가이드</p>
+            </div>
             <div className="rounded-2xl border border-gold-dim bg-ink-soft px-5 py-4">
               <p className="text-[0.74rem] tracking-[0.12em] text-gold">예시 사연</p>
               <ul className="mt-2 flex flex-col gap-1.5 text-[0.9rem] leading-[1.6] text-ivory">
