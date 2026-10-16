@@ -386,6 +386,53 @@ export default async function AdminMarketingPage({
         </div>
       </section>
 
+      {/* 10/16 지시문 14 — 혜택 잔여 구간 · 결제 화면 브라우저 */}
+      {s.offerBuckets && s.offerBuckets.some((b) => b.cta > 0) && (
+        <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
+          <p className="text-sm font-semibold">구매 버튼을 누른 때의 첫 구매 혜택 남은 시간</p>
+          <p className="mt-0.5 text-[0.7rem] text-ivory-dim">주문당 처음 누른 순간 기준 · 같은 기간 신청 주문 · 테스트 제외</p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[30rem] text-[0.8rem] tabular-nums">
+              <thead>
+                <tr className="text-[0.68rem] text-ivory-dim">
+                  {["남은 시간", "구매 버튼", "결제 페이지", "토스 호출", "결제", "버튼→결제"].map((h, i) => (
+                    <th key={h} className={`py-1 font-normal ${i === 0 ? "text-left" : "text-right"}`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {s.offerBuckets.map((b) => (
+                  <tr key={b.label} className="border-t border-gold-dim/10">
+                    <td className="py-1.5">{b.label}</td>
+                    <td className="py-1.5 text-right">{b.cta}</td>
+                    <td className="py-1.5 text-right">{b.payPage}</td>
+                    <td className="py-1.5 text-right">{b.payWindow}</td>
+                    <td className="py-1.5 text-right">{b.paid}</td>
+                    <td className="py-1.5 text-right text-ivory-dim">{pct(b.paid, b.cta)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+      {s.browsers && s.browsers.length > 0 && (
+        <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
+          <p className="text-sm font-semibold">결제 화면을 연 브라우저</p>
+          <p className="mt-0.5 text-[0.7rem] text-ivory-dim">결제 페이지 → 토스 결제창 호출 → 결제 (주문당 1회) · ‘토스 호출’은 결제창 요청 기준이며 실제 화면 표시 확인은 아님</p>
+          <div className="mt-2 space-y-1 text-[0.8rem] tabular-nums">
+            {s.browsers.map((r) => (
+              <div key={r.label} className="flex justify-between gap-3">
+                <span className="text-ivory-dim">{r.label}</span>
+                <span>
+                  결제 페이지 {r.payPage} · 토스 호출 {r.payWindow} ({pct(r.payWindow, r.payPage)}) · 결제 {r.paid}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* 일별 */}
       <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
         <p className="text-sm font-semibold">날짜별</p>
