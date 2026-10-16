@@ -6,8 +6,10 @@ import RealReviewsSection from "@/components/home/RealReviewsSection";
 import HomeHero from "@/components/home2/HomeHero";
 import ResumeCard from "@/components/home2/ResumeCard";
 import ComposeTabs from "@/components/home2/ComposeTabs";
-import WhyStory from "@/components/home2/WhyStory";
-import SituationPick from "@/components/home2/SituationPick";
+import Moments from "@/components/home2/Moments";
+import WolhwaStory from "@/components/home2/WolhwaStory";
+import BookShowcase from "@/components/home2/BookShowcase";
+import ShortsRow from "@/components/home2/ShortsRow";
 import RitualScene from "@/components/home2/RitualScene";
 import ProcessTrust from "@/components/home2/ProcessTrust";
 import PricingSection from "@/components/home2/PricingSection";
@@ -34,10 +36,12 @@ export default async function Home() {
       <main>
         <HomeHero />
         <ResumeCard />
+        <Moments />
+        <WolhwaStory />
         <ComposeTabs />
-        <WhyStory />
-        <SituationPick />
         <RitualScene />
+        <BookShowcase />
+        <ShortsRow />
         <ProcessTrust />
         {reviews.length > 0 && (
           <div className="mx-auto max-w-[1120px]">
