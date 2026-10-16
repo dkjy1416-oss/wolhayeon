@@ -33,10 +33,9 @@ import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
 import OfferCountdown from "@/components/pay/OfferCountdown";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
-import { PayIncludes, PayReviews } from "@/components/pay/PayValueBlock";
-import SelectedProduct, { OtherProductOption } from "@/components/pay/SelectedProduct";
+import { PayIncludes } from "@/components/pay/PayValueBlock";
+import SelectedProduct from "@/components/pay/SelectedProduct";
 import { logPayEventServer } from "@/lib/pay-events-server";
-import { getPublicReviews } from "@/lib/reviews";
 import UpgradeSelected, { UpgradeUnavailable } from "@/components/pay/UpgradeSelected";
 import { upgradeOrderStatus } from "@/lib/book/book-upgrade";
 import { UPGRADE_REASON_TEXT } from "@/lib/book/upgrade-rules";
@@ -197,10 +196,10 @@ export default async function CompletePage({
 
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
   /* 결제 화면 후기 — 결제가 열려 있고 아직 결제 전일 때만 (실제 구매자·공개 동의 후기만, 없으면 숨김) */
-  const payReviews = !alreadyPaid && paymentsOpen ? await getPublicReviews(2) : [];
 
   return (
-    <main className="mx-auto flex min-h-[100svh] w-full max-w-md flex-col px-6 pb-36 pt-14">
+    <div className="paper min-h-[100svh]">
+    <main className="mx-auto flex min-h-[100svh] w-full max-w-[560px] flex-col px-5 pb-36 pt-10">
       {!alreadyPaid && (
         <PayEventPing
           orderNumber={orderNumber}
@@ -208,17 +207,17 @@ export default async function CompletePage({
           code={paymentsOpen ? "open" : "closed"}
         />
       )}
-      <p className="text-center text-xs tracking-[0.35em] text-gold/90">
-        月下緣
-      </p>
-
-      <h1 className="font-display mt-6 text-center text-2xl font-semibold leading-[1.55] text-ivory">
-        월화의 이야기를
-        <br />
-        계속 열어볼게요.
-      </h1>
-      <p className="mt-4 text-center text-[0.92rem] font-light leading-[1.9] text-ivory-dim">
-        방금 본 미리보기 다음 이야기부터 이어집니다.
+      <div className="flex items-center justify-between">
+        <Link href={`/apply/preview?order=${encodeURIComponent(orderNumber)}`} className="text-[0.86rem] text-ivory-dim">
+          ← 미리보기로
+        </Link>
+        <p className="font-display text-[0.95rem] text-ivory">
+          월하연 <span className="text-gold">月下緣</span>
+        </p>
+      </div>
+      <h1 className="font-display mt-7 text-[1.5rem] font-bold leading-[1.45] text-ivory">주문 확인</h1>
+      <p className="mt-1.5 text-[0.9rem] leading-[1.7] text-ivory-dim">
+        들려준 사연 그대로, 미리보기 다음 내용부터 이어집니다. 사연을 다시 쓰지 않아요.
       </p>
 
       {alreadyPaid ? (
@@ -389,16 +388,7 @@ export default async function CompletePage({
             />
           </div>
           {product === "book" && offerEnd && <OfferCountdown endsAt={offerEnd} after={regularPriceFor(product)} className="mt-3 text-center" />}
-          {product !== "book" && bookSales && (
-            <OtherProductOption
-              orderNumber={orderNumber}
-              current={product}
-              otherPrice={product === "message" ? bundleNowPrice : messagePrice}
-              extraQuery={paytest === "1" ? "&paytest=1" : ""}
-            />
-          )}
           <InAppBrowserNotice orderNumber={orderNumber} />
-          <PayReviews reviews={payReviews} />
 
           {/* 테스트 결제 단계 전용 — 실결제 전환 시 제거 (TestModeNotices.tsx 참고) */}
           <TestPaymentNotice />
@@ -416,5 +406,6 @@ export default async function CompletePage({
         </>
       )}
     </main>
+    </div>
   );
 }
