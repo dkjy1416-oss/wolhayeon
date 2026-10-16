@@ -76,7 +76,7 @@ export default function PrivacyPage() {
         <p>
           월하연은 서비스 계약의 이행을 위해 필요한 범위에서 국외 사업자의 서비스를 사용합니다.
           국외 이전을 원하지 않는 경우 고객센터를 통해 개인정보 삭제 또는 처리 중지를 요청할 수 있으나,
-          AI 콘텐츠 생성·웹 호스팅·이메일 발송 등 해당 기능의 이용이 제한될 수 있습니다.
+          콘텐츠 생성·웹 호스팅·이메일 발송 등 해당 기능의 이용이 제한될 수 있습니다.
         </p>
 
         <div className="overflow-hidden rounded-2xl border border-gold-dim/20">
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
               이전 항목: 개인화 결과 생성에 필요한 신청 내용
               <br />국가: 미국(저장), 미국·유럽·아시아·호주 지역에서 처리될 수 있음
               <br />시기·방법: 결과 생성 요청 시 암호화된 API 전송
-              <br />목적: 개인화 AI 콘텐츠 생성
+              <br />목적: 개인화 콘텐츠 생성
               <br />보유기간: Anthropic API의 기본 정책에 따라 입력·출력은 통상 30일 이내 삭제
               (법령 준수·정책 집행 등 예외 가능)
               <br />연락처: legal@anthropic.com
