@@ -1,0 +1,20 @@
+name: social-tick
+
+# 관리자 'SNS 업로드'에 예약해 둔 영상을 10분마다 확인해서 시간이 된 것부터 채널에 올림.
+# 저장소 Settings → Secrets → Actions 에 SOCIAL_CRON_SECRET (Vercel 환경변수와 같은 값) 필요.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: run
+        env:
+          S: ${{ secrets.SOCIAL_CRON_SECRET }}
+        run: |
+          if [ -z "$S" ]; then echo "SOCIAL_CRON_SECRET 없음 — 건너뜀"; exit 0; fi
+          curl -fsS -m 300 -H "x-social-secret: $S" https://thewolha.com/api/internal/social-tick || true

@@ -10,6 +10,7 @@ const ITEMS: { href: string; label: string }[] = [
   { href: "/admin/customers", label: "고객" },
   { href: "/admin/marketing", label: "마케팅" },
   { href: "/admin/promo", label: "홍보" },
+  { href: "/admin/social", label: "SNS 업로드" },
   { href: "/admin/reviews", label: "후기" },
   { href: "/admin/stats", label: "통계" },
   { href: "/admin/cs", label: "고객센터" },
