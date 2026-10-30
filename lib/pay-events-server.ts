@@ -29,6 +29,10 @@ export const CLIENT_PAY_EVENTS = [
   "package_open", // 'PDF 책도 함께 받고 싶다면' 펼침 (code: preview | pay)
   "book_view", // 'PDF 책 실제 페이지 넘겨 보기' (구매 클릭과 구분)
   "product_change", // 결제 화면에서 상품 변경 (code: 바뀐 상품)
+  "pay_page_leave", // 결제 화면을 떠남 (code: 도달단계_머문초 — view|paybtn|clicked|error, 예: paybtn_35s) (10/30)
+  "pay_timeout", // 결제하기 후 8초 넘게 결제창으로 안 넘어감 (code: 앱 안 브라우저 이름 | none) (10/30)
+  "external_open_click", // '외부 브라우저로 열기' (code: android_chrome | kakao_auto | kakao | line | copy) (10/30)
+  "preview_lock_click", // 미리보기 잠긴 항목 클릭 → 결제 안내로 이동 (code: 항목 번호) (10/30)
 ] as const;
 
 /** 서버에서만 기록하는 이벤트 */
@@ -38,6 +42,8 @@ export type ServerPayEvent =
   | "confirm_failed" // 승인 API 실패 (code)
   | "amount_mismatch" // 금액 불일치로 승인 거부
   | "confirm_pending" // 승인 응답 유실 — 자동 재확인 대기
+  | "mail_open" // 메일 열람 (1×1 이미지, code: remind | preview_link | apology | book …) (10/30)
+  | "mail_click" // 메일 링크 클릭 → /api/remind/open (code: 위와 같음) (10/30)
   | "apology_sent" // 결제 오류 사과 쿠폰 메일 발송
   | "upgrade_invite_sent" // 책 추가 구매 안내 메일 발송 (후기 남기기 → 쿠폰)
   | "upgrade_issued"; // 후기 작성 후 책 추가 구매 쿠폰(주문) 발급 (code: 발급된 책 주문번호)

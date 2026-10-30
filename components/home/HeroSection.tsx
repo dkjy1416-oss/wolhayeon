@@ -1,6 +1,5 @@
 import TrackedCtaLink from "@/components/TrackedCtaLink";
 import Image from "next/image";
-import Reveal from "@/components/home/Reveal";
 import HeroMontage, { type MontageClip } from "@/components/home/HeroMontage";
 
 /**
@@ -52,21 +51,21 @@ export default function HeroSection({
       </div>
 
       <div className="relative flex min-h-[100svh] flex-col justify-end px-6 pb-10 pt-24">
-        <Reveal>
+        <div className="fade-in">
           <h1 className="font-display text-[2.15rem] font-semibold leading-[1.38] text-ivory drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
             연락해야 할까.
             <br />
             기다려야 할까.
           </h1>
-        </Reveal>
-        <Reveal delay={80}>
+        </div>
+        <div className="fade-in">
           <p className="mt-4 text-[0.95rem] font-light leading-[1.85] text-ivory drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
             지금 두 사람의 상태와
             <br />
             먼저 해야 할 행동부터 확인해보세요.
           </p>
-        </Reveal>
-        <Reveal delay={150}>
+        </div>
+        <div className="fade-in">
           <TrackedCtaLink
             event="home_cta_click"
             placement="hero"
@@ -76,9 +75,9 @@ export default function HeroSection({
             내 관계 무료로 보기
           </TrackedCtaLink>
           <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/85">
-            질문 3분 · 결제 전 무료 분석 먼저
+            질문 3분 · 미리보기 무료 · 정기결제 없음
           </p>
-        </Reveal>
+        </div>
       </div>
     </section>
   );

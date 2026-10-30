@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { verifyRemindToken } from "@/lib/remind-auth";
 import { createContinueToken } from "@/lib/cs-auth";
+import { logPayEventServer } from "@/lib/pay-events-server";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,10 @@ export async function GET(request: Request) {
   if (!ORDER_NUMBER_RE.test(order) || !verifyRemindToken(order, token)) {
     return NextResponse.redirect(fallback, 302);
   }
+
+  /* 메일 클릭 기록 (10/30 — 리마인드 클릭률). src 없는 옛 메일은 "mail" */
+  const src = (url.searchParams.get("src") ?? "mail").replace(/[^a-z_]/g, "").slice(0, 20) || "mail";
+  await logPayEventServer(order, "mail_click", src);
 
   const ct = createContinueToken(order);
   if (!ct) return NextResponse.redirect(fallback, 302);

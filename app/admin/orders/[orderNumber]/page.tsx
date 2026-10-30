@@ -22,6 +22,7 @@ import ResultLinkButtons from "@/components/admin/ResultLinkButtons";
 import DeliveryButton from "@/components/admin/DeliveryButton";
 import GenerateResultButton from "@/components/admin/GenerateResultButton";
 import CustomerEmailForm from "@/components/admin/CustomerEmailForm";
+import { getOrderAttribution, touchLabel } from "@/lib/order-attribution";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,10 @@ export default async function AdminOrderDetailPage({
     );
   }
 
+  const attr = await getOrderAttribution(order.order_number, order.paid_at);
+  const kst = (iso: string) =>
+    new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+
   const safetyRisky = order.safety_concerns.filter(
     (v) => v !== "none" && v !== "prefer_not_to_say"
   );
@@ -141,6 +146,26 @@ export default async function AdminOrderDetailPage({
             </>
           )}
         </div>
+      </div>
+
+      {/* 유입 경로 (첫 유입 · 마지막 유입) */}
+      <div className="mt-3 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-3.5 text-xs text-ivory-dim">
+        <p className="text-[0.68rem] tracking-wide text-gold/80">유입 경로</p>
+        {attr ? (
+          <div className="mt-1.5 grid gap-1 sm:grid-cols-2">
+            <p>
+              첫 유입: <b className="text-ivory">{touchLabel(attr.first)}</b>
+              {attr.first && <span className="ml-1 text-ivory-dim/70">({kst(attr.first.at)})</span>}
+            </p>
+            <p>
+              마지막 유입{order.paid_at ? "(결제 전)" : ""}: <b className="text-ivory">{touchLabel(attr.last)}</b>
+              {attr.last && <span className="ml-1 text-ivory-dim/70">({kst(attr.last.at)})</span>}
+            </p>
+            <p className="text-ivory-dim/70">방문 기록 {attr.visits}건</p>
+          </div>
+        ) : (
+          <p className="mt-1.5">방문 기록과 연결되지 않은 주문입니다 (기록 시작 전 주문이거나 추적 차단).</p>
+        )}
       </div>
 
       {/* 승인 완료 시에만: 고객 결과 링크 (승인 전에는 표시하지 않음) */}

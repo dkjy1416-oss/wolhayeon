@@ -9,6 +9,7 @@ import {
   type TossPaymentsWidgets,
 } from "@tosspayments/tosspayments-sdk";
 import { logPayEvent } from "@/lib/pay-events";
+import { inAppName } from "@/components/pay/InAppBrowserNotice";
 
 /** 토스 SDK 오류에서 코드만 안전하게 꺼냄 */
 function errorCode(e: unknown): string | null {
@@ -66,6 +67,89 @@ function useReloadOnRestore(orderNumber: string, amount: number) {
       window.removeEventListener("focus", onVisible);
     };
   }, [orderNumber, amount]);
+}
+
+
+/**
+ * 결제 화면 이탈 기록 (10/30 요청 1 — 결제 화면 43명 → 결제창 20명)
+ * 어디까지 보고 나갔는지: view(진입) → paybtn(결제 버튼이 화면에 보임) → clicked(결제하기 누름) → error
+ * 화면을 떠날 때 한 번만 pay_page_leave 로 남긴다 (code 예: paybtn_35s).
+ */
+type LeaveStage = "view" | "paybtn" | "clicked" | "error";
+const STAGE_RANK: Record<LeaveStage, number> = { view: 0, paybtn: 1, clicked: 2, error: 3 };
+function useLeaveLog(orderNumber: string) {
+  const stage = useRef<LeaveStage>("view");
+  const t0 = useRef<number>(0);
+  const sent = useRef(false);
+  useEffect(() => {
+    t0.current = Date.now();
+    const send = () => {
+      if (sent.current) return;
+      sent.current = true;
+      const secs = Math.min(3600, Math.round((Date.now() - t0.current) / 1000));
+      logPayEvent(orderNumber, "pay_page_leave", `${stage.current}_${secs}s`);
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") send();
+    };
+    window.addEventListener("pagehide", send);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", send);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [orderNumber]);
+  return (s: LeaveStage) => {
+    if (STAGE_RANK[s] > STAGE_RANK[stage.current]) stage.current = s;
+  };
+}
+
+/**
+ * 결제하기를 눌렀는데 8초가 지나도 결제창으로 넘어가지 않으면(앱 안 브라우저에서 자주 막힘)
+ * 안내 문구를 띄우고 pay_timeout 으로 기록한다. 그 사이 화면이 가려지면(결제창·카드앱으로 이동) 띄우지 않음.
+ */
+const PAY_TIMEOUT_MS = 8000;
+function usePayTimeout(orderNumber: string) {
+  const [stuck, setStuck] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const left = useRef(false);
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") left.current = true;
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+  const start = () => {
+    left.current = false;
+    setStuck(false);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      if (left.current || document.visibilityState === "hidden") return;
+      setStuck(true);
+      logPayEvent(orderNumber, "pay_timeout", inAppName());
+    }, PAY_TIMEOUT_MS);
+  };
+  const stop = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  return { stuck, start, stop };
+}
+
+function PayStuckNotice() {
+  return (
+    <div className="mt-4 rounded-xl border border-thread/40 bg-thread/5 px-4 py-3 text-center text-[0.8rem] leading-[1.8] text-ivory">
+      결제창이 열리지 않나요?
+      <br />
+      <span className="text-ivory-dim">
+        인스타그램·카카오톡 안에서는 결제창이 막힐 수 있어요. 아래 <b className="text-ivory">외부 브라우저로 열기</b>를 누른 뒤 다시 결제해 주세요. 신청 내용과 금액은 그대로 이어집니다.
+      </span>
+    </div>
+  );
 }
 
 /**
@@ -161,12 +245,16 @@ function TossWindowCheckout({
   }, [clientKey, orderNumber]);
 
   useReloadOnRestore(orderNumber, amount);
+  const markStage = useLeaveLog(orderNumber);
+  const payTimeout = usePayTimeout(orderNumber);
 
   const handlePay = async () => {
     const payment = paymentRef.current;
     if (!payment || paying) return;
     setPaying(true);
     setErrorMsg(null);
+    markStage("clicked");
+    payTimeout.start();
     logPayEvent(orderNumber, "pay_request", method);
     const common = {
       amount: { currency: "KRW" as const, value: amount },
@@ -199,6 +287,8 @@ function TossWindowCheckout({
       }
       // Redirect 방식 — 성공 시 이 아래는 실행되지 않음
     } catch (e) {
+      payTimeout.stop();
+      markStage("error");
       logPayEvent(orderNumber, "pay_request_error", errorCode(e));
       const msg = payErrorMessage(e);
       setErrorMsg(msg);
@@ -213,7 +303,13 @@ function TossWindowCheckout({
   useEffect(() => {
     const el = payBtnRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    const io = new IntersectionObserver(([e]) => setPayBtnVisible(e.isIntersecting), { threshold: 0.1 });
+    const io = new IntersectionObserver(
+      ([e]) => {
+        setPayBtnVisible(e.isIntersecting);
+        if (e.isIntersecting) markStage("paybtn");
+      },
+      { threshold: 0.1 }
+    );
     io.observe(el);
     return () => io.disconnect();
   }, []);
@@ -284,6 +380,7 @@ function TossWindowCheckout({
           {errorMsg}
         </p>
       )}
+      {payTimeout.stuck && !errorMsg && <PayStuckNotice />}
 
       {typeof document !== "undefined" &&
         createPortal(
@@ -373,12 +470,16 @@ function TossWidgetCheckout({
   }, [clientKey, amount]);
 
   useReloadOnRestore(orderNumber, amount);
+  const markStage = useLeaveLog(orderNumber);
+  const payTimeout = usePayTimeout(orderNumber);
 
   const handlePay = async () => {
     const widgets = widgetsRef.current;
     if (!widgets || paying) return;
     setPaying(true);
     setErrorMsg(null);
+    markStage("clicked");
+    payTimeout.start();
     logPayEvent(orderNumber, "pay_request");
     try {
       await widgets.requestPayment({
@@ -390,6 +491,8 @@ function TossWidgetCheckout({
       // Redirect 방식이므로 성공 시 이 아래는 실행되지 않음
     } catch (e) {
       // 구매자가 결제창을 닫은 경우 등 (USER_CANCEL 등 코드로 구분)
+      payTimeout.stop();
+      markStage("error");
       logPayEvent(orderNumber, "pay_request_error", errorCode(e));
       const msg = payErrorMessage(e);
       setErrorMsg(msg);
@@ -425,6 +528,7 @@ function TossWidgetCheckout({
           {errorMsg}
         </p>
       )}
+      {payTimeout.stuck && !errorMsg && <PayStuckNotice />}
 
     </div>
   );

@@ -19,7 +19,11 @@ export type ClientPayEvent =
   | "example_seen"
   | "package_open"
   | "book_view"
-  | "product_change";
+  | "product_change"
+  | "pay_page_leave"
+  | "pay_timeout"
+  | "external_open_click"
+  | "preview_lock_click";
 
 export function logPayEvent(
   orderNumber: string,

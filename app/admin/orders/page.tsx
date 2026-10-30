@@ -11,6 +11,7 @@ const shownAmount = (r: { payment_status: string | null; product?: string | null
     : r.payment_amount;
 import { isOperatorEmail, won } from "@/lib/admin-util";
 import CsvButton from "@/components/admin/CsvButton";
+import { getOrderAttributions, touchLabel, type OrderAttribution } from "@/lib/order-attribution";
 
 const PRODUCT_LABEL: Record<string, string> = { message: "메시지", book: "책", bundle: "패키지" };
 
@@ -98,6 +99,7 @@ export default async function AdminOrdersPage({
   let rows: Row[] = [];
   let versions = new Map<string, number>();
   let loadError = false;
+  let attrs = new Map<string, OrderAttribution>();
   try {
     const supabase = getSupabaseAdmin();
     let query = supabase
@@ -140,6 +142,7 @@ export default async function AdminOrdersPage({
     const res = await query.order("created_at", { ascending: false }).limit(300);
     if (res.error || !res.data) throw new Error("load");
     rows = res.data;
+    attrs = await getOrderAttributions(rows.map((r) => ({ order_number: r.order_number, paid_at: r.paid_at })));
 
     const ids = res.data.map((r: { id: string }) => r.id);
     if (ids.length > 0) {
@@ -224,7 +227,7 @@ export default async function AdminOrdersPage({
           </p>
           <CsvButton
             filename={`월하연_주문_${f}_${new Date().toISOString().slice(0, 10)}.csv`}
-            header={["주문번호", "신청일", "결제일", "이름", "이메일", "상품", "금액", "결제", "결과 생성", "검수", "메일", "책"]}
+            header={["주문번호", "신청일", "결제일", "이름", "이메일", "상품", "금액", "결제", "결과 생성", "검수", "메일", "책", "첫 유입", "마지막 유입"]}
             rows={rows.map((r) => [
               r.order_number,
               new Date(r.created_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }),
@@ -238,6 +241,8 @@ export default async function AdminOrdersPage({
               r.review_status,
               r.delivery_status,
               r.book_status ?? "",
+              touchLabel(attrs.get(r.order_number)?.first ?? null),
+              touchLabel(attrs.get(r.order_number)?.last ?? null),
             ])}
           />
         </div>
@@ -275,6 +280,13 @@ export default async function AdminOrdersPage({
                 </div>
                 {r.email && (
                   <p className="mt-1 text-[0.72rem] text-ivory-dim/80">{r.email}</p>
+                )}
+                {attrs.get(r.order_number) && (
+                  <p className="mt-1 text-[0.7rem] text-ivory-dim/80">
+                    유입: {touchLabel(attrs.get(r.order_number)!.first)}
+                    {touchLabel(attrs.get(r.order_number)!.last) !== touchLabel(attrs.get(r.order_number)!.first) &&
+                      ` → ${touchLabel(attrs.get(r.order_number)!.last)}`}
+                  </p>
                 )}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className="mr-1 text-sm text-ivory">

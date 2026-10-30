@@ -503,6 +503,9 @@ export default function PreviewExperience({
   /* 유료 안내(전체 분석에서 추가로 확인할 내용) 도달 — 주문당 1회 */
   const offerRef = useRef<HTMLDivElement>(null);
   const offerSeen = useRef(false);
+  /* 10/30: 유료 안내를 판정 카드 바로 아래로 올리고 그 자리에 구매 버튼 — 이 버튼이 보이면 하단 고정 바는 숨김 */
+  const offerCtaRef = useRef<HTMLDivElement>(null);
+  const priceRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (phase !== "ready" || !PAYMENTS_OPEN) return;
     const onScroll = () => {
@@ -522,7 +525,9 @@ export default function PreviewExperience({
         endSeen.current = true;
         logPayEvent(orderNumber, "preview_end_seen");
       }
-      setShowSticky(pastStart && !ctaVisible && !bookVisible);
+      const oc = offerCtaRef.current?.getBoundingClientRect();
+      const offerCtaVisible = !!oc && oc.top < window.innerHeight && oc.bottom > 0;
+      setShowSticky(pastStart && !ctaVisible && !bookVisible && !offerCtaVisible);
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -650,6 +655,15 @@ export default function PreviewExperience({
     logPayEvent(orderNumber, "preview_cta_click", where);
   };
   const lock = LOCK_COPY[sit];
+  /* 잠긴 항목을 누르면 바로 가격·구매 안내로 (10/30: 잠긴 카드 클릭 7명) */
+  const scrollToPrice = () => {
+    const el = priceRef.current ?? mainCtaRef.current;
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const onLockClick = (n: number) => {
+    logPayEvent(orderNumber, "preview_lock_click", `lock${n}`);
+    if (PAYMENTS_OPEN) scrollToPrice();
+  };
   const badge = priceBadge(price);
 
   /* 판정 카드 4개 — 짧게, 1~2초 안에 읽히게 */
@@ -743,6 +757,70 @@ export default function PreviewExperience({
       </section>
       <div ref={stickyStartRef} aria-hidden />
 
+      {/* ---------- 05. 무료 미리보기 vs 전체 리추얼 구성 — 10/30 판정 카드 바로 아래로 이동 + 구매 버튼 ---------- */}
+      <section className="mt-6 px-6">
+        <div ref={offerRef} className="shadow-paper mx-auto max-w-[640px] rounded-2xl border border-gold-dim bg-ink-soft px-5 py-6">
+          <p className="font-display text-[1.25rem] font-bold leading-snug text-ivory">{lock.title}</p>
+          <p className="mt-2 text-[0.92rem] leading-[1.75] text-ivory-dim">{lock.desc}</p>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-[0.86rem] leading-[1.6]">
+            <div className="rounded-xl bg-ink px-3.5 py-3">
+              <p className="text-[0.78rem] font-semibold text-ivory-dim">무료 미리보기 · 지금 받음</p>
+              <ul className="mt-1.5 flex flex-col gap-1 text-ivory">
+                <li>· 사연에서 읽히는 현재 흐름</li>
+                <li>· 오늘 피할 행동</li>
+                <li>· 결과 일부</li>
+              </ul>
+            </div>
+            <div className="rounded-xl border border-burgundy/40 bg-[#f6e9ec] px-3.5 py-3">
+              <p className="text-[0.78rem] font-semibold text-burgundy">전체 리추얼 구성</p>
+              <ul className="mt-1.5 flex flex-col gap-1 text-ivory">
+                <li>· 관계 흐름·반복 패턴 상세 읽기</li>
+                <li>· 월화의 편지 · 나만의 리추얼</li>
+                <li>· 첫날·7일·21일 실천 가이드</li>
+                <li>· {ROLE_PAID[sit]}</li>
+              </ul>
+            </div>
+          </div>
+          <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">내 사연으로 이어서 열리는 것</p>
+          <ul className="mt-2 flex flex-col gap-2">
+            {lock.items.slice(0, 3).map((it, i) => (
+              <li key={it.t}>
+                <button
+                  type="button"
+                  onClick={() => onLockClick(i + 1)}
+                  className="block w-full rounded-xl border border-gold-dim bg-ink px-4 py-2.5 text-left transition-colors active:border-burgundy/60"
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-[0.92rem] font-medium text-ivory">{it.t}</span>
+                    <span aria-hidden className="shrink-0 text-[0.78rem] text-burgundy">🔒 열기</span>
+                  </span>
+                  <span aria-hidden className="mt-0.5 block select-none text-[0.82rem] leading-[1.6] text-ivory-dim blur-[4px]">
+                    {it.ph}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {PAYMENTS_OPEN && (
+            <div ref={offerCtaRef} className="mt-5">
+              <p className="mb-2 text-center text-[0.84rem] text-ivory-dim">
+                {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
+                <b className="text-burgundy">{priceText}</b> · 1회 결제 · 정기결제 없음
+              </p>
+              {ctaButton("offer", mainLabel)}
+              <button
+                type="button"
+                onClick={() => scrollToPrice()}
+                className="mt-2 block w-full text-center text-[0.78rem] text-ivory-dim underline underline-offset-4"
+              >
+                구성·환불 기준 먼저 볼게요
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+
       {/* ---------- 03. 왜 이렇게 판단했는지 (입력한 사실 기반) ---------- */}
       <section className="mt-10 px-6">
         <div className="mx-auto max-w-[640px]">
@@ -784,44 +862,6 @@ export default function PreviewExperience({
         </div>
       </section>
 
-      {/* ---------- 05. 무료 미리보기 vs 전체 리추얼 구성 (10/16 지시문 6) ---------- */}
-      <section className="mt-12 px-6">
-        <div ref={offerRef} className="shadow-paper mx-auto max-w-[640px] rounded-2xl border border-gold-dim bg-ink-soft px-5 py-6">
-          <p className="font-display text-[1.25rem] font-bold leading-snug text-ivory">{lock.title}</p>
-          <p className="mt-2 text-[0.92rem] leading-[1.75] text-ivory-dim">{lock.desc}</p>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-[0.86rem] leading-[1.6]">
-            <div className="rounded-xl bg-ink px-3.5 py-3">
-              <p className="text-[0.78rem] font-semibold text-ivory-dim">무료 미리보기 · 지금 받음</p>
-              <ul className="mt-1.5 flex flex-col gap-1 text-ivory">
-                <li>· 사연에서 읽히는 현재 흐름</li>
-                <li>· 오늘 피할 행동</li>
-                <li>· 결과 일부</li>
-              </ul>
-            </div>
-            <div className="rounded-xl border border-burgundy/40 bg-[#f6e9ec] px-3.5 py-3">
-              <p className="text-[0.78rem] font-semibold text-burgundy">전체 리추얼 구성</p>
-              <ul className="mt-1.5 flex flex-col gap-1 text-ivory">
-                <li>· 관계 흐름·반복 패턴 상세 읽기</li>
-                <li>· 월화의 편지 · 나만의 리추얼</li>
-                <li>· 첫날·7일·21일 실천 가이드</li>
-                <li>· {ROLE_PAID[sit]}</li>
-              </ul>
-            </div>
-          </div>
-          <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">내 사연으로 이어서 열리는 것</p>
-          <ul className="mt-2 flex flex-col gap-2">
-            {lock.items.slice(0, 3).map((it) => (
-              <li key={it.t} className="rounded-xl border border-gold-dim bg-ink px-4 py-2.5">
-                <p className="text-[0.92rem] font-medium text-ivory">{it.t}</p>
-                <p aria-hidden className="mt-0.5 select-none text-[0.82rem] leading-[1.6] text-ivory-dim blur-[4px]">
-                  {it.ph}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
       {PAYMENTS_OPEN ? (
         <>
           {/* ---------- 06. 전체 분석 결과 예시 (가상 사연) ---------- */}
@@ -832,7 +872,8 @@ export default function PreviewExperience({
           </section>
 
           {/* ---------- 07. 가격 · 제공 방식 · 구매 버튼 ---------- */}
-          <section className="mt-6 px-6">
+          <section className="mt-6 scroll-mt-4 px-6">
+            <div ref={priceRef} aria-hidden />
             <div className="mx-auto max-w-[640px]">
               {!want && (
                 <div className="mb-3 overflow-hidden rounded-2xl border-2 border-burgundy bg-ink-soft">

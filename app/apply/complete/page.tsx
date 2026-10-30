@@ -380,6 +380,7 @@ export default async function CompletePage({
           </>
           )}
           <div className="mt-7">
+            <InAppBrowserNotice orderNumber={orderNumber} />
             <TossCheckout
               clientKey={clientKey}
               orderNumber={orderNumber}
@@ -388,7 +389,6 @@ export default async function CompletePage({
             />
           </div>
           {product === "book" && offerEnd && <OfferCountdown endsAt={offerEnd} after={regularPriceFor(product)} className="mt-3 text-center" />}
-          <InAppBrowserNotice orderNumber={orderNumber} />
 
           {/* 테스트 결제 단계 전용 — 실결제 전환 시 제거 (TestModeNotices.tsx 참고) */}
           <TestPaymentNotice />

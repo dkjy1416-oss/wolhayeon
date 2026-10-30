@@ -67,7 +67,7 @@ function deadlineText(endMs: number): string {
   }).format(new Date(endMs));
 }
 
-function buildEmail(name: string, openUrl: string, fromEmail: string, endMs: number) {
+function buildEmail(name: string, openUrl: string, fromEmail: string, endMs: number, pixelUrl = "") {
   const safeName = name.trim() || "당신";
   const esc = escapeHtml(safeName);
   const offer = FIRST_OFFER_PRICE_KRW.toLocaleString();
@@ -138,7 +138,7 @@ function buildEmail(name: string, openUrl: string, fromEmail: string, endMs: num
       더 받고 싶지 않으시면 이 메일(${escapeHtml(fromEmail)})에
       "수신거부"라고 회신해 주세요.
     </p>
-  </div></td></tr></table></body></html>`;
+  </div></td></tr></table>${pixelUrl ? `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;" />` : ""}</body></html>`;
 
   return { subject, text, html };
 }
@@ -224,10 +224,11 @@ export async function POST(request: Request) {
     }
     const openUrl = `${siteUrl}/api/remind/open?order=${encodeURIComponent(
       row.order_number
-    )}&t=${encodeURIComponent(token)}`;
+    )}&t=${encodeURIComponent(token)}&src=remind`;
+    const pixelUrl = `${siteUrl}/api/remind/px?order=${encodeURIComponent(row.order_number)}&t=${encodeURIComponent(token)}&src=remind`;
     /* 발송 직전 시각 기준 24시간 — 실제 기록(remind_sent_at)은 발송 직후라 안내한 마감보다 몇 초 늦게 끝나 손님에게 불리하지 않음 */
     const sendStart = Date.now();
-    const mail = buildEmail(row.applicant_name ?? "", openUrl, fromEmail!, sendStart + FIRST_OFFER_WINDOW_MS);
+    const mail = buildEmail(row.applicant_name ?? "", openUrl, fromEmail!, sendStart + FIRST_OFFER_WINDOW_MS, pixelUrl);
 
     try {
       const r = await resend.emails.send(

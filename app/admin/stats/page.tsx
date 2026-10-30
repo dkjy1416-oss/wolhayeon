@@ -161,6 +161,32 @@ export default async function AdminStatsPage() {
       ).length
     : 0;
 
+  /* 리마인드 열람·클릭 (10/30부터 기록 — 그 전에 보낸 메일은 열람 기록 없음) */
+  let remindOpened = 0;
+  let remindClicked = 0;
+  if (remindAvailable && reminded > 0) {
+    try {
+      const nums = real.filter((r) => r.remind_sent_at).map((r) => r.order_number);
+      const opened = new Set<string>();
+      const clicked = new Set<string>();
+      for (let i = 0; i < nums.length; i += 200) {
+        const ev = await supabase
+          .from("payment_events")
+          .select("order_number, event, code")
+          .in("order_number", nums.slice(i, i + 200))
+          .in("event", ["mail_open", "mail_click"])
+          .eq("code", "remind");
+        for (const e of (ev.data ?? []) as { order_number: string; event: string }[]) {
+          (e.event === "mail_open" ? opened : clicked).add(e.order_number);
+        }
+      }
+      remindOpened = opened.size;
+      remindClicked = clicked.size;
+    } catch {
+      /* 표시만 생략 */
+    }
+  }
+
   /* ---- CS 이용 (테이블이 아직 없으면 각 항목만 조용히 생략) ---- */
   const CS_TOPIC_LABELS: Record<string, string> = {
     refund: "환불",
@@ -423,8 +449,9 @@ export default async function AdminStatsPage() {
         {remindAvailable ? (
           <>
             <br />
-            리마인드 발송 <b>{reminded}</b>명 · 리마인드 후 결제{" "}
-            <b>{remindReturns}</b>건
+            리마인드 발송 <b>{reminded}</b>명 · 열람 <b>{remindOpened}</b>명 · 클릭{" "}
+            <b>{remindClicked}</b>명 · 리마인드 후 결제 <b>{remindReturns}</b>건
+            <span className="ml-1 text-[0.72rem] text-ivory-dim">(열람·클릭은 10/30 배포 이후 발송분부터)</span>
           </>
         ) : null}
       </div>
