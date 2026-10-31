@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { verifyChatToken } from "@/lib/chat/auth";
-import { getChatOrder } from "@/lib/chat/store";
+import { getChatOrder, listChatImages } from "@/lib/chat/store";
 import { CHAT_PRODUCTS } from "@/lib/chat/types";
 import ChatUpload from "@/components/chat/ChatUpload";
 import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
@@ -23,6 +23,7 @@ export default async function ChatOrderPage({
   if (!o) notFound();
   if (o.pay_status === "paid") redirect(`/chat/payment/success?orderId=${orderNumber}&paymentKey=${encodeURIComponent(o.payment_key ?? "")}&amount=${o.amount}`);
   const p = CHAT_PRODUCTS[o.product];
+  const imageCount = (await listChatImages(orderNumber)).length;
   return (
     <main className="paper min-h-[100svh] px-5 pb-28 pt-10">
       <div className="mx-auto max-w-[560px]">
@@ -36,7 +37,7 @@ export default async function ChatOrderPage({
           <ChatUpload
             orderNumber={orderNumber}
             token={t as string}
-            initialCount={o.image_count}
+            initialCount={imageCount}
             clientKey={process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim() || null}
             amount={o.amount}
             orderName={p.orderName}

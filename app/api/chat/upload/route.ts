@@ -5,7 +5,7 @@
  */
 import { NextResponse } from "next/server";
 import { verifyChatToken } from "@/lib/chat/auth";
-import { getChatOrder, updateChatOrder, uploadChatImage, deleteChatImages } from "@/lib/chat/store";
+import { getChatOrder, updateChatOrder, uploadChatImage, deleteChatImages, listChatImages } from "@/lib/chat/store";
 import { CHAT_MAX_IMAGES } from "@/lib/chat/types";
 
 export const dynamic = "force-dynamic";
@@ -21,12 +21,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "이미지 파일(4MB 이하)만 올릴 수 있어요." }, { status: 400 });
   const o = await getChatOrder(order);
   if (!o || o.pay_status !== "pending") return NextResponse.json({ ok: false, message: "이미 결제된 주문이에요." }, { status: 409 });
-  if (o.image_count >= CHAT_MAX_IMAGES)
+  /* 실제 저장된 파일 수 기준 (주문 JSON 값만 믿지 않음) */
+  const existing = (await listChatImages(order)).length;
+  if (existing >= CHAT_MAX_IMAGES)
     return NextResponse.json({ ok: false, message: `캡처는 최대 ${CHAT_MAX_IMAGES}장까지예요.` }, { status: 400 });
-  const idx = o.image_count + 1;
+  const idx = existing + 1;
   if (!(await uploadChatImage(order, idx, await file.arrayBuffer(), file.type)))
     return NextResponse.json({ ok: false, message: "업로드에 실패했어요. 다시 시도해 주세요." }, { status: 500 });
-  const saved = await updateChatOrder(order, (cur) => ({ ...cur, image_count: Math.max(cur.image_count, idx) }));
+  const saved = await updateChatOrder(order, (cur) => ({ ...cur, image_count: idx }));
   return NextResponse.json({ ok: true, count: saved?.image_count ?? idx });
 }
 

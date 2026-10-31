@@ -35,7 +35,7 @@ export async function saveChatOrder(o: ChatOrder): Promise<boolean> {
     .upload(`orders/${o.order_number}.json`, new Blob([JSON.stringify(o)], { type: "application/json" }), {
       upsert: true,
       contentType: "application/json",
-      cacheControl: "0",
+      cacheControl: "no-cache",
     });
   return !r.error;
 }
@@ -43,10 +43,14 @@ export async function saveChatOrder(o: ChatOrder): Promise<boolean> {
 export async function getChatOrder(orderNumber: string): Promise<ChatOrder | null> {
   if (!CHAT_ORDER_RE.test(orderNumber)) return null;
   await ensureBucket();
-  const r = await getSupabaseAdmin().storage.from(BUCKET).download(`orders/${orderNumber}.json`);
-  if (r.error || !r.data) return null;
+  /* Storage CDN 캐시 때문에 방금 고친 주문이 예전 값으로 읽히는 문제(10/31 실측: 업로드 1장 → 화면 0장) —
+     매번 새 서명 주소 + 캐시 무시로 읽는다 */
+  const sign = await getSupabaseAdmin().storage.from(BUCKET).createSignedUrl(`orders/${orderNumber}.json`, 60);
+  if (sign.error || !sign.data?.signedUrl) return null;
   try {
-    return JSON.parse(await r.data.text()) as ChatOrder;
+    const res = await fetch(`${sign.data.signedUrl}&cb=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as ChatOrder;
   } catch {
     return null;
   }
