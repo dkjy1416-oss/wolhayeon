@@ -66,40 +66,35 @@ export async function getOrderAttributions(
   try {
     const sb = getSupabaseAdmin();
     const nums = orders.map((o) => o.order_number);
-    const link = await sb
-      .from("site_events")
-      .select("visitor_id, order_number, created_at")
-      .in("order_number", nums)
-      .order("created_at", { ascending: true })
-      .limit(5000);
-    if (link.error || !link.data) return out;
+    /* Supabase 는 한 번에 최대 1,000행만 돌려준다 → 주문 20개씩 나눠서 조회 (10/31 수정: 최근 주문이 잘려 '유입 없음'으로 보이던 문제) */
+    const chunks = <T,>(arr: T[], n: number) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
     const vidByOrder = new Map<string, string>();
-    for (const r of link.data as { visitor_id: string; order_number: string }[]) {
-      if (!vidByOrder.has(r.order_number)) vidByOrder.set(r.order_number, r.visitor_id);
+    const linkRes = await Promise.all(
+      chunks(nums, 20).map((c) =>
+        sb.from("site_events").select("visitor_id, order_number, created_at").in("order_number", c).order("created_at", { ascending: true }).limit(1000)
+      )
+    );
+    for (const link of linkRes) {
+      for (const r of (link.data ?? []) as { visitor_id: string; order_number: string }[]) {
+        if (!vidByOrder.has(r.order_number)) vidByOrder.set(r.order_number, r.visitor_id);
+      }
     }
     const vids = [...new Set(vidByOrder.values())];
     if (vids.length === 0) return out;
 
     const evByVid = new Map<string, EvRow[]>();
-    for (let i = 0; i < vids.length; i += 100) {
-      const chunk = vids.slice(i, i + 100);
-      let res = await sb
-        .from("site_events")
-        .select(COLS_WITH_CONTENT)
-        .in("visitor_id", chunk)
-        .order("created_at", { ascending: true })
-        .limit(20000);
-      /* utm_content 열이 아직 없으면 열 없이 다시 */
-      if (res.error) {
-        res = (await sb
-          .from("site_events")
-          .select(COLS)
-          .in("visitor_id", chunk)
-          .order("created_at", { ascending: true })
-          .limit(20000)) as typeof res;
-      }
-      if (res.error || !res.data) continue;
-      for (const e of res.data as EvRow[]) {
+    const evRes = await Promise.all(
+      chunks(vids, 10).map(async (chunk) => {
+        let res = await sb.from("site_events").select(COLS_WITH_CONTENT).in("visitor_id", chunk).order("created_at", { ascending: true }).limit(1000);
+        /* utm_content 열이 아직 없으면 열 없이 다시 */
+        if (res.error) {
+          res = (await sb.from("site_events").select(COLS).in("visitor_id", chunk).order("created_at", { ascending: true }).limit(1000)) as typeof res;
+        }
+        return res;
+      })
+    );
+    for (const res of evRes) {
+      for (const e of (res.data ?? []) as EvRow[]) {
         const arr = evByVid.get(e.visitor_id) ?? [];
         arr.push(e);
         evByVid.set(e.visitor_id, arr);
