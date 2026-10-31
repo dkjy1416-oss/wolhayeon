@@ -10,8 +10,20 @@ import Link from "next/link";
 import { CHAT_QUESTIONS, CHAT_LOCKED_ITEMS, freeChatType } from "@/lib/chat/questions";
 import { CHAT_PRICE_KRW, CHAT_BUNDLE_PRICE_KRW, type ChatProduct } from "@/lib/chat/types";
 import { sendSiteEvent } from "@/lib/site-track";
+import ChatLanding from "@/components/chat/ChatLanding";
+import ChatFileFlow, { StatsPreview, type FileReady } from "@/components/chat/ChatFileFlow";
+import { transcript } from "@/lib/chat/kakao-parse";
 
-type Step = "intro" | "quiz" | "free" | "form";
+type Step = "intro" | "file" | "quiz" | "free" | "form";
+
+const FILE_LOCKED = [
+  "그 사람은 지금 나를 어떻게 생각할까 — 숫자 뒤의 해석",
+  "우리 관계는 어디로 흘러갈까 — 만남·약속 얘기의 흐름",
+  "말하지 않고 숨기는 마음 — 말과 행동의 온도차",
+  "대화가 달라진 날, 그날 무슨 말이 오갔는지",
+  "지금 보내면 안 되는 문장",
+  "다음에 보낼 메시지 3개와 예상 반응 · 1~2주 계획",
+];
 
 function readUtm(): Record<string, string> {
   try {
@@ -35,6 +47,8 @@ const won = (n: number) => `${n.toLocaleString()}원`;
 export default function ChatFunnel() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("intro");
+  const [mode, setMode] = useState<"file" | "quiz">("file");
+  const [fileData, setFileData] = useState<FileReady | null>(null);
   const [qi, setQi] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [product, setProduct] = useState<ChatProduct>("chat");
@@ -48,7 +62,7 @@ export default function ChatFunnel() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const free = useMemo(() => (step === "free" || step === "form" ? freeChatType(answers) : null), [step, answers]);
+  const free = useMemo(() => (mode === "quiz" && (step === "free" || step === "form") ? freeChatType(answers) : null), [mode, step, answers]);
   const thisYear = new Date().getFullYear();
   const age = birthYear ? thisYear - Number(birthYear) - 1 : null;
   const minor = age !== null && age < 19;
@@ -76,10 +90,26 @@ export default function ChatFunnel() {
       const r = await fetch("/api/chat/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers, name, email, birthYear: Number(birthYear), guardianOk, marketingOk, product, partnerLabel, mySide: "right", utm: readUtm() }),
+        body: JSON.stringify({
+          answers: mode === "quiz" ? answers : {},
+          source: mode === "file" ? "file" : "images",
+          stats: fileData ? { ...fileData.stats, meName: "", partnerName: "" } : null,
+          name, email, birthYear: Number(birthYear), guardianOk, marketingOk, product, partnerLabel, mySide: "right", utm: readUtm(),
+        }),
       });
       const j = (await r.json()) as { ok: boolean; orderNumber?: string; token?: string; message?: string };
       if (!j.ok || !j.orderNumber) throw new Error(j.message ?? "잠시 후 다시 시도해 주세요.");
+      if (mode === "file" && fileData) {
+        /* 결제 화면으로 가기 전에 대화 원문 저장 — 상대 이름은 호칭으로 바꿔서 보냄 */
+        const text = transcript(fileData.msgs, fileData.meName, fileData.partnerName, partnerLabel.trim() || "그 사람");
+        const u = await fetch("/api/chat/upload-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: j.orderNumber, t: j.token, text }),
+        });
+        const uj = (await u.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+        if (!uj.ok) throw new Error(uj.message ?? "대화 저장에 실패했어요. 다시 시도해 주세요.");
+      }
       sendSiteEvent("apply_complete", { order: "" });
       router.push(`/chat/order/${j.orderNumber}?t=${encodeURIComponent(j.token ?? "")}`);
     } catch (e) {
@@ -94,38 +124,34 @@ export default function ChatFunnel() {
 
   if (step === "intro")
     return (
-      <div className="mx-auto max-w-[560px] px-5 pb-24 pt-24">
-        <p className="text-[0.74rem] tracking-[0.2em] text-gold">月下緣 · 카톡 대화 분석</p>
-        <h1 className="font-display mt-3 text-[1.9rem] font-bold leading-[1.35] text-ivory">
-          그 사람 카톡,
-          <br />
-          캡처만 올리세요.
-        </h1>
-        <p className="mt-4 text-[0.95rem] leading-[1.85] text-ivory-dim">
-          대화 온도, 답장이 식기 시작한 지점, 지금 보내면 안 되는 말, 다음에 보낼 메시지까지.
-          실제 대화를 근거로 정리해 드려요.
-        </p>
-        <ul className="mt-6 grid grid-cols-3 gap-2 text-center text-[0.76rem] leading-[1.5] text-ivory">
-          <li className="rounded-xl border border-gold-dim/40 bg-ink-soft px-2 py-3">질문 10개<span className="block text-ivory-dim">1분 · 무료</span></li>
-          <li className="rounded-xl border border-gold-dim/40 bg-ink-soft px-2 py-3">캡처 1~10장<span className="block text-ivory-dim">분석 후 삭제</span></li>
-          <li className="rounded-xl border border-gold-dim/40 bg-ink-soft px-2 py-3">1회 결제<span className="block text-ivory-dim">구독 없음</span></li>
-        </ul>
-        <button type="button" className={`${btn} mt-7`} onClick={() => setStep("quiz")}>
-          무료로 대화 유형 보기
-        </button>
-        <div className={`${card} mt-8 text-[0.84rem] leading-[1.8] text-ivory-dim`}>
-          <p className="font-semibold text-ivory">개인정보는 이렇게 다뤄요</p>
-          <ul className="mt-1.5 flex flex-col gap-1">
-            <li>· 올린 캡처는 분석이 끝나면 바로 삭제해요. 결제하지 않으면 48시간 안에 삭제돼요.</li>
-            <li>· 결과에는 상대의 실명을 쓰지 않고, 정해 주신 호칭만 써요.</li>
-            <li>· 대화 내용은 AI 학습이나 다른 용도로 쓰지 않아요.</li>
-            <li>· 상대 이름·프로필 사진은 가리고 올려도 분석돼요.</li>
-          </ul>
-        </div>
-        <p className="mt-6 text-center text-[0.8rem] text-ivory-dim">
-          카톡 없이 사연으로 보고 싶다면 <Link href="/apply" className="underline underline-offset-4">재회 분석</Link>
-        </p>
-      </div>
+      <ChatLanding
+        onFile={() => {
+          setMode("file");
+          setStep("file");
+          window.scrollTo({ top: 0 });
+        }}
+        onQuiz={() => {
+          setMode("quiz");
+          setStep("quiz");
+          window.scrollTo({ top: 0 });
+        }}
+      />
+    );
+
+  if (step === "file")
+    return (
+      <ChatFileFlow
+        onReady={(r) => {
+          setFileData(r);
+          setStep("free");
+          sendSiteEvent("preview_view", { order: "" });
+          window.scrollTo({ top: 0 });
+        }}
+        onQuiz={() => {
+          setMode("quiz");
+          setStep("quiz");
+        }}
+      />
     );
 
   if (step === "quiz") {
@@ -162,6 +188,20 @@ export default function ChatFunnel() {
 
   return (
     <div className="mx-auto max-w-[560px] px-5 pb-28 pt-24">
+      {mode === "file" && fileData && (
+        <>
+          <StatsPreview s={fileData.stats} partnerLabel={partnerLabel.trim() || "그 사람"} />
+          <div className={`${card} mt-4`}>
+            <p className="text-[0.8rem] font-semibold text-gold">해석 리포트에서 이어서 열리는 것</p>
+            <ul className="mt-2 flex flex-col gap-1.5 text-[0.9rem] text-ivory">
+              {FILE_LOCKED.map((t) => (
+                <li key={t}>🔒 {t}</li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[0.78rem] leading-[1.7] text-ivory-dim">월화가 대화 전체를 읽고, 위 숫자가 왜 그렇게 나왔는지 실제 대화를 근거로 풀어 드려요.</p>
+          </div>
+        </>
+      )}
       {free && (
         <>
           <p className="text-[0.74rem] tracking-[0.2em] text-gold">무료 결과 · 대화 유형</p>
@@ -195,7 +235,7 @@ export default function ChatFunnel() {
 
       <div className="mt-8 flex flex-col gap-2.5">
         {([
-          ["chat", "카톡 대화 분석", CHAT_PRICE_KRW, "캡처 최대 10장 · 결과 + 다음 메시지 예시 3개"],
+          ["chat", "카톡 대화 분석", CHAT_PRICE_KRW, mode === "file" ? "대화 전체 해석 리포트 + 다음 메시지 예시 3개" : "캡처 최대 10장 · 결과 + 다음 메시지 예시 3개"],
           ["chat_bundle", "카톡 분석 + 재회 분석 패키지", CHAT_BUNDLE_PRICE_KRW, "사연으로 보는 재회 분석(편지·리추얼·21일 가이드)까지"],
         ] as const).map(([k, t, p, d]) => (
           <button
@@ -216,7 +256,7 @@ export default function ChatFunnel() {
 
       {step === "free" ? (
         <button type="button" className={`${btn} mt-6`} onClick={() => setStep("form")}>
-          캡처 올리고 분석받기
+          {mode === "file" ? "해석 리포트 받기" : "캡처 올리고 분석받기"}
         </button>
       ) : (
         <div className={`${card} mt-6 flex flex-col gap-3`}>
@@ -253,7 +293,7 @@ export default function ChatFunnel() {
           <label className="flex gap-2 text-[0.82rem] leading-[1.7] text-ivory">
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1 shrink-0" />
             <span className="min-w-0">
-              캡처는 분석에만 쓰이고 분석 직후 삭제되는 것, 결과는 대화 패턴을 바탕으로 한 참고 의견이라는 것에 동의해요. (
+              올린 대화(파일·캡처)는 분석에만 쓰이고 분석 직후 삭제되는 것, 결과는 대화 패턴을 바탕으로 한 참고 의견이라는 것에 동의해요. (
               <Link href="/privacy" className="underline">개인정보처리방침</Link> · <Link href="/refund" className="underline">환불정책</Link>)
             </span>
           </label>
@@ -263,7 +303,7 @@ export default function ChatFunnel() {
           </label>
           {err && <p className="text-[0.84rem] text-thread">{err}</p>}
           <button type="button" className={btn} disabled={busy || under14} onClick={submit}>
-            {busy ? "준비하는 중…" : "다음: 캡처 올리기"}
+            {busy ? "준비하는 중…" : mode === "file" ? "다음: 결제하기" : "다음: 캡처 올리기"}
           </button>
         </div>
       )}

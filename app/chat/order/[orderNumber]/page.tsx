@@ -38,6 +38,7 @@ export default async function ChatOrderPage({
             orderNumber={orderNumber}
             token={t as string}
             initialCount={imageCount}
+            fileReady={o.source === "file"}
             clientKey={process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim() || null}
             amount={o.amount}
             orderName={p.orderName}

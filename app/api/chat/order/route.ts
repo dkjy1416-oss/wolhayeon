@@ -24,7 +24,8 @@ export async function POST(request: Request) {
     const v = raw[q.id];
     if (typeof v === "string" && q.options.some((o) => o.v === v)) answers[q.id] = v;
   }
-  if (Object.keys(answers).length < CHAT_QUESTIONS.length)
+  const source: "file" | "images" = b.source === "file" ? "file" : "images";
+  if (source === "images" && Object.keys(answers).length < CHAT_QUESTIONS.length)
     return NextResponse.json({ ok: false, message: "질문에 모두 답해 주세요." }, { status: 400 });
 
   const email = clip(b.email, 120).toLowerCase();
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     my_side: b.mySide === "left" ? "left" : "right",
     partner_label: clip(b.partnerLabel, 12) || "그 사람",
     answers,
-    free_type: freeChatType(answers).key,
+    free_type: source === "file" ? "file" : freeChatType(answers).key,
     image_count: 0,
     pay_status: "pending",
     payment_key: null,
@@ -76,6 +77,8 @@ export async function POST(request: Request) {
     email_sent_at: null,
     bundle_redeemed_order: null,
     utm: Object.keys(utm).length ? utm : null,
+    source,
+    stats: source === "file" && b.stats && typeof b.stats === "object" && JSON.stringify(b.stats).length < 8000 ? (b.stats as Record<string, unknown>) : null,
   };
   if (!(await saveChatOrder(order)))
     return NextResponse.json({ ok: false, message: "저장 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });

@@ -71,4 +71,8 @@ export interface ChatOrder {
   email_sent_at: string | null;
   bundle_redeemed_order: string | null; // 패키지: 재회 분석에 쓴 WH 주문번호
   utm: Record<string, string> | null;
+  /** 10/31: file = 대화 내보내기 파일(숫자 분석 포함), images = 캡처 */
+  source?: "file" | "images";
+  /** 파일 분석 숫자 (이름 제외) */
+  stats?: Record<string, unknown> | null;
 }

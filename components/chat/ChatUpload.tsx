@@ -25,8 +25,10 @@ export default function ChatUpload(props: {
   clientKey: string | null;
   amount: number;
   orderName: string;
+  /** 대화 파일로 준비된 주문이면 캡처 업로드 없이 바로 결제 */
+  fileReady?: boolean;
 }) {
-  const [count, setCount] = useState(props.initialCount);
+  const [count, setCount] = useState(props.fileReady ? 1 : props.initialCount);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -65,6 +67,12 @@ export default function ChatUpload(props: {
 
   return (
     <div>
+      {props.fileReady ? (
+        <div className="rounded-2xl border border-gold-dim bg-ink-soft px-5 py-5">
+          <p className="text-[0.95rem] font-semibold text-ivory">1. 대화 파일 준비 완료 ✓</p>
+          <p className="mt-1 text-[0.84rem] leading-[1.7] text-ivory-dim">상대 이름은 호칭으로 바꿔서 저장했어요. 리포트가 완성되면 원문은 바로 삭제돼요.</p>
+        </div>
+      ) : (
       <div className="rounded-2xl border border-gold-dim bg-ink-soft px-5 py-5">
         <p className="text-[0.95rem] font-semibold text-ivory">1. 카톡 캡처 올리기</p>
         <ul className="mt-2 flex flex-col gap-1 text-[0.82rem] leading-[1.7] text-ivory-dim">
@@ -86,6 +94,7 @@ export default function ChatUpload(props: {
         </p>
         {err && <p className="mt-2 text-center text-[0.82rem] text-thread">{err}</p>}
       </div>
+      )}
 
       <div className={`mt-5 rounded-2xl border border-gold-dim bg-ink-soft px-5 py-5 ${count ? "" : "opacity-50"}`}>
         <p className="text-[0.95rem] font-semibold text-ivory">2. 결제하고 분석 받기</p>

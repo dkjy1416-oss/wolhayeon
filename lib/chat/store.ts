@@ -93,11 +93,35 @@ export async function uploadChatImage(orderNumber: string, idx: number, data: Ar
   return !r.error;
 }
 
-export async function listChatImages(orderNumber: string): Promise<string[]> {
+async function listUploads(orderNumber: string): Promise<string[]> {
   await ensureBucket();
   const l = await getSupabaseAdmin().storage.from(BUCKET).list(`uploads/${orderNumber}`, { limit: 50 });
   if (l.error || !l.data) return [];
   return l.data.map((f) => `uploads/${orderNumber}/${f.name}`).sort();
+}
+
+export async function listChatImages(orderNumber: string): Promise<string[]> {
+  return (await listUploads(orderNumber)).filter((p) => /\.(jpe?g|png|webp)$/.test(p));
+}
+
+/** 대화 내보내기 파일에서 만든 대화 원문 (상대 이름은 호칭으로 바뀐 상태) */
+export async function saveChatText(orderNumber: string, text: string): Promise<boolean> {
+  await ensureBucket();
+  const r = await getSupabaseAdmin()
+    .storage.from(BUCKET)
+    .upload(`uploads/${orderNumber}/chat.txt`, new Blob([text], { type: "text/plain;charset=utf-8" }), { upsert: true, contentType: "text/plain;charset=utf-8", cacheControl: "no-cache" });
+  return !r.error;
+}
+
+export async function getChatText(orderNumber: string): Promise<string | null> {
+  const sign = await getSupabaseAdmin().storage.from(BUCKET).createSignedUrl(`uploads/${orderNumber}/chat.txt`, 60);
+  if (sign.error || !sign.data?.signedUrl) return null;
+  try {
+    const res = await fetch(`${sign.data.signedUrl}&cb=${Date.now()}`, { cache: "no-store" });
+    return res.ok ? await res.text() : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function downloadChatImage(path: string): Promise<{ data: string; type: string } | null> {
@@ -109,7 +133,7 @@ export async function downloadChatImage(path: string): Promise<{ data: string; t
 }
 
 export async function deleteChatImages(orderNumber: string): Promise<void> {
-  const paths = await listChatImages(orderNumber);
+  const paths = await listUploads(orderNumber); // 캡처 + 대화 원문 모두
   if (paths.length) await getSupabaseAdmin().storage.from(BUCKET).remove(paths);
 }
 

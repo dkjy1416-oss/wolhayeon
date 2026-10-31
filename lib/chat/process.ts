@@ -6,7 +6,7 @@ import { Resend } from "resend";
 import { confirmTossPayment, getTossPayment } from "@/lib/toss";
 import { sendOpsAlert } from "@/lib/ops-alert";
 import { sanitizeSiteUrl } from "@/lib/delivery-rules";
-import { analyzeChat } from "@/lib/chat/analyze";
+import { analyzeChat, analyzeChatText } from "@/lib/chat/analyze";
 import { chatToken } from "@/lib/chat/auth";
 import {
   getChatOrder,
@@ -14,6 +14,7 @@ import {
   listChatImages,
   downloadChatImage,
   deleteChatImages,
+  getChatText,
 } from "@/lib/chat/store";
 import { CHAT_ORDER_RE, CHAT_PRODUCTS, type ChatOrder } from "@/lib/chat/types";
 
@@ -109,17 +110,18 @@ export async function processChatOrder(orderNumber: string): Promise<ChatProcess
   );
   if (!claimed || claimed.gen_status !== "generating") return { status: "processing" };
 
-  const paths = await listChatImages(orderNumber);
+  const text = await getChatText(orderNumber);
+  const paths = text ? [] : await listChatImages(orderNumber);
   const images = (await Promise.all(paths.slice(0, 10).map(downloadChatImage))).filter(
     (x): x is { data: string; type: string } => !!x
   );
-  const result = await analyzeChat(claimed, images);
+  const result = text ? await analyzeChatText(claimed, text) : await analyzeChat(claimed, images);
   if (!result) {
     await updateChatOrder(orderNumber, (cur) => ({ ...cur, gen_status: "failed" }));
     await sendOpsAlert("generation_failed", {
       orderNumber,
-      code: images.length ? "chat_ai_failed" : "chat_no_images",
-      detail: images.length ? "카톡 분석 생성 실패 — 다시 시도 필요" : "결제됐지만 캡처가 없습니다. 손님에게 캡처 재업로드 안내가 필요합니다.",
+      code: images.length || text ? "chat_ai_failed" : "chat_no_images",
+      detail: images.length || text ? "카톡 분석 생성 실패 — 다시 시도 필요" : "결제됐지만 캡처가 없습니다. 손님에게 캡처 재업로드 안내가 필요합니다.",
     });
     return { status: "failed" };
   }
