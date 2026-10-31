@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
+import AutoFx from "@/components/fx/AutoFx";
 import Footer from "@/components/Footer";
 import { getPublicReviews } from "@/lib/reviews";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
@@ -25,7 +26,8 @@ export default async function Home() {
   const reviews = await getPublicReviews(8);
   return (
     <div className="min-h-screen bg-[#0a0809]">
-      <div className="relative mx-auto min-h-screen w-full max-w-[480px] bg-[#120e10] shadow-[0_0_80px_rgba(0,0,0,0.8)]">
+      <div data-fx-root className="relative mx-auto min-h-screen w-full max-w-[480px] bg-[#120e10] shadow-[0_0_80px_rgba(0,0,0,0.8)]">
+        <AutoFx />
         <Header ctaLabel="무료 미리보기" />
         <main>
           <Hook />

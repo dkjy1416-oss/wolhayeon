@@ -15,7 +15,7 @@ export function Cta({ placement, label = "내 사연으로 무료 미리보기",
         event="home_cta_click"
         placement={placement}
         href="/apply"
-        className="cta-glow flex h-[3.6rem] w-full items-center justify-center rounded-full bg-gradient-to-b from-[#a83a57] to-burgundy-deep text-[1.05rem] font-bold text-[#fbf7f2] shadow-[0_8px_28px_rgba(168,58,87,0.45)]"
+        className="cta-glow fx-sheen flex h-[3.6rem] w-full items-center justify-center rounded-full bg-gradient-to-b from-[#a83a57] to-burgundy-deep text-[1.05rem] font-bold text-[#fbf7f2] shadow-[0_8px_28px_rgba(168,58,87,0.45)]"
       >
         {label}
       </TrackedCtaLink>
@@ -63,10 +63,10 @@ export function Phone({ children, tilt = "" }: { children: React.ReactNode; tilt
 
 /** 큰 제목 (한 화면 한 문장) */
 export function Big({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <h2 className={`whitespace-pre-line text-center text-[1.65rem] font-extrabold leading-[1.42] tracking-[-0.02em] text-ivory ${className}`}>{children}</h2>;
+  return <h2 className={`font-display whitespace-pre-line text-center text-[1.8rem] font-black leading-[1.36] text-ivory ${className}`}>{children}</h2>;
 }
 
 /** 강조 글자 (분홍빛 버건디) */
 export function Hl({ children }: { children: React.ReactNode }) {
-  return <span className="text-[#e46b8a]">{children}</span>;
+  return <span className="fx-rose">{children}</span>;
 }
