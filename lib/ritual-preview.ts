@@ -45,6 +45,7 @@ import type { RitualOrderRow } from "@/lib/supabase/types";
 import {
   BREAKUP_ELAPSED_OPTIONS,
   LAST_CONVERSATION_OPTIONS,
+  RELATIONSHIP_DURATION_OPTIONS,
   optionLabel,
 } from "@/lib/ritual-types";
 import { HIGH_RISK_SAFETY_VALUES, BLOCKED_CONTACT_VALUES } from "@/lib/wolhwa-prompt";
@@ -171,6 +172,13 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
   );
 
   const memory = clip(order.last_conversation_memory, 40);
+  /* 10/31: API 없이도 손님이 쓴 답을 빠짐없이 반영 — 직접 쓴 사연 첫 문장·바라는 한 문장·관계 기간 */
+  const storyFirst = clip(((order.story ?? "").split(/(?<=[.!?。…])\s+|\n/)[0] ?? "").replace(/["“”]/g, "").replace(/[.!?。…]+$/, ""), 38);
+  const wishSent = clip((order.wish_sentence ?? "").replace(/["“”]/g, ""), 40);
+  const durationLabel =
+    order.relationship_duration && order.relationship_duration !== "never_official"
+      ? optionLabel(RELATIONSHIP_DURATION_OPTIONS, order.relationship_duration)
+      : "";
 
   const line1 = sentence(
     `${name}님, 지금 ${partner}님을 향한 이 마음이 얼마나 큰지부터 알아요. ${breakup}${emotion} ${pain}이 하루를 채우고 있을 거예요.`
@@ -201,6 +209,11 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
         `특히 마지막 대화에서 마음에 남은 “${memory}” 때문에, 끝난 장면을 마음속에서 계속 다시 확인하고 있을 수 있어요.`,
         195
       )
+    : storyFirst
+    ? sentence(
+        `“${storyFirst}”라고 적어 주신 그 장면이, 지금도 ${name}님의 하루 가운데에 머물러 있는 것 같아요.`,
+        195
+      )
     : sentence(
         `${contact} 마지막 대화가 ${lastTalk}였다는 점까지 놓고 보면, 지금은 답을 서두르기보다 두 사람 사이의 거리와 반복을 먼저 봐야 해요.`,
         195
@@ -208,6 +221,11 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
   const letter3 = highRisk
     ? sentence(
         `그래서 전체 결과에서는 상대의 반응보다 ${name}님의 안전과 경계를 먼저 지키는 방향에서 다음 선택을 이어서 볼게요.`,
+        195
+      )
+    : wishSent
+    ? sentence(
+        `“${wishSent}”라는 바람을 그냥 지나치지 않을게요. 전체 결과에서는 ${wish}부터 ${name}님의 실제 상황에 맞춰 이어서 볼게요.`,
         195
       )
     : sentence(
@@ -247,11 +265,23 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
       text: `두 사람 모두 연락을 막아 둔 상태예요. 감정이 크게 부딪힌 뒤 서로를 지키려고 거리를 만든 경우가 많아요. 지금은 이 거리를 억지로 좁히기보다, 각자 가라앉을 시간이 필요한 구간이에요.`,
     },
   };
-  const state =
+  /* 관계 유형별 한 문장 — 헤어진 연인이 아닌 경우 같은 연락 상태라도 읽는 법이 다르다 */
+  const REL_NOTE: Record<string, string> = {
+    current_lover: ` 지금은 헤어진 게 아니라 함께인 관계라서, 서운함을 쌓아 두기보다 말하는 순서를 바꾸는 게 핵심이에요.`,
+    getting_to_know: ` 아직 관계의 이름이 정해지기 전이라, 마음을 확인받기보다 편안함을 쌓는 쪽이 다음 걸음을 만들어요.`,
+    one_sided: ` 짝사랑은 상대의 작은 반응에 의미를 크게 싣기 쉬워요. 지금은 내 마음의 속도와 상대의 속도를 구분해 보는 게 먼저예요.`,
+    ambiguous: ` 애매한 사이는 정의를 서두를수록 오히려 멀어지기 쉬워요. 지금의 거리에서 무엇이 편안했는지부터 봐야 해요.`,
+    lost_contact: ` 연락이 끊긴 관계는 다시 닿는 첫 문장의 무게가 커요. 오랜 공백을 부담 없이 넘는 방식이 필요해요.`,
+  };
+  const relNote = REL_NOTE[order.relationship_type] ?? "";
+  const baseState =
     STATE[order.contact_status] ?? {
       label: "연락의 거리가 아직 분명하지 않은 상태",
       text: `지금 두 사람 사이의 연락 상태가 분명하지 않아요. 이럴 때는 상대의 작은 반응 하나에 하루가 흔들리기 쉬워요. 먼저 지금의 거리를 있는 그대로 보는 것부터 시작해요.`,
     };
+  const baseText =
+    order.relationship_type === "ex_lover" ? baseState.text : baseState.text.replace("이별을 소화하는", "마음을 정리하는");
+  const state = { label: baseState.label, text: `${baseText}${relNote}` };
 
   const MODES: Record<string, RitualPreview["partner_reading"]["modes"]> = {
     in_contact: ["익숙함", "미련"],
@@ -365,9 +395,10 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
   const talkFact =
     order.last_conversation === "never_personal"
       ? "아직 개인적인 대화는 나눈 적이 없고"
-      : `마지막 대화가 ${lastTalk}였고`;
+      : `마지막 대화 시점은 ‘${lastTalk}’이고`;
+  const durationFact = durationLabel ? `${durationLabel} 함께한 사이이고, ` : "";
   const reasons = [
-    sentence(`${elapsedFact}${talkFact} ${contactFact}.`, 165),
+    sentence(`${durationFact}${elapsedFact}${talkFact} ${contactFact}.`, 165),
     boundary
       ? sentence(`지금 ${partner}님 쪽은 대화를 이어갈 여유보다 거리를 지키려는 마음이 더 커 보여요.`, 165)
       : sentence(`이 흐름은 마음이 완전히 사라졌다기보다, 대화를 다시 시작하는 것 자체에 부담을 느끼는 쪽에 가까워요.`, 165),
@@ -594,10 +625,14 @@ export async function getOrCreatePreview(
     /* AI 미리보기 우선 — 실패/초과 시 즉석 템플릿으로 자동 대체.
        템플릿 폴백은 저장하지 않는다: 저장하면 그 주문은 영원히 템플릿에
        갇히므로, 폴백은 화면만 채우고 다음 방문에서 AI를 다시 시도한다. */
-    const ai = await buildAiPreview(order);
+    /* 10/31: 미리보기 API 비용 절감 — PREVIEW_MODE=template(기본)이면 API 없이 즉석 분석으로 만들고 저장.
+       PREVIEW_MODE=ai 로 바꾸면 예전처럼 AI 미리보기 (모델은 PREVIEW_ANTHROPIC_MODEL, 예: claude-haiku-4-5 로 비용 절감 가능).
+       유료 전체 결과 생성은 이 설정과 무관하게 그대로 AI 를 쓴다. */
+    const useAi = (process.env.PREVIEW_MODE ?? "template").trim().toLowerCase() === "ai";
+    const ai = useAi ? await buildAiPreview(order) : null;
     const preview = ai ?? buildInstantPreview(order);
 
-    if (ai) {
+    if (ai || !useAi) {
       const save = await supabase
         .from("ritual_orders")
         .update({
@@ -619,7 +654,7 @@ export async function getOrCreatePreview(
           paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), offerAnchor(order)),
           offerEndsAt: offerEndsFor(order),
       situation: previewSituation(order, preview.now_plan.stance),
-      generated: ai !== null,
+      generated: ai !== null || !useAi,
     };
   } catch (e) {
     console.error(
