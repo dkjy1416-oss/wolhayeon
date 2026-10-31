@@ -17,8 +17,9 @@ import { Cta, Phone } from "./parts";
 function PointHead({ n, title, sub }: { n: number; title: React.ReactNode; sub?: React.ReactNode }) {
   return (
     <div className="px-5 text-center">
-      <span className="inline-block rounded-full border border-[#a83a57] px-3 py-0.5 text-[0.8rem] font-bold text-[#a83a57]">POINT {n}.</span>
-      <h2 className="mt-3 text-[1.55rem] font-extrabold leading-[1.42] tracking-[-0.02em] text-[#2a2326]">{title}</h2>
+      <span className="font-display block text-[0.78rem] font-bold tracking-[0.35em] text-[#a83a57]">POINT</span>
+      <span className="font-display block bg-gradient-to-b from-[#a83a57] to-[#e8b04a] bg-clip-text text-[3.2rem] font-black leading-none text-transparent">{String(n).padStart(2, "0")}</span>
+      <h2 className="font-display mt-3 text-[1.7rem] font-black leading-[1.38] text-[#2a2326]">{title}</h2>
       {sub && <p className="mt-3 text-[0.95rem] leading-[1.75] text-[#6a5f61]">{sub}</p>}
     </div>
   );

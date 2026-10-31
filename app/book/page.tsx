@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import AutoFx from "@/components/fx/AutoFx";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -373,7 +374,8 @@ export default async function BookPage({
 
   return (
     <div className="min-h-screen bg-[#080607]">
-      <div className="relative mx-auto min-h-screen w-full max-w-[500px] overflow-hidden bg-ink shadow-[0_0_80px_rgba(0,0,0,0.8)]">
+      <div data-fx-root className="fx-grain relative mx-auto min-h-screen w-full max-w-[500px] overflow-hidden bg-ink shadow-[0_0_80px_rgba(0,0,0,0.8)]">
+        <AutoFx />
         <Header ctaHref="#pick" ctaLabel="내 책 받기" />
         <main className="pb-20">
           <ResumeOrder hasOrderParam={!!orderNumber} />
@@ -394,7 +396,7 @@ export default async function BookPage({
           </section>
           <section className="relative -mt-24 px-6 pb-12 text-center">
             <p className="text-[0.86rem] text-gold">보내기 직전의 당신을, 한 번만 붙잡아 줄 책</p>
-            <h1 className="font-display mt-2 text-[2rem] leading-[1.4] text-ivory">
+            <h1 className="font-display fx-shine mt-2 text-[2.2rem] font-black leading-[1.32]">
               헤어진 뒤,
               <br />
               연락하지 말아야 할 때
@@ -439,7 +441,7 @@ export default async function BookPage({
           {/* ===== 0-1. 지금 내 상황 고르기 ===== */}
           <section className="border-t border-gold-dim/10 px-6 py-12">
             <p className="text-center text-[0.72rem] tracking-[0.3em] text-gold/80">지금 내 상황 고르기</p>
-            <h2 className="font-display mt-2 text-center text-[1.4rem] leading-[1.55] text-ivory">
+            <h2 className="font-display mt-2 font-bold text-center text-[1.4rem] leading-[1.55] text-ivory">
               지금 당신은
               <br />
               <span className="text-gold">어떤 상황인가요?</span>
@@ -459,7 +461,7 @@ export default async function BookPage({
           {/* ===== 1. 이런 장면, 당신 얘기죠? (릴스 + 실제 본문) ===== */}
           <section className="border-t border-gold-dim/10 pt-14">
             <p className="px-6 text-center text-[0.72rem] tracking-[0.3em] text-gold/80">이런 장면, 당신 얘기죠?</p>
-            <h2 className="font-display mt-2 px-6 text-center text-[1.4rem] leading-[1.55] text-ivory">
+            <h2 className="font-display mt-2 font-bold px-6 text-center text-[1.4rem] leading-[1.55] text-ivory">
               그 밤에 보낸 한 줄이,
               <br />
               <span className="text-gold">그다음을 정해요</span>
@@ -603,7 +605,7 @@ export default async function BookPage({
           </div>
           <section className="px-6 py-14">
             <p className="text-center text-[0.72rem] tracking-[0.3em] text-gold/80">책 속 한 장 미리 보기</p>
-            <h2 className="font-display mt-2 text-center text-[1.25rem] font-semibold leading-[1.6] text-ivory">
+            <h2 className="font-display mt-2 font-bold text-center text-[1.25rem] font-semibold leading-[1.6] text-ivory">
               지금 쓰고 있는 그 메시지,
               <br />
               <span className="text-gold">여기 있나요?</span>
@@ -697,7 +699,7 @@ export default async function BookPage({
           {/* ===== 6. 120쪽에 담긴 것 ===== */}
           <section className="px-6 py-14">
             <p className="text-center text-[0.72rem] tracking-[0.3em] text-gold/80">이 책에 담긴 것</p>
-            <h2 className="font-display mt-2 text-center text-[1.25rem] font-semibold leading-[1.6] text-ivory">
+            <h2 className="font-display mt-2 font-bold text-center text-[1.25rem] font-semibold leading-[1.6] text-ivory">
               헤어진 날 밤부터
               <br />
               <span className="text-gold">다시 만나는 날까지, 순서대로</span>
@@ -733,7 +735,7 @@ export default async function BookPage({
           {/* ===== 7. 재회 상담과 비교 ===== */}
           <section className="border-t border-gold-dim/10 px-6 py-14">
             <p className="text-center text-[0.72rem] tracking-[0.3em] text-gold/80">재회 상담과 무엇이 다른가요</p>
-            <h2 className="font-display mt-2 text-center text-[1.25rem] font-semibold leading-[1.6] text-ivory">
+            <h2 className="font-display mt-2 font-bold text-center text-[1.25rem] font-semibold leading-[1.6] text-ivory">
               비싼 한 시간보다,
               <br />
               <span className="text-gold">흔들리는 21일 내내 곁에</span>
