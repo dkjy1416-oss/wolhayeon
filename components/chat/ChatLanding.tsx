@@ -137,6 +137,7 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
             말투·답장 속도·대화의 흐름을 <b className="text-white">숫자와 문장</b>으로 짚어 드려요.
           </p>
           <div className="mt-7">{cta("내 카톡으로 무료 분석 시작")}</div>
+          <a href="/chat/sample" className="mt-3 block text-center text-[0.84rem] text-white/70 underline underline-offset-4">결과 리포트 예시 보기</a>
           <p className="mt-3 text-center text-[0.76rem] text-white/50">파일을 올리면 숫자 분석은 바로 무료 · 해석 리포트 {CHAT_PRICE_KRW.toLocaleString()}원 · 구독 없음</p>
         </div>
       </section>
@@ -246,7 +247,12 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
         </div>
       </section>
 
-      <section className="mx-auto max-w-[560px] px-5 pb-28 pt-12">{cta("그 사람 마음 확인하기")}</section>
+      <section className="mx-auto max-w-[560px] px-5 pb-28 pt-12">
+        <a href="/chat/sample" className="mb-4 flex min-h-12 w-full items-center justify-center rounded-full border border-white/25 text-[0.92rem] text-white/85">
+          결과 리포트 예시 먼저 보기
+        </a>
+        {cta("그 사람 마음 확인하기")}
+      </section>
     </div>
   );
 }

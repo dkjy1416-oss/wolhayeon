@@ -75,4 +75,7 @@ export interface ChatOrder {
   source?: "file" | "images";
   /** 파일 분석 숫자 (이름 제외) */
   stats?: Record<string, unknown> | null;
+  /** 관리자 미리보기용 AI 결과 (결제 전, 손님에게 안 보임) */
+  preview_result?: ChatResult | null;
+  preview_at?: string | null;
 }

@@ -34,6 +34,9 @@ export default async function AdminChatPage() {
               {r.bundle_redeemed_order && ` · 재회 분석 ${r.bundle_redeemed_order}`}
               {r.utm && ` · 유입 ${Object.values(r.utm).filter(Boolean).join(" / ")}`}
             </p>
+            <Link href={`/admin/chat/preview/${r.order_number}`} className="mr-3 mt-1 inline-block text-gold underline underline-offset-4">
+              {r.result || r.preview_result ? "AI 결과 미리보기" : "AI 결과 미리 만들기"}
+            </Link>
             {r.pay_status === "paid" && r.result && (
               <Link href={`/chat/result/${r.order_number}?t=${chatToken("result", r.order_number)}`} className="mt-1 inline-block text-gold underline underline-offset-4" target="_blank">
                 결과 보기

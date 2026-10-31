@@ -159,3 +159,19 @@ async function sendResultEmail(orderNumber: string) {
     /* 메일 실패는 결과 공개를 막지 않음 */
   }
 }
+
+/** 관리자 전용: 결제 없이 AI 결과를 만들어 미리보기 (캡처·원문은 지우지 않음, 손님 결과로 공개되지 않음) */
+export async function previewChatOrder(orderNumber: string): Promise<"ok" | "no_input" | "failed" | "not_found"> {
+  const o = await getChatOrder(orderNumber);
+  if (!o) return "not_found";
+  const text = await getChatText(orderNumber);
+  const paths = text ? [] : await listChatImages(orderNumber);
+  if (!text && !paths.length) return "no_input";
+  const images = (await Promise.all(paths.slice(0, 10).map(downloadChatImage))).filter(
+    (x): x is { data: string; type: string } => !!x
+  );
+  const result = text ? await analyzeChatText(o, text) : await analyzeChat(o, images);
+  if (!result) return "failed";
+  await updateChatOrder(orderNumber, (cur) => ({ ...cur, preview_result: result, preview_at: new Date().toISOString() }));
+  return "ok";
+}
