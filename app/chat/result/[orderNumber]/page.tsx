@@ -26,7 +26,7 @@ export default async function ChatResultPage({
 
   if (expired || !r)
     return (
-      <main className="paper mx-auto flex min-h-[100svh] max-w-md flex-col items-center justify-center px-6 text-center">
+      <main className="fx-grain bg-[#0e0b0d] mx-auto flex min-h-[100svh] max-w-md flex-col items-center justify-center px-6 text-center">
         <p className="text-[0.95rem] text-ivory">{expired ? `열람 기간(${VIEW_DAYS}일)이 지났어요.` : "결과를 준비하고 있어요. 잠시 후 다시 열어 주세요."}</p>
       </main>
     );
@@ -35,7 +35,7 @@ export default async function ChatResultPage({
     o.product === "chat_bundle" && !o.bundle_redeemed_order ? `/chat/bundle?o=${orderNumber}&t=${encodeURIComponent(chatToken("bundle", orderNumber) ?? "")}` : null;
 
   return (
-    <main className="paper min-h-[100svh] px-5 pb-24 pt-10">
+    <main className="fx-grain bg-[#0e0b0d] min-h-[100svh] px-5 pb-24 pt-10">
       <ChatResultView o={o} r={r} orderNumber={orderNumber} bundleHref={bundleHref} />
     </main>
   );

@@ -1,4 +1,5 @@
-/** 주별 대화 온도 선 그래프 (나 / 상대) — SVG, 외부 라이브러리 없음 */
+/** 주별 대화 온도 선 그래프 (나 / 상대) — SVG, 외부 라이브러리 없음 · 화면에 들어오면 선이 그려짐 */
+import InView from "@/components/fx/InView";
 export default function TempChart({
   weeks,
   meLabel = "나",
@@ -20,8 +21,8 @@ export default function TempChart({
   const last = weeks[weeks.length - 1];
   const step = Math.ceil(weeks.length / 5);
   return (
-    <figure className="w-full">
-      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" role="img" aria-label="주별 대화 온도">
+    <InView as="figure" className="w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} className="fx-draw block h-auto w-full" role="img" aria-label="주별 대화 온도">
         {[0, 50, 100].map((v) => (
           <g key={v}>
             <line x1={pad.l} x2={W - pad.r} y1={y(v)} y2={y(v)} stroke="currentColor" strokeOpacity={0.12} />
@@ -37,8 +38,8 @@ export default function TempChart({
             </text>
           ) : null
         )}
-        <path d={line("me")} fill="none" stroke="#e8b04a" strokeWidth={2.2} strokeLinejoin="round" />
-        <path d={line("partner")} fill="none" stroke="#e46b8a" strokeWidth={2.2} strokeLinejoin="round" />
+        <path className="fx-line" d={line("me")} fill="none" stroke="#e8b04a" strokeWidth={2.2} strokeLinejoin="round" />
+        <path className="fx-line" d={line("partner")} fill="none" stroke="#e46b8a" strokeWidth={2.2} strokeLinejoin="round" />
         {last && (
           <>
             <circle cx={x(weeks.length - 1)} cy={y(last.me)} r={3.2} fill="#e8b04a" />
@@ -53,6 +54,6 @@ export default function TempChart({
         <span className="flex items-center gap-1.5"><i className="inline-block h-0.5 w-4 bg-[#e46b8a]" />{partnerLabel}</span>
         {example && <span className="ml-auto opacity-70">예시 차트</span>}
       </figcaption>
-    </figure>
+    </InView>
   );
 }

@@ -40,11 +40,11 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
-        {/* 글꼴: 본문 프리텐다드(OFL) · 제목 고운바탕(Google Fonts, OFL) */}
+        {/* 글꼴: 본문 프리텐다드(OFL) · 제목 노토 세리프 KR(10/31, 고운바탕은 대체용) */}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Serif+KR:wght@500;700;900&display=swap" />
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"

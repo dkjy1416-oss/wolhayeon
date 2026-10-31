@@ -11,7 +11,7 @@ export default function ChatPage() {
   return (
     <>
       <Header ctaHref="/chat" ctaLabel="무료 유형 보기" />
-      <main className="paper min-h-[100svh]">
+      <main className="fx-grain bg-[#0e0b0d] min-h-[100svh]">
         <ChatFunnel />
       </main>
     </>

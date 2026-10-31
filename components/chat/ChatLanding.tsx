@@ -6,6 +6,8 @@
  */
 import LoopVideo from "@/components/book/LoopVideo";
 import TempChart from "@/components/chat/TempChart";
+import InView from "@/components/fx/InView";
+import SplitWords from "@/components/fx/SplitWords";
 import { CHAT_PRICE_KRW } from "@/lib/chat/types";
 
 type Line = { me?: boolean; text: string; time?: string; note?: string };
@@ -14,7 +16,7 @@ function Bubbles({ lines, name = "그 사람" }: { lines: Line[]; name?: string 
   return (
     <div className="rounded-2xl bg-[#b2c7d9] px-3 py-3.5 text-[0.84rem] text-[#191919]">
       {lines.map((l, i) => (
-        <div key={i} className={`mt-2 flex flex-col first:mt-0 ${l.me ? "items-end" : "items-start"}`}>
+        <div key={i} className={`fx-pop mt-2 flex flex-col first:mt-0 ${l.me ? "items-end" : "items-start"}`} style={{ ["--i" as string]: i }}>
           {!l.me && (i === 0 || lines[i - 1].me) && <span className="mb-0.5 text-[0.7rem] text-[#3a3a3a]">{name}</span>}
           <div className={`flex items-end gap-1.5 ${l.me ? "flex-row-reverse" : ""}`}>
             <p className={`max-w-[15rem] rounded-2xl px-3 py-1.5 ${l.me ? "rounded-tr-md bg-[#fee500]" : "rounded-tl-md bg-white"}`}>{l.text}</p>
@@ -108,7 +110,7 @@ const CARDS: {
 export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; onQuiz: () => void }) {
   const cta = (label: string) => (
     <div className="flex flex-col gap-2.5">
-      <button type="button" onClick={onFile} className="flex min-h-14 w-full items-center justify-center rounded-full bg-[#e46b8a] px-5 text-[1rem] font-bold text-white shadow-[0_0_40px_rgba(228,107,138,0.35)] active:opacity-85">
+      <button type="button" onClick={onFile} className="fx-sheen flex min-h-14 w-full items-center justify-center rounded-full bg-[#e46b8a] px-5 text-[1rem] font-bold text-white shadow-[0_0_40px_rgba(228,107,138,0.35)] active:opacity-85">
         {label}
       </button>
       <button type="button" onClick={onQuiz} className="text-[0.84rem] text-white/60 underline underline-offset-4">
@@ -117,25 +119,26 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
     </div>
   );
   return (
-    <div className="bg-[#120e10] text-white">
+    <div className="fx-grain bg-[#0e0b0d] text-white">
       {/* 히어로 */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0" aria-hidden>
           <LoopVideo src="/book/v3/w-phone.mp4" poster="/book/v3/w-phone.webp" className="h-full w-full object-cover opacity-60" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#120e10]/30 via-[#120e10]/40 to-[#120e10]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0e0b0d]/20 via-[#0e0b0d]/45 to-[#0e0b0d]" />
+          <div className="fx-aurora" />
         </div>
         <div className="relative mx-auto max-w-[560px] px-5 pb-12 pt-32">
-          <p className="text-[0.78rem] tracking-[0.25em] text-[#e8b04a]">月下緣 · 월화의 대화 읽기</p>
-          <h1 className="font-display mt-4 text-[2rem] font-bold leading-[1.35]">
-            그 사람 마음,
+          <p className="fx-kicker text-[#e8b04a]">月下緣 · Conversation Reading</p>
+          <h1 className="font-display mt-5 text-[2.35rem] font-black leading-[1.22]">
+            <SplitWords text="그 사람 마음," />
             <br />
-            대화에 이미 남아 있어요.
+            <SplitWords text="대화에 이미 남아 있어요." wordClassName="fx-shine" delayMs={280} />
           </h1>
-          <p className="mt-4 text-[1rem] leading-[1.85] text-white/80">
+          <InView className="reveal mt-5"><p className="text-[1rem] leading-[1.85] text-white/80">
             두 사람이 나눈 카톡을 월화가 처음부터 끝까지 읽고,
             <br />
-            말투·답장 속도·대화의 흐름을 <b className="text-white">숫자와 문장</b>으로 짚어 드려요.
-          </p>
+            말투·답장 속도·대화의 흐름을 <b className="fx-rose font-semibold">숫자와 문장</b>으로 짚어 드려요.
+          </p></InView>
           <div className="mt-7">{cta("내 카톡으로 무료 분석 시작")}</div>
           <a href="/chat/sample" className="mt-3 block text-center text-[0.84rem] text-white/70 underline underline-offset-4">결과 리포트 예시 보기</a>
           <p className="mt-3 text-center text-[0.76rem] text-white/50">파일을 올리면 숫자 분석은 바로 무료 · 해석 리포트 {CHAT_PRICE_KRW.toLocaleString()}원 · 구독 없음</p>
@@ -144,24 +147,20 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
 
       {/* 무엇을 보는지 */}
       <section className="mx-auto max-w-[560px] px-5 pt-6">
-        <p className="text-[0.74rem] font-semibold tracking-[0.2em] text-[#e46b8a]">WHAT WE READ</p>
-        <h2 className="font-display mt-2 text-[1.45rem] font-bold leading-snug">
-          대화에는 마음이 남아요.
-          <br />
-          말보다 흐름에서 더 잘 보일 때도 있어요.
-        </h2>
+        <p className="fx-kicker text-[#e46b8a]">What we read</p>
+        <SplitWords as="h2" className="font-display mt-3 block text-[1.6rem] font-bold leading-[1.35]" text={"대화에는 마음이 남아요.\n말보다 흐름에서 더 잘 보일 때도 있어요."} />
       </section>
 
       {CARDS.map((c) => (
-        <section key={c.no} className="mx-auto mt-8 max-w-[560px] px-5">
-          <div className="rounded-3xl bg-[#1d181b] px-5 py-6">
-            <p className="text-[0.8rem] font-bold text-[#e46b8a]">{c.no}</p>
-            <h3 className="font-display mt-1 whitespace-pre-line text-[1.3rem] font-bold leading-snug">{c.q}</h3>
+        <section key={c.no} className="mx-auto mt-10 max-w-[560px] px-5">
+          <InView className="reveal fx-glass rounded-[28px] px-5 py-6" threshold={0.12}>
+            <p className="font-display fx-rose text-[2.2rem] font-black leading-none">{c.no}</p>
+            <h3 className="font-display mt-2 whitespace-pre-line text-[1.4rem] font-bold leading-[1.35]">{c.q}</h3>
             <p className="mt-2 text-[0.76rem] text-white/45">{c.tags.join(" ")}</p>
             <div className="mt-4">
               <Bubbles lines={c.chat} />
             </div>
-            <div className="mt-4 rounded-2xl bg-[#262024] px-4 py-4 text-white">
+            <div className="mt-4 rounded-2xl border border-white/5 bg-black/25 px-4 py-4 text-white">
               {c.chart ? (
                 <TempChart weeks={EX_WEEKS} example />
               ) : c.bars ? (
@@ -173,12 +172,12 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
                         <p className="text-[0.76rem] text-white/70">{b.k}</p>
                         <div className="mt-1 flex items-center gap-2 text-[0.72rem]">
                           <span className="w-12 text-white/60">나</span>
-                          <div className="h-2.5 flex-1 rounded-full bg-white/10"><div className="h-full rounded-full bg-[#e8b04a]" style={{ width: `${(b.me / max) * 100}%` }} /></div>
+                          <div className="h-2.5 flex-1 rounded-full bg-white/10"><div className="fx-bar h-full rounded-full bg-gradient-to-r from-[#e8b04a] to-[#f3d08a]" style={{ width: `${(b.me / max) * 100}%` }} /></div>
                           <span className="w-6 text-right tabular-nums">{b.me}</span>
                         </div>
                         <div className="mt-1 flex items-center gap-2 text-[0.72rem]">
                           <span className="w-12 text-white/60">그 사람</span>
-                          <div className="h-2.5 flex-1 rounded-full bg-white/10"><div className="h-full rounded-full bg-[#e46b8a]" style={{ width: `${(b.p / max) * 100}%` }} /></div>
+                          <div className="h-2.5 flex-1 rounded-full bg-white/10"><div className="fx-bar h-full rounded-full bg-gradient-to-r from-[#b8325a] to-[#e46b8a]" style={{ width: `${(b.p / max) * 100}%`, ["--i" as string]: 1 }} /></div>
                           <span className="w-6 text-right tabular-nums">{b.p}</span>
                         </div>
                       </div>
@@ -190,8 +189,9 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
                 <p className="text-[0.84rem] text-white/70">결과 화면에서 실제 문장으로 받아요 · 예시</p>
               )}
             </div>
-            <p className="mt-4 text-[1rem] font-semibold leading-[1.75]">{c.head}</p>
-            <div className="mt-3 rounded-2xl border border-white/10 px-4 py-3">
+            <div className="fx-hair mt-5" />
+            <p className="font-display mt-4 text-[1.08rem] font-bold leading-[1.7]">{c.head}</p>
+            <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3">
               <p className="text-[0.72rem] font-semibold text-white/50">근거</p>
               <ul className="mt-1 flex flex-col gap-1 text-[0.82rem] text-white/80">
                 {c.evidence.map((e) => (
@@ -202,33 +202,35 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
                 ))}
               </ul>
             </div>
-          </div>
+          </InView>
         </section>
       ))}
 
       {/* 3단계 */}
       <section className="mx-auto mt-14 max-w-[560px] px-5">
-        <h2 className="font-display text-[1.35rem] font-bold">딱 3단계면 끝</h2>
+        <p className="fx-kicker text-[#e8b04a]">How it works</p>
+        <SplitWords as="h2" className="font-display mt-3 block text-[1.6rem] font-bold" text="딱 3단계면 끝" />
         <ol className="mt-4 flex flex-col gap-3">
           {[
             ["대화 내보내기", "카톡 대화방 → 메뉴 → 대화 내보내기 (텍스트만). 인스타 DM 파일도 돼요."],
             ["파일 올리고 무료 숫자 분석", "주별 대화 온도, 먼저 연락한 횟수, 답장 시간 변화를 바로 보여 드려요. 이 단계는 무료예요."],
             ["해석 리포트 받기", "결제하면 1~2분 안에 월화가 대화 전체를 읽고 해석과 다음 메시지까지 정리해 드려요."],
           ].map(([t, d], i) => (
-            <li key={t} className="flex gap-3 rounded-2xl bg-[#1d181b] px-4 py-4">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e46b8a] text-[0.9rem] font-bold">{i + 1}</span>
+            <InView as="li" key={t} className="reveal fx-glass flex gap-3 rounded-2xl px-4 py-4" style={{ transitionDelay: `${i * 120}ms` }}>
+              <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#e46b8a] to-[#8a2442] text-[1rem] font-bold">{i + 1}</span>
               <span className="min-w-0">
                 <b className="block text-[0.98rem]">{t}</b>
                 <span className="mt-0.5 block text-[0.84rem] leading-[1.7] text-white/65">{d}</span>
               </span>
-            </li>
+            </InView>
           ))}
         </ol>
       </section>
 
       {/* 자주 묻는 질문 */}
       <section className="mx-auto mt-14 max-w-[560px] px-5">
-        <h2 className="font-display text-[1.35rem] font-bold">자주 묻는 질문</h2>
+        <p className="fx-kicker text-[#e8b04a]">FAQ</p>
+        <SplitWords as="h2" className="font-display mt-3 block text-[1.6rem] font-bold" text="자주 묻는 질문" />
         <div className="mt-4 flex flex-col gap-2">
           {[
             ["내 대화가 밖으로 새어 나가진 않나요?", "무료 숫자 분석은 내 휴대폰 안에서만 계산하고 서버로 보내지 않아요. 결제하면 리포트를 만들 때만 대화를 보내고, 리포트가 완성되면 원문은 바로 삭제해요. 결제하지 않으면 48시간 안에 삭제돼요."],
@@ -239,8 +241,11 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
             ["재회나 연애가 꼭 되나요?", "결과를 보장하지 않아요. 대화에서 보이는 패턴과, 지금 할 수 있는 가장 부담 낮은 다음 걸음을 정리해 드려요."],
             ["환불되나요?", "리포트를 열어 보기 전이면 7일 안에 전액 환불돼요. 만 14세 미만은 결제할 수 없고, 미성년자는 보호자 동의가 필요해요."],
           ].map(([q, a]) => (
-            <details key={q} className="rounded-2xl bg-[#1d181b] px-4 py-3.5">
-              <summary className="cursor-pointer list-none text-[0.92rem] font-semibold">{q}</summary>
+            <details key={q} className="fx-glass group rounded-2xl px-4 py-3.5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[0.92rem] font-semibold">
+                {q}
+                <span className="text-white/40 transition-transform group-open:rotate-45">+</span>
+              </summary>
               <p className="mt-2 text-[0.84rem] leading-[1.8] text-white/70">{a}</p>
             </details>
           ))}

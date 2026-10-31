@@ -61,7 +61,7 @@ export default function ChatProcessing({ orderNumber, token }: { orderNumber: st
         </>
       ) : (
         <>
-          <div className="mt-8 h-10 w-10 animate-spin rounded-full border-2 border-burgundy border-t-transparent" />
+          <div className="mt-8 h-10 w-10 animate-spin rounded-full border-2 border-[#e46b8a]/70 border-t-transparent" />
           <h1 className="font-display mt-6 text-[1.35rem] font-semibold text-ivory">결제가 완료됐어요</h1>
           <p className="mt-3 text-[0.95rem] text-ivory">{LINES[i]}</p>
           <p className="mt-2 text-[0.8rem] text-ivory-dim">보통 1~2분 걸려요. 창을 닫아도 결과는 메일로 보내 드려요.</p>

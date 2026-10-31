@@ -13,6 +13,8 @@ import { sendSiteEvent } from "@/lib/site-track";
 import ChatLanding from "@/components/chat/ChatLanding";
 import ChatFileFlow, { StatsPreview, type FileReady } from "@/components/chat/ChatFileFlow";
 import { transcript } from "@/lib/chat/kakao-parse";
+import SplitWords from "@/components/fx/SplitWords";
+import InView from "@/components/fx/InView";
 
 type Step = "intro" | "file" | "quiz" | "free" | "form";
 
@@ -118,9 +120,9 @@ export default function ChatFunnel() {
     }
   };
 
-  const card = "rounded-2xl border border-gold-dim bg-ink-soft px-5 py-5";
+  const card = "fx-glass rounded-2xl px-5 py-5";
   const btn =
-    "inline-flex min-h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep px-5 text-[0.97rem] font-semibold text-ivory active:opacity-85 disabled:opacity-50";
+    "fx-sheen inline-flex min-h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep px-5 text-[0.97rem] font-semibold text-ivory active:opacity-85 disabled:opacity-50";
 
   if (step === "intro")
     return (
@@ -159,24 +161,25 @@ export default function ChatFunnel() {
     return (
       <div className="mx-auto max-w-[560px] px-5 pb-24 pt-24">
         <div className="h-1.5 overflow-hidden rounded-full bg-ink-soft">
-          <div className="h-full bg-burgundy transition-all" style={{ width: `${((qi + 1) / CHAT_QUESTIONS.length) * 100}%` }} />
+          <div className="h-full bg-gradient-to-r from-[#8a2442] to-[#e46b8a] transition-all duration-500" style={{ width: `${((qi + 1) / CHAT_QUESTIONS.length) * 100}%` }} />
         </div>
         <p className="mt-6 text-[0.78rem] text-gold">
           {qi + 1} / {CHAT_QUESTIONS.length}
         </p>
-        <h2 className="font-display mt-2 text-[1.35rem] font-bold leading-snug text-ivory">{q.q}</h2>
-        <div className="mt-6 flex flex-col gap-2.5">
-          {q.options.map((o) => (
+        <SplitWords key={q.id} as="h2" className="font-display mt-2 block text-[1.55rem] font-bold leading-snug text-ivory" text={q.q} />
+        <InView key={`o-${q.id}`} className="mt-6 flex flex-col gap-2.5">
+          {q.options.map((o, oi) => (
             <button
               key={o.v}
               type="button"
               onClick={() => pick(o.v)}
-              className={`rounded-xl border px-4 py-4 text-left text-[0.95rem] ${answers[q.id] === o.v ? "border-burgundy bg-[#f6e9ec] text-ivory" : "border-gold-dim bg-ink-soft text-ivory"}`}
+              style={{ ["--i" as string]: oi * 0.25 }}
+              className={`fx-pop rounded-xl border px-4 py-4 text-left text-[0.95rem] transition-colors active:scale-[0.99] ${answers[q.id] === o.v ? "border-[#e46b8a] bg-[#e46b8a]/10 text-ivory" : "border-gold-dim bg-ink-soft text-ivory"}`}
             >
               {o.label}
             </button>
           ))}
-        </div>
+        </InView>
         {qi > 0 && (
           <button type="button" onClick={() => setQi(qi - 1)} className="mt-6 text-[0.84rem] text-ivory-dim underline underline-offset-4">
             이전 질문
@@ -205,8 +208,8 @@ export default function ChatFunnel() {
       {free && (
         <>
           <p className="text-[0.74rem] tracking-[0.2em] text-gold">무료 결과 · 대화 유형</p>
-          <h2 className="font-display mt-2 text-[1.5rem] font-bold leading-snug text-ivory">{free.name}</h2>
-          <p className="mt-1 text-[0.92rem] text-burgundy">{free.line}</p>
+          <SplitWords as="h2" className="font-display mt-2 block text-[1.7rem] font-bold leading-snug" wordClassName="fx-shine" text={free.name} />
+          <p className="mt-1 text-[0.92rem] text-[#e46b8a]">{free.line}</p>
           <p className="mt-4 text-[0.95rem] leading-[1.9] text-ivory">{free.desc}</p>
           <div className={`${card} mt-6`}>
             <p className="text-[0.8rem] font-semibold text-gold">지금은 이것만 하지 마세요</p>
@@ -242,11 +245,11 @@ export default function ChatFunnel() {
             key={k}
             type="button"
             onClick={() => setProduct(k)}
-            className={`rounded-2xl border px-4 py-4 text-left ${product === k ? "border-burgundy bg-[#f6e9ec]" : "border-gold-dim bg-ink-soft"}`}
+            className={`rounded-2xl border px-4 py-4 text-left ${product === k ? "border-[#e46b8a] bg-[#e46b8a]/10" : "border-gold-dim bg-ink-soft"}`}
           >
             <span className="flex items-baseline justify-between gap-2">
               <span className="text-[0.95rem] font-semibold text-ivory">{t}</span>
-              <span className="font-display text-[1.15rem] text-burgundy">{won(p)}</span>
+              <span className="font-display text-[1.15rem] text-[#e46b8a]">{won(p)}</span>
             </span>
             <span className="mt-1 block text-[0.8rem] text-ivory-dim">{d}</span>
           </button>

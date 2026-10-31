@@ -48,8 +48,8 @@ const O = { partner_label: "그 사람", name: "", product: "chat" } as unknown 
 
 export default function ChatSamplePage() {
   return (
-    <main className="paper min-h-[100svh] px-5 pb-24 pt-10">
-      <div className="mx-auto mb-6 max-w-[620px] rounded-xl border border-burgundy/40 bg-[#f6e9ec] px-4 py-3 text-[0.82rem] leading-[1.7] text-ivory">
+    <main className="fx-grain bg-[#0e0b0d] min-h-[100svh] px-5 pb-24 pt-10">
+      <div className="mx-auto mb-6 max-w-[620px] rounded-xl border border-burgundy/40 bg-[#e46b8a]/10 px-4 py-3 text-[0.82rem] leading-[1.7] text-ivory">
         <b>결과 예시</b> — 가상의 대화로 만든 예시예요. 실제 결과는 올려 주신 대화를 근거로 매번 새로 써요.
       </div>
       <ChatResultView o={O} r={R} orderNumber="예시" bundleHref={null} />

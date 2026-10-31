@@ -80,12 +80,12 @@ export default function ChatUpload(props: {
           <li>· 분위기가 바뀐 때, 마지막 대화가 꼭 들어가면 좋아요</li>
           <li>· 상대 이름·프로필 사진은 가려도 괜찮아요</li>
         </ul>
-        <label className={`mt-4 flex min-h-14 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-burgundy/60 text-[0.95rem] font-medium text-burgundy ${count >= CHAT_MAX_IMAGES || busy ? "pointer-events-none opacity-50" : ""}`}>
+        <label className={`mt-4 flex min-h-14 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-[#e46b8a]/60 text-[0.95rem] font-medium text-[#e46b8a] ${count >= CHAT_MAX_IMAGES || busy ? "pointer-events-none opacity-50" : ""}`}>
           {busy ?? (count ? "캡처 더 추가하기" : "캡처 고르기")}
           <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onFiles(e.target.files)} />
         </label>
         <p className="mt-3 text-center text-[0.86rem] text-ivory">
-          올린 캡처 <b className="text-burgundy">{count}</b> / {CHAT_MAX_IMAGES}장
+          올린 캡처 <b className="text-[#e46b8a]">{count}</b> / {CHAT_MAX_IMAGES}장
           {count > 0 && !busy && (
             <button type="button" onClick={reset} className="ml-3 text-[0.78rem] text-ivory-dim underline underline-offset-4">
               전부 지우고 다시

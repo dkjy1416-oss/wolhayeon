@@ -10,7 +10,7 @@ export default async function ChatPayFail({
   const back = p.order && CHAT_ORDER_RE.test(p.order) && p.t ? `/chat/order/${p.order}?t=${encodeURIComponent(p.t)}` : "/chat";
   const cancel = p.code === "PAY_PROCESS_CANCELED" || p.code === "USER_CANCEL";
   return (
-    <main className="paper mx-auto flex min-h-[100svh] max-w-md flex-col items-center justify-center px-6 text-center">
+    <main className="fx-grain bg-[#0e0b0d] mx-auto flex min-h-[100svh] max-w-md flex-col items-center justify-center px-6 text-center">
       <h1 className="font-display text-[1.3rem] font-semibold text-ivory">{cancel ? "결제를 취소했어요" : "결제가 완료되지 않았어요"}</h1>
       <p className="mt-4 text-[0.9rem] leading-[1.9] text-ivory-dim">
         올린 캡처와 답변은 그대로 있어요. 다시 결제할 수 있어요.

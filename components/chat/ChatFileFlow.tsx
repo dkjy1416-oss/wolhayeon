@@ -5,6 +5,9 @@
  */
 import { useState } from "react";
 import TempChart from "@/components/chat/TempChart";
+import InView from "@/components/fx/InView";
+import SplitWords from "@/components/fx/SplitWords";
+import CountUp from "@/components/fx/CountUp";
 import { parseChatExport, participants, analyzeChat, type Msg, type ChatStats } from "@/lib/chat/kakao-parse";
 
 const GUIDE: [string, string[]][] = [
@@ -54,17 +57,17 @@ export default function ChatFileFlow({ onReady, onQuiz }: { onReady: (r: FileRea
     onReady({ msgs, meName, partnerName: stats.partnerName, stats });
   };
 
-  const card = "rounded-2xl border border-gold-dim bg-ink-soft px-5 py-5";
+  const card = "fx-glass rounded-2xl px-5 py-5";
   return (
     <div className="mx-auto max-w-[560px] px-5 pb-24 pt-24">
       <p className="text-[0.74rem] tracking-[0.2em] text-gold">1단계 · 대화 파일 올리기</p>
-      <h2 className="font-display mt-2 text-[1.4rem] font-bold text-ivory">{msgs ? "어느 쪽이 나예요?" : "대화 파일을 올려 주세요"}</h2>
+      <SplitWords key={msgs ? "a" : "b"} as="h2" className="font-display mt-2 block text-[1.6rem] font-bold text-ivory" text={msgs ? "어느 쪽이 나예요?" : "대화 파일을 올려 주세요"} />
       {!msgs ? (
         <>
           <p className="mt-2 text-[0.9rem] leading-[1.8] text-ivory-dim">
             숫자 분석은 <b className="text-ivory">이 휴대폰 안에서만</b> 계산해요. 결제 전에는 대화가 서버로 가지 않아요.
           </p>
-          <label className="mt-5 flex min-h-16 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-burgundy/60 bg-ink-soft text-[1rem] font-semibold text-burgundy">
+          <label className="mt-5 flex min-h-16 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-[#e46b8a]/60 bg-ink-soft text-[1rem] font-semibold text-[#e46b8a]">
             파일 고르기 (.txt · .csv · .json)
             <input type="file" accept=".txt,.csv,.json,text/plain,application/json" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
           </label>
@@ -115,16 +118,20 @@ export default function ChatFileFlow({ onReady, onQuiz }: { onReady: (r: FileRea
 }
 
 export function StatsPreview({ s, partnerLabel = "그 사람" }: { s: ChatStats; partnerLabel?: string }) {
-  const card = "rounded-2xl border border-gold-dim bg-ink-soft px-5 py-4";
+  const card = "fx-glass rounded-2xl px-5 py-4";
+  const num = (v: string | number, cls: string) => {
+    const m = typeof v === "number" ? [String(v), String(v), ""] : String(v).match(/^(\d+)(회)?$/);
+    return m ? <CountUp value={Number(m[1])} suffix={m[2] ?? ""} className={cls} /> : <span className={cls}>{v}</span>;
+  };
   const vs = (k: string, me: string | number, p: string | number, note?: string) => (
-    <div className={card}>
+    <InView className={`reveal ${card}`}>
       <p className="text-[0.78rem] text-ivory-dim">{k}</p>
       <p className="mt-1 flex items-baseline gap-3 text-ivory">
-        <span className="text-[0.82rem]">나 <b className="font-display text-[1.25rem] text-[#c98a1a]">{me}</b></span>
-        <span className="text-[0.82rem]">{partnerLabel} <b className="font-display text-[1.25rem] text-burgundy">{p}</b></span>
+        <span className="text-[0.82rem]">나 {num(me, "font-display text-[1.5rem] font-bold text-[#e8b04a]")}</span>
+        <span className="text-[0.82rem]">{partnerLabel} {num(p, "font-display text-[1.5rem] font-bold text-[#e46b8a]")}</span>
       </p>
       {note && <p className="mt-1 text-[0.78rem] leading-[1.6] text-ivory-dim">{note}</p>}
-    </div>
+    </InView>
   );
   const firstShare = Math.round((s.starts.me / Math.max(1, s.starts.me + s.starts.partner)) * 100);
   const d = (t: number) => {
@@ -133,20 +140,22 @@ export function StatsPreview({ s, partnerLabel = "그 사람" }: { s: ChatStats;
   };
   return (
     <div>
-      <p className="text-[0.74rem] tracking-[0.2em] text-gold">무료 숫자 분석 · 내 휴대폰에서 계산</p>
-      <h2 className="font-display mt-2 text-[1.4rem] font-bold leading-snug text-ivory">
-        {s.total.toLocaleString()}개의 대화, {s.days}일을 읽었어요
+      <p className="fx-kicker text-gold">무료 숫자 분석 · 내 휴대폰에서 계산</p>
+      <h2 className="font-display mt-3 text-[1.7rem] font-bold leading-snug text-ivory">
+        <CountUp value={s.total} className="fx-rose" />개의 대화,
+        <br />
+        <CountUp value={s.days} className="fx-rose" />일을 읽었어요
       </h2>
       <p className="mt-1 text-[0.82rem] text-ivory-dim">
         {d(s.from)} ~ {d(s.to)}
       </p>
-      <div className={`${card} mt-5 text-ivory`}>
+      <InView className={`reveal ${card} mt-5 text-ivory`}>
         <p className="mb-2 text-[0.84rem] font-semibold">주별 대화 온도</p>
         <TempChart weeks={s.weeks} partnerLabel={partnerLabel} />
         <p className="mt-2 text-[0.8rem] leading-[1.6] text-ivory-dim">
           {s.turnWeek ? `${s.turnWeek}에 ${partnerLabel} 쪽 온도가 가장 크게 내려갔어요.` : "주별로 큰 꺾임은 보이지 않아요."} 온도는 메시지 비중·먼저 연락·답장 속도·질문과 감정 표현으로 계산한 상대적인 지표예요. 0은 대화가 없던 주예요.
         </p>
-      </div>
+      </InView>
       <div className="mt-3 grid grid-cols-1 gap-3">
         {vs("먼저 말 건 횟수 (6시간 넘게 쉬었다가)", s.starts.me, s.starts.partner, `대화를 여는 쪽의 ${firstShare}%가 나예요.`)}
         {vs("답장 시간 (중앙값)", fmtMin(s.replyMin.me), fmtMin(s.replyMin.partner), s.partnerReplyEarly !== null && s.partnerReplyLate !== null ? `${partnerLabel} 답장: 앞 기간 ${fmtMin(s.partnerReplyEarly)} → 최근 ${fmtMin(s.partnerReplyLate)}` : undefined)}
@@ -156,7 +165,7 @@ export function StatsPreview({ s, partnerLabel = "그 사람" }: { s: ChatStats;
         {vs("대화를 마지막으로 남긴 쪽", `${s.ends.me}회`, `${s.ends.partner}회`)}
       </div>
       {s.lastFrom === "me" && (
-        <p className="mt-3 rounded-2xl bg-[#f6e9ec] px-5 py-3 text-[0.86rem] leading-[1.7] text-ivory">
+        <p className="mt-3 rounded-2xl bg-[#e46b8a]/10 px-5 py-3 text-[0.86rem] leading-[1.7] text-ivory">
           파일의 마지막 메시지는 내가 보냈고, 그 뒤로 {partnerLabel}의 답이 없어요.
         </p>
       )}

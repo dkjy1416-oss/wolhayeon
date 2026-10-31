@@ -25,15 +25,17 @@ export default async function ChatOrderPage({
   const p = CHAT_PRODUCTS[o.product];
   const imageCount = (await listChatImages(orderNumber)).length;
   return (
-    <main className="paper min-h-[100svh] px-5 pb-28 pt-10">
+    <main className="fx-grain bg-[#0e0b0d] min-h-[100svh] px-5 pb-28 pt-10">
       <div className="mx-auto max-w-[560px]">
         <p className="text-[0.74rem] tracking-[0.2em] text-gold">月下緣 · 카톡 대화 분석</p>
         <h1 className="font-display mt-2 text-[1.4rem] font-bold text-ivory">{o.name ? `${o.name}님, ` : ""}대화를 보여 주세요</h1>
         <p className="mt-2 text-[0.9rem] leading-[1.8] text-ivory-dim">
-          {p.name} · <b className="text-burgundy">{o.amount.toLocaleString()}원</b> · 1회 결제 · 정기결제 없음
+          {p.name} · <b className="text-[#e46b8a]">{o.amount.toLocaleString()}원</b> · 1회 결제 · 정기결제 없음
         </p>
         <div className="mt-6">
-          <InAppBrowserNotice orderNumber={orderNumber} />
+          <div className="paper rounded-xl">
+            <InAppBrowserNotice orderNumber={orderNumber} />
+          </div>
           <ChatUpload
             orderNumber={orderNumber}
             token={t as string}
