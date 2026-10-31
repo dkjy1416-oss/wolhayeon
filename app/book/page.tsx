@@ -36,6 +36,12 @@ export const metadata: Metadata = {
   title: "《헤어진 뒤, 연락하지 말아야 할 때》 개인화 PDF 책 | 월하연 月下緣",
   description:
     "싸우고 끝났을 때, 매달린 뒤 답이 끊겼을 때, 술 마신 새벽 카톡 창 앞에서 펼치는 책. 당신의 이야기로 다시 쓴 약 120쪽, 29,000원.",
+  openGraph: {
+    title: "보내기 직전, 붙잡아 줄 한 권 | 월하연 월화의 책",
+    description: "내 사연으로 쓰는 나만의 재회의 책",
+    images: [{ url: "/og/book.jpg", width: 1200, height: 630 }],
+  },
+  twitter: { card: "summary_large_image", title: "보내기 직전, 붙잡아 줄 한 권 | 월하연 월화의 책", description: "내 사연으로 쓰는 나만의 재회의 책", images: ["/og/book.jpg"] },
 };
 
 const ORDER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;

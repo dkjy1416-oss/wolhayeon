@@ -5,6 +5,12 @@ import ChatFunnel from "@/components/chat/ChatFunnel";
 export const metadata: Metadata = {
   title: "카톡 대화 분석 | 월하연 月下緣",
   description: "그 사람 카톡, 캡처만 올리세요. 대화 온도·답장이 식은 지점·지금 보내면 안 되는 말·다음 메시지까지. 질문 10개 무료 유형 진단.",
+  openGraph: {
+    title: "그 사람 카톡, 숫자로 읽어 드려요 | 월하연",
+    description: "답장 시간·먼저 연락·대화 온도 — 대화 파일만 올리면 1분 무료 분석",
+    images: [{ url: "/og/chat.jpg", width: 1200, height: 630 }],
+  },
+  twitter: { card: "summary_large_image", title: "그 사람 카톡, 숫자로 읽어 드려요 | 월하연", description: "답장 시간·먼저 연락·대화 온도 — 대화 파일만 올리면 1분 무료 분석", images: ["/og/chat.jpg"] },
 };
 
 export default function ChatPage() {
