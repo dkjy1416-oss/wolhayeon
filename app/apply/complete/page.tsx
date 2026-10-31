@@ -39,6 +39,9 @@ import { logPayEventServer } from "@/lib/pay-events-server";
 import UpgradeSelected, { UpgradeUnavailable } from "@/components/pay/UpgradeSelected";
 import { upgradeOrderStatus } from "@/lib/book/book-upgrade";
 import { UPGRADE_REASON_TEXT } from "@/lib/book/upgrade-rules";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { redeemChatBundle, BUNDLE_COOKIE } from "@/lib/chat/bundle";
 
 /** 주문번호 형식 (개인정보 아님 — URL에 넣을 수 있는 유일한 값) */
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
@@ -165,6 +168,13 @@ export default async function CompletePage({
         linkLabel="신청서 작성하기"
       />
     );
+  }
+
+  /* 카톡 분석 패키지 손님: 재회 분석은 결제 없이 바로 결과 생성으로 (10/31) */
+  if (row.payment_status === "pending") {
+    const cb = (await cookies()).get(BUNDLE_COOKIE)?.value;
+    const to = cb ? await redeemChatBundle(orderNumber, cb) : null;
+    if (to) redirect(to);
   }
 
   /* 이미 결제 완료 → 결제창을 다시 띄우지 않음 */

@@ -11,7 +11,7 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sendOpsAlert, isMerchantPaymentCode } from "@/lib/ops-alert";
 
-export const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
+export const ORDER_NUMBER_RE = /^W[HC]-\d{8}-[A-Z0-9]{5}$/; // WC = 카톡 분석 주문 (10/31)
 
 /** 브라우저에서 보낼 수 있는 이벤트 (화이트리스트) */
 export const CLIENT_PAY_EVENTS = [

@@ -163,6 +163,9 @@ export default function TossCheckout(props: {
   orderNumber: string;
   amount: number;
   orderName?: string;
+  /** 카톡 분석 등 다른 상품은 자체 승인 화면으로 (기본: 재회 분석 /payment/success) */
+  successPath?: string;
+  failPath?: string;
 }) {
   return props.clientKey.includes("_gck_") ? (
     <TossWidgetCheckout {...props} />
@@ -208,11 +211,15 @@ function TossWindowCheckout({
   orderNumber,
   amount,
   orderName = ORDER_NAME,
+  successPath = "/payment/success",
+  failPath = "/payment/fail",
 }: {
   clientKey: string;
   orderNumber: string;
   amount: number;
   orderName?: string;
+  successPath?: string;
+  failPath?: string;
 }) {
   const paymentRef = useRef<ReturnType<
     Awaited<ReturnType<typeof loadTossPayments>>["payment"]
@@ -260,8 +267,8 @@ function TossWindowCheckout({
       amount: { currency: "KRW" as const, value: amount },
       orderId: orderNumber,
       orderName,
-      successUrl: `${window.location.origin}/payment/success`,
-      failUrl: `${window.location.origin}/payment/fail`,
+      successUrl: `${window.location.origin}${successPath}`,
+      failUrl: `${window.location.origin}${failPath}`,
     };
     try {
       if (method === "CARD") {
@@ -421,11 +428,15 @@ function TossWidgetCheckout({
   orderNumber,
   amount,
   orderName = ORDER_NAME,
+  successPath = "/payment/success",
+  failPath = "/payment/fail",
 }: {
   clientKey: string;
   orderNumber: string;
   amount: number;
   orderName?: string;
+  successPath?: string;
+  failPath?: string;
 }) {
   const widgetsRef = useRef<TossPaymentsWidgets | null>(null);
   const [ready, setReady] = useState(false);
@@ -485,8 +496,8 @@ function TossWidgetCheckout({
       await widgets.requestPayment({
         orderId: orderNumber,
         orderName,
-        successUrl: `${window.location.origin}/payment/success`,
-        failUrl: `${window.location.origin}/payment/fail`,
+        successUrl: `${window.location.origin}${successPath}`,
+        failUrl: `${window.location.origin}${failPath}`,
       });
       // Redirect 방식이므로 성공 시 이 아래는 실행되지 않음
     } catch (e) {
