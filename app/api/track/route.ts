@@ -15,6 +15,9 @@ const EVENTS = new Set([
   "order_created",
   "preview_view",
   "payment_cta_click",
+  /* 11/3 카톡 분석 퍼널 */
+  "chat_start",
+  "chat_form",
 ]);
 const ORDER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 const BOT_RE = /bot|crawl|spider|slurp|preview|facebookexternalhit|kakaotalk-scrap|headless|lighthouse/i;

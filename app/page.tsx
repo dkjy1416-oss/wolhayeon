@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import { getPublicReviews } from "@/lib/reviews";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
 import ResumeCard from "@/components/home2/ResumeCard";
+import ChatPromo from "@/components/home3/ChatPromo";
 import ShortsRow from "@/components/home2/ShortsRow";
 import StickyCta from "@/components/home2/StickyCta";
 import { FAQ } from "@/components/home2/content";
@@ -32,6 +33,7 @@ export default async function Home() {
         <main>
           <Hook />
           <ResumeCard />
+          <ChatPromo />
           <Turn />
           <Mystery />
           <MeetWolhwa />
