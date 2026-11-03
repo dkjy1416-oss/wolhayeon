@@ -5,26 +5,13 @@
  * 지어낸 숫자 없음. 실패하면 빈 값.
  */
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { isOperatorEmail } from "@/lib/admin-util";
+import { getPaidCount } from "@/lib/paid-count";
 import { getPublicReviews } from "@/lib/reviews";
 
 export const revalidate = 600;
 
 export async function GET() {
-  let paid = 0;
-  try {
-    const { data } = await getSupabaseAdmin()
-      .from("ritual_orders")
-      .select("email")
-      .eq("payment_status", "paid")
-      .limit(5000);
-    paid = (data ?? []).filter(
-      (r: { email: string | null }) => !isOperatorEmail(r.email) && !/@example\.com$/i.test(r.email ?? "")
-    ).length;
-  } catch {
-    paid = 0;
-  }
+  const paid = await getPaidCount();
   const reviews = await getPublicReviews(3).catch(() => []);
   return NextResponse.json(
     { paid, reviews: reviews.map((r) => ({ rating: r.rating, body: r.body.slice(0, 120), name: r.name, month: r.month, incentive: r.incentive })) },
