@@ -4,7 +4,7 @@
  * 카톡 대화 분석 — 무료 선택형 질문 → 무료 대화 유형 → 상품 선택 → 주문 생성
  * 무료 단계는 API 비용 없음 (lib/chat/questions.freeChatType)
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CHAT_QUESTIONS, CHAT_LOCKED_ITEMS, freeChatType } from "@/lib/chat/questions";
@@ -15,6 +15,7 @@ import ChatFileFlow, { StatsPreview, type FileReady } from "@/components/chat/Ch
 import { transcript } from "@/lib/chat/kakao-parse";
 import SplitWords from "@/components/fx/SplitWords";
 import InView from "@/components/fx/InView";
+import ShareTypeButton from "@/components/chat/ShareTypeButton";
 
 type Step = "intro" | "file" | "quiz" | "free" | "form";
 
@@ -63,6 +64,15 @@ export default function ChatFunnel() {
   const [marketingOk, setMarketingOk] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  /* 공유 링크(/chat/type/…)에서 "나도 해 보기"로 들어오면 바로 무료 질문부터 */
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("start") === "quiz") {
+      setMode("quiz");
+      setStep("quiz");
+      sendSiteEvent("chat_start", { step: "quiz" });
+    }
+  }, []);
 
   const free = useMemo(() => (mode === "quiz" && (step === "free" || step === "form") ? freeChatType(answers) : null), [mode, step, answers]);
   const thisYear = new Date().getFullYear();
@@ -222,6 +232,7 @@ export default function ChatFunnel() {
           <SplitWords as="h2" className="font-display mt-2 block text-[1.7rem] font-bold leading-snug" wordClassName="fx-shine" text={free.name} />
           <p className="mt-1 text-[0.92rem] text-[#e46b8a]">{free.line}</p>
           <p className="mt-4 text-[0.95rem] leading-[1.9] text-ivory">{free.desc}</p>
+          <ShareTypeButton typeKey={free.key} typeName={free.name} />
           <div className={`${card} mt-6`}>
             <p className="text-[0.8rem] font-semibold text-gold">지금은 이것만 하지 마세요</p>
             <ul className="mt-2 flex flex-col gap-2.5">

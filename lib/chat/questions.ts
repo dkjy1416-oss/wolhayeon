@@ -154,6 +154,9 @@ const TYPES: Record<string, Omit<FreeChatType, "avoid">> = {
   },
 };
 
+/** 공유 페이지(/chat/type/[key])용 */
+export const CHAT_TYPES = TYPES;
+
 const AVOID: Record<string, { what: string; why: string }> = {
   again: { what: "답이 없는데 이어서 보내는 두 번째 메시지", why: "기다림을 줄여 주지 않고, 상대가 답할 여유만 줄여요." },
   long: { what: "새벽에 쓰는 장문의 마음 고백", why: "진심이어도 감정이 가장 높을 때의 글은 '부담'으로 먼저 도착해요." },
