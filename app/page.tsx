@@ -7,6 +7,7 @@ import { getPublicReviews } from "@/lib/reviews";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
 import ResumeCard from "@/components/home2/ResumeCard";
 import ChatPromo from "@/components/home3/ChatPromo";
+import { getPaidCount } from "@/lib/paid-count";
 import ShortsRow from "@/components/home2/ShortsRow";
 import StickyCta from "@/components/home2/StickyCta";
 import { FAQ } from "@/components/home2/content";
@@ -25,6 +26,7 @@ export const metadata: Metadata = {
 /** 10/16 3차 — 한 줄로 길게 이어지는 상세페이지형 홈 (공감 → 월화 → 상품 POINT 1~5 → 마지막 버튼) */
 export default async function Home() {
   const reviews = await getPublicReviews(8);
+  const paid = await getPaidCount();
   return (
     <div className="min-h-screen bg-[#0a0809]">
       <div data-fx-root className="relative mx-auto min-h-screen w-full max-w-[480px] bg-[#120e10] shadow-[0_0_80px_rgba(0,0,0,0.8)]">
@@ -33,7 +35,7 @@ export default async function Home() {
         <main>
           <Hook />
           <ResumeCard />
-          <ChatPromo />
+          <ChatPromo paid={paid} />
           <Turn />
           <Mystery />
           <MeetWolhwa />
