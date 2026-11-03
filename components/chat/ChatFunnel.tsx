@@ -205,6 +205,15 @@ export default function ChatFunnel() {
             </ul>
             <p className="mt-3 text-[0.78rem] leading-[1.7] text-ivory-dim">월화가 대화 전체를 읽고, 위 숫자가 왜 그렇게 나왔는지 실제 대화를 근거로 풀어 드려요.</p>
           </div>
+          {/* 11/3 — 숫자는 어디서나 나와요. 돈을 낼 이유 = '그래서 뭘 보내야 하는지' (결과 예시 일부를 먼저 보여줌) */}
+          <div className={`${card} mt-4`}>
+            <p className="text-[0.8rem] font-semibold text-gold">숫자 다음, 리포트가 답하는 것 · 결과 예시</p>
+            <p className="mt-2 text-[0.92rem] font-semibold text-ivory">“그래서 지금 뭘 보내야 해?”</p>
+            <div className="mt-2 rounded-2xl rounded-tr-md bg-[#fee500] px-4 py-2.5 text-[0.9rem] text-[#1a1215]">그때 말한 전시 이번 주까지래, 생각나서 ㅎㅎ</div>
+            <p className="mt-1.5 text-[0.78rem] leading-[1.6] text-ivory-dim">의도 · 부담 없는 정보형 — 답하기 쉬움 · 예상 반응 · 짧더라도 답장이 올 가능성이 높은 문장</p>
+            <p className="mt-2 select-none text-[0.84rem] text-ivory-dim blur-[4px]" aria-hidden>오늘 비 온대 우산 챙겨! · 챙김형 — 짧게 끝내기</p>
+            <Link href="/chat/sample" className="mt-3 inline-block text-[0.84rem] text-[#e46b8a] underline underline-offset-4">결과 예시 전체 보기 →</Link>
+          </div>
         </>
       )}
       {free && (
