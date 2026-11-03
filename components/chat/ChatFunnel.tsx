@@ -130,11 +130,13 @@ export default function ChatFunnel() {
         onFile={() => {
           setMode("file");
           setStep("file");
+          sendSiteEvent("chat_start", { step: "file" });
           window.scrollTo({ top: 0 });
         }}
         onQuiz={() => {
           setMode("quiz");
           setStep("quiz");
+          sendSiteEvent("chat_start", { step: "quiz" });
           window.scrollTo({ top: 0 });
         }}
       />
@@ -258,7 +260,7 @@ export default function ChatFunnel() {
       </div>
 
       {step === "free" ? (
-        <button type="button" className={`${btn} mt-6`} onClick={() => setStep("form")}>
+        <button type="button" className={`${btn} mt-6`} onClick={() => { setStep("form"); sendSiteEvent("chat_form", { step: mode }); }}>
           {mode === "file" ? "해석 리포트 받기" : "캡처 올리고 분석받기"}
         </button>
       ) : (
