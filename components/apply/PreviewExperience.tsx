@@ -91,6 +91,18 @@ const NEED_DEFAULT: Record<Stance, string> = {
   hold_boundary: "거리 존중하며 내 하루 지키기",
 };
 
+/** 11/3 — 신청서 '가장 알고 싶은 것' → 미리보기 맨 위 질문 + 전체 결과에서 이어서 답하는 질문 (전체 결과에 실제 들어 있는 범위만) */
+const ASKED: Record<string, { q: string; next: string[] }> = {
+  reunion: { q: "그 사람과 다시 이어질 수 있을까요?", next: ["다시 이어지려면 무엇이 먼저 달라져야 할까?", "연락한다면 언제, 어떤 첫 문장으로?", "답이 짧거나 없으면 그다음엔?"] },
+  natural_contact: { q: "다시 자연스럽게 연락해도 될까요?", next: ["나에게 맞는 연락 시점은 언제일까?", "부담 없이 보낼 첫 문장은?", "답장이 오면 / 안 오면 다음 행동은?"] },
+  slow_recovery: { q: "관계를 천천히 회복할 수 있을까요?", next: ["지금 관계에서 가장 먼저 풀어야 할 것은?", "첫날·7일·21일 동안 지킬 순서는?", "다시 같은 이유로 멀어지지 않으려면?"] },
+  understand_my_heart: { q: "그 사람을 향한 제 마음은 뭘까요?", next: ["내가 붙잡고 있는 건 그 사람일까, 그때의 나일까?", "이 마음을 망치지 않는 행동 순서는?", "21일 동안 내 마음을 정리하는 리추얼은?"] },
+  let_go: { q: "이 미련을 정리할 수 있을까요?", next: ["미련이 계속 남는 진짜 이유는?", "정리하는 21일 동안의 순서는?", "흔들리는 날 대신 할 행동은?"] },
+  apology: { q: "사과하거나 사과받을 수 있을까요?", next: ["사과가 닿으려면 언제, 어떻게?", "사과 문장 예시와 피해야 할 표현은?", "답이 없을 때 지킬 선은?"] },
+  find_direction: { q: "앞으로 어떻게 해야 할까요?", next: ["지금 관계가 반복하는 흐름은?", "오늘부터 21일 동안 할 일의 순서는?", "연락할지 기다릴지 판단하는 기준은?"] },
+  not_sure: { q: "지금 제 상황, 어떻게 봐야 할까요?", next: ["두 사람 사이에 지금 남아 있는 것은?", "가장 먼저 확인해야 할 한 가지는?", "오늘부터 21일 동안의 순서는?"] },
+};
+
 /** 구버전 저장본: 긴 행동 문장을 카드용으로 짧게 */
 function shortAction(text: string): string {
   const t = text.replace(/[“”"']/g, "").trim();
@@ -304,6 +316,16 @@ export default function PreviewExperience({
   /* 내 사연에서 반영한 사실 (10/16 지시문 6) — 이 기기의 신청 데이터 중 선택 항목 라벨만 (자유 입력 원문은 쓰지 않음) */
   const [facts, setFacts] = useState<string[]>([]);
   const [guides, setGuides] = useState<GuidePick[]>([]);
+  /* 11/3 — 신청서의 '가장 알고 싶은 것'을 미리보기 맨 위 질문으로 (경쟁사 학습: 상품=손님의 질문) */
+  const [wish, setWish] = useState<string>("");
+  /* 11/3 — 결제 버튼 옆 실제 숫자·후기 */
+  const [proof, setProof] = useState<{ paid: number; reviews: { rating: number; body: string; name: string; month: string; incentive: boolean }[] } | null>(null);
+  useEffect(() => {
+    fetch("/api/stats/proof")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => j && setProof(j))
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     /* 같은 브라우저 세션의 신청 데이터에서 표시용 이름·선택 항목만 */
     try {
@@ -321,6 +343,7 @@ export default function PreviewExperience({
       if (nr && f.length < 3) f.push(`상대의 새 사람 · ${nr}`);
       setFacts(f.filter(Boolean).slice(0, 3));
       setGuides(pickSituationGuides(a));
+      setWish(a.main_wish || "");
     } catch {
       /* 이름 없이 진행 */
     }
@@ -739,6 +762,34 @@ export default function PreviewExperience({
         </div>
       </header>
 
+
+      {/* ---------- 01-1. 당신이 물어본 질문 (11/3) ---------- */}
+      {(() => {
+        const q = ASKED[wish] ?? ASKED.find_direction;
+        return (
+          <section className="mt-4 px-6" aria-label="내가 물어본 질문">
+            <div className="mx-auto max-w-[640px] rounded-2xl border-2 border-burgundy/50 bg-[#f6e9ec] px-5 py-5">
+              <p className="text-[0.74rem] font-semibold tracking-[0.12em] text-burgundy">내가 월화에게 물어본 질문</p>
+              <p className="font-display mt-1.5 text-[1.3rem] font-bold leading-snug text-ivory">“{q.q}”</p>
+              <p className="mt-3 text-[0.76rem] font-semibold text-gold">월화의 한 줄 답 · 무료</p>
+              <p className="mt-1 text-[0.98rem] font-semibold leading-[1.6] text-ivory">
+                {CONTACT_VERDICT[stance]}. 지금 두 사람은 ‘{preview.relationship_state.label}’예요.
+              </p>
+              <p className="mt-4 text-[0.76rem] font-semibold text-gold">전체 결과에서 이어서 답하는 질문</p>
+              <ul className="mt-1.5 flex flex-col gap-1.5">
+                {q.next.map((t, i) => (
+                  <li key={t}>
+                    <button type="button" onClick={() => onLockClick(10 + i)} className="flex w-full items-center justify-between gap-2 rounded-xl border border-gold-dim bg-ink px-3.5 py-2.5 text-left">
+                      <span className="text-[0.9rem] font-medium text-ivory">{t}</span>
+                      <span aria-hidden className="shrink-0 text-[0.76rem] text-burgundy">🔒</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        );
+      })()}
       {/* ---------- 02. 관계 판정 카드 4개 ---------- */}
       <section className="mt-5 px-6" aria-label="관계 판정">
         <div className="mx-auto grid max-w-[640px] grid-cols-2 gap-2.5">
@@ -802,6 +853,19 @@ export default function PreviewExperience({
             ))}
           </ul>
           {PAYMENTS_OPEN && (
+            <>
+            {proof && (proof.paid >= 5 || proof.reviews.length > 0) && (
+              <div className="mt-5 rounded-xl border border-gold-dim bg-ink px-4 py-3">
+                {proof.paid >= 5 && (
+                  <p className="text-[0.84rem] font-semibold text-ivory">지금까지 {proof.paid.toLocaleString()}건의 전체 결과가 전달됐어요</p>
+                )}
+                {proof.reviews.slice(0, 2).map((r, i) => (
+                  <p key={i} className="mt-2 text-[0.82rem] leading-[1.6] text-ivory-dim">
+                    <span className="text-gold">{"★".repeat(Math.max(1, Math.min(5, r.rating)))}</span> “{r.body}{r.body.length >= 120 ? "…" : ""}” <span className="text-[0.74rem]">— {r.name} · {r.month}{r.incentive ? " · 후기 혜택 제공" : ""}</span>
+                  </p>
+                ))}
+              </div>
+            )}
             <div ref={offerCtaRef} className="mt-5">
               <p className="mb-2 text-center text-[0.84rem] text-ivory-dim">
                 {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
@@ -816,6 +880,7 @@ export default function PreviewExperience({
                 구성·환불 기준 먼저 볼게요
               </button>
             </div>
+            </>
           )}
         </div>
       </section>
