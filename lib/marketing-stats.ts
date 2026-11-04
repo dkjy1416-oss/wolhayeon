@@ -101,6 +101,8 @@ export interface MarketingStats {
   offerBuckets?: { label: string; cta: number; payPage: number; payWindow: number; paid: number }[];
   /** 10/16: 결제 화면을 연 브라우저(인앱 포함)별 — 결제 페이지 → 토스 호출 → 결제 */
   browsers?: { label: string; payPage: number; payWindow: number; paid: number }[];
+  /** 11/4: 미리보기 가격 아래 '망설여지는 이유' 응답 (주문당 마지막 답 1개) · paid = 그 뒤 결제까지 간 수 */
+  hesitations?: { label: string; count: number; paid: number }[];
 }
 
 const empty = (): Funnel => ({
@@ -553,9 +555,33 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
   }
   const browsers = [...browserMap.values()].sort((a, b) => b.payPage - a.payPage);
 
+  /* 망설이는 이유 — 주문당 마지막 응답 1개, 그 주문이 결국 결제했는지 */
+  const HESITATE_LABELS: Record<string, string> = {
+    price: "가격이 부담돼요",
+    trust: "도움이 될지 확신이 안 서요",
+    enough: "무료 미리보기로 충분했어요",
+    later: "더 생각해보고 싶어요",
+    pay: "결제 방법·절차가 불편해요",
+    other: "다른 이유",
+  };
+  const lastReason = new Map<string, string>();
+  for (const p of payEvents) {
+    if (p.event === "preview_hesitate" && p.code && HESITATE_LABELS[p.code]) lastReason.set(p.order_number, p.code);
+  }
+  const paidSet = new Set(orders.filter((o) => o.paid_at).map((o) => o.order_number));
+  const hesMap = new Map<string, { label: string; count: number; paid: number }>();
+  for (const [on, k] of lastReason) {
+    const r = hesMap.get(k) ?? { label: HESITATE_LABELS[k], count: 0, paid: 0 };
+    r.count += 1;
+    if (paidSet.has(on)) r.paid += 1;
+    hesMap.set(k, r);
+  }
+  const hesitations = [...hesMap.values()].sort((a, b) => b.count - a.count);
+
   return {
     offerBuckets: bucketRows,
     browsers,
+    hesitations,
     days,
     since,
     trackingSince,

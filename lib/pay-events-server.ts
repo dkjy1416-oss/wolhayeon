@@ -33,6 +33,7 @@ export const CLIENT_PAY_EVENTS = [
   "pay_timeout", // 결제하기 후 8초 넘게 결제창으로 안 넘어감 (code: 앱 안 브라우저 이름 | none) (10/30)
   "external_open_click", // '외부 브라우저로 열기' (code: android_chrome | kakao_auto | kakao | line | copy) (10/30)
   "preview_lock_click", // 미리보기 잠긴 항목 클릭 → 결제 안내로 이동 (code: 항목 번호) (10/30)
+  "preview_hesitate", // 미리보기 가격 아래 '망설여지는 이유' 한 번 탭 (code: price | trust | enough | later | pay | other) (11/4)
 ] as const;
 
 /** 서버에서만 기록하는 이벤트 */

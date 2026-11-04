@@ -23,7 +23,8 @@ export type ClientPayEvent =
   | "pay_page_leave"
   | "pay_timeout"
   | "external_open_click"
-  | "preview_lock_click";
+  | "preview_lock_click"
+  | "preview_hesitate";
 
 export function logPayEvent(
   orderNumber: string,
