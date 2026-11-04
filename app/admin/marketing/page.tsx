@@ -433,6 +433,25 @@ export default async function AdminMarketingPage({
         </section>
       )}
 
+      <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
+        <p className="text-sm font-semibold">미리보기에서 망설인 이유</p>
+        <p className="mt-0.5 text-[0.7rem] text-ivory-dim">가격 아래 ‘이유 하나만 알려주세요’ 탭 응답 · 주문당 1개 · 11/4부터 기록 · 테스트 제외</p>
+        {s.hesitations && s.hesitations.length > 0 ? (
+          <div className="mt-2 space-y-1 text-[0.8rem] tabular-nums">
+            {s.hesitations.map((r) => (
+              <div key={r.label} className="flex justify-between gap-3">
+                <span className="text-ivory-dim">{r.label}</span>
+                <span>
+                  {r.count}명{r.paid > 0 && <span className="text-ivory-dim"> · 그중 결제 {r.paid}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-2 text-[0.78rem] text-ivory-dim">아직 응답이 없어요</p>
+        )}
+      </section>
+
       {/* 일별 */}
       <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
         <p className="text-sm font-semibold">날짜별</p>
