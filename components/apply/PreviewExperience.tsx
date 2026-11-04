@@ -216,6 +216,69 @@ const ROLE_PAID: Record<Situation, string> = {
 };
 
 /** 결제 직전 FAQ — 실제 운영 기준과 일치하는 고정 문구 */
+/* 11/4: 가격을 보고도 결제 버튼을 안 누르는 손님(최근 7일 94%)이 '왜' 그런지 — 한 번 탭으로만 묻는다 (주문당 1회, 개인정보 없음) */
+const HESITATE_REASONS: Array<{ k: string; label: string; after: string }> = [
+  { k: "price", label: "가격이 조금 부담돼요", after: `결과를 열어보기 전이면 ${REFUND_WINDOW_DAYS}일 안에 전액 환불돼요. 부담 없이 천천히 정해도 괜찮아요.` },
+  { k: "trust", label: "정말 도움이 될지 확신이 안 서요", after: "전체 결과에는 연락 기준·보낼 문장·마음 정리가 들어가요. 위 '결과 예시'에서 실제 구성을 다시 볼 수 있어요." },
+  { k: "enough", label: "무료 미리보기로 충분했어요", after: "알려주셔서 고마워요. 미리보기의 '지금 연락' 판단만 지켜도 가장 위험한 행동은 피할 수 있어요." },
+  { k: "later", label: "지금은 더 생각해보고 싶어요", after: "이 화면은 이 기기에서 다시 열 수 있고, 결과 링크는 이메일로도 가요. 마음이 정해지면 그때 열어도 돼요." },
+  { k: "pay", label: "결제 방법이나 절차가 불편해요", after: "알려주셔서 고마워요. 카드·간편결제 모두 되고, 인스타 안에서 막히면 '외부 브라우저로 열기'를 눌러 주세요." },
+  { k: "other", label: "다른 이유예요", after: "알려주셔서 고마워요. 더 나은 미리보기를 만드는 데 참고할게요." },
+];
+
+function HesitateCard({ orderNumber }: { orderNumber: string }) {
+  const key = `wolhayeon_hesitate_${orderNumber}`;
+  const [picked, setPicked] = useState<string | null>(null);
+  const [hidden, setHidden] = useState(true);
+  useEffect(() => {
+    try {
+      const v = sessionStorage.getItem(key);
+      if (v) setPicked(v);
+    } catch {
+      /* noop */
+    }
+    setHidden(false);
+  }, [key]);
+  if (hidden) return null;
+  const done = picked ? HESITATE_REASONS.find((r) => r.k === picked) : null;
+  const pick = (k: string) => {
+    setPicked(k);
+    try {
+      sessionStorage.setItem(key, k);
+    } catch {
+      /* noop */
+    }
+    logPayEvent(orderNumber, "preview_hesitate", k);
+  };
+  return (
+    <div className="mt-4 rounded-xl border border-gold-dim/20 bg-ink/40 px-4 py-3.5">
+      {done ? (
+        <>
+          <p className="text-[0.74rem] font-semibold text-gold/80">고마워요</p>
+          <p className="mt-1 text-[0.78rem] leading-[1.8] text-ivory-dim">{done.after}</p>
+        </>
+      ) : (
+        <>
+          <p className="text-[0.8rem] font-medium text-ivory">아직 망설여진다면, 이유 하나만 알려주시겠어요?</p>
+          <p className="mt-0.5 text-[0.7rem] text-ivory-dim">탭 한 번이면 돼요 · 답해도 결제로 넘어가지 않아요</p>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {HESITATE_REASONS.map((r) => (
+              <button
+                key={r.k}
+                type="button"
+                onClick={() => pick(r.k)}
+                className="rounded-full border border-gold-dim/30 bg-ink-soft px-3 py-1.5 text-[0.74rem] text-ivory active:bg-burgundy/30"
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 const FAQ = [
   {
     q: "결과가 모두 똑같은가요?",
@@ -982,6 +1045,7 @@ export default function PreviewExperience({
                   <li>· 입력하신 사연은 결과를 만드는 데에만 사용됩니다</li>
                 </ul>
               </div>
+              {PAYMENTS_OPEN && !want && <HesitateCard orderNumber={orderNumber} />}
             </div>
           </section>
 
