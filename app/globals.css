@@ -15,7 +15,7 @@
   --color-gold: #c9a96a; /* muted gold accent */
   --color-gold-dim: #75613f; /* hairlines */
 
-  --font-serif-kr: "Noto Serif KR", "Gowun Batang", "Nanum Myeongjo", serif;
+  --font-serif-kr: "Gowun Dodum", "Pretendard Variable", Pretendard, "Noto Sans KR", sans-serif; /* 11/4: 운영자 선택 — 제목 글씨체 고운돋움 */
   --font-sans-kr: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
     "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
@@ -37,7 +37,7 @@ body {
 /* 세리프 제목 공통 */
 .font-display {
   font-family: var(--font-serif-kr);
-  letter-spacing: -0.035em; /* 10/31: 제목을 더 단단하고 현대적으로 */
+  letter-spacing: -0.015em; /* 11/4: 고운돋움은 둥근 고딕이라 자간을 덜 좁힘 */
   font-synthesis-weight: none;
 }
 
@@ -541,4 +541,47 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .fx-auto, .fx-auto-media { opacity: 1; transform: none; filter: none; transition: none; }
+}
+
+/* ---------------------------------------------------------------
+   11/4 운영자 지시: 제목 글씨체 고운돋움 + 제목 크기 1.4rem(약 22px)으로 통일,
+   본문 문단 0.95~1.12rem → 0.88rem. 파일마다 손대지 않고 한 곳에서 덮어씀
+   (관리자 화면은 .font-display 를 거의 안 써서 영향 없음).
+   되돌리려면 이 블록만 지우면 됨.
+   --------------------------------------------------------------- */
+.font-display.text-\[1\.45rem\],
+.font-display.text-\[1\.5rem\],
+.font-display.text-\[1\.55rem\],
+.font-display.text-\[1\.6rem\],
+.font-display.text-\[1\.65rem\],
+.font-display.text-\[1\.7rem\],
+.font-display.text-\[1\.75rem\],
+.font-display.text-\[1\.8rem\],
+.font-display.text-\[1\.85rem\],
+.font-display.text-\[2rem\],
+.font-display.text-\[2\.15rem\],
+.font-display.text-\[2\.2rem\],
+.font-display.text-\[2\.35rem\],
+.font-display.text-\[3\.2rem\],
+.font-display.md\:text-\[1\.5rem\],
+.font-display.md\:text-\[1\.7rem\],
+.font-display.md\:text-\[2rem\],
+.font-display.md\:text-\[2\.6rem\],
+.font-display.text-2xl,
+.font-display.text-3xl,
+.font-display.text-4xl,
+.font-display.sm\:text-2xl,
+.font-display.sm\:text-3xl,
+.font-display.sm\:text-4xl {
+  font-size: 1.4rem !important;
+}
+p.text-\[0\.95rem\],
+p.text-\[0\.96rem\],
+p.text-\[0\.98rem\],
+p.text-\[1rem\],
+p.text-\[1\.02rem\],
+p.text-\[1\.05rem\],
+p.text-\[1\.08rem\],
+p.md\:text-\[1rem\] {
+  font-size: 0.88rem !important;
 }
