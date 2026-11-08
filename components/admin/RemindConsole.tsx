@@ -21,9 +21,9 @@ type ApiResult = {
 export default function RemindConsole() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ApiResult | null>(null);
-  const [lastMode, setLastMode] = useState<"count" | "send" | null>(null);
+  const [lastMode, setLastMode] = useState<"count" | "send" | "test" | null>(null);
 
-  const call = async (mode: "count" | "send") => {
+  const call = async (mode: "count" | "send" | "test") => {
     if (
       mode === "send" &&
       !window.confirm(
@@ -74,12 +74,20 @@ export default function RemindConsole() {
           {busy && lastMode === "send" ? "발송 중…" : "발송하기"}
         </button>
       </div>
+      <button
+        onClick={() => call("test")}
+        disabled={busy}
+        className="mt-3 h-11 w-full rounded-full border border-gold-dim/25 text-[0.82rem] text-ivory-dim disabled:opacity-40"
+      >
+        {busy && lastMode === "test" ? "보내는 중…" : "내 메일로 테스트 (예시 사연 · dkjy1416@naver.com)"}
+      </button>
+      <p className="mt-2 text-[0.72rem] leading-[1.7] text-ivory-dim">광고성 메일이라 밤 9시~아침 8시에는 발송이 막혀요.</p>
 
       {result && (
         <div className="mt-8 rounded-xl border border-gold-dim/25 bg-ink-soft/70 px-5 py-5 text-[0.88rem] leading-[1.9]">
           {result.ok ? (
             <>
-              <p>발송 대상: {result.eligible}명</p>
+              {typeof result.eligible === "number" && <p>발송 대상: {result.eligible}명</p>}
               {typeof result.sent === "number" && (
                 <>
                   <p className="text-gold">발송 완료: {result.sent}명</p>
@@ -94,6 +102,8 @@ export default function RemindConsole() {
               오류: {result.error}
               {result.code === "42703"
                 ? " — Supabase에서 remind_sent_at 컬럼 SQL을 먼저 실행하세요."
+                : result.error === "quiet_hours"
+                  ? " — 밤 9시~아침 8시에는 광고 메일을 보낼 수 없어요. 아침 8시 이후에 다시 눌러 주세요."
                 : result.error === "unauthorized"
                   ? " — 로그인이 만료됐어요. 다시 로그인해주세요."
                   : ""}
