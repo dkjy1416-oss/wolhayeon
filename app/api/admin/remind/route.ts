@@ -1,7 +1,9 @@
 /**
  * POST /api/admin/remind — 미결제 신청자 리마인드 메일 (관리자 전용)
  *
- * body: { adminSecret: string, mode: "count" | "send", limit?: number }
+ * body: { adminSecret: string, mode: "count" | "send" | "test", limit?: number }
+ * mode=test : 운영자 메일(dkjy1416@naver.com)로 예시 메일 1통 (손님 데이터 사용 안 함)
+ * 21:00~08:00(KST)에는 send 거절 (광고성 메일 발송 금지 시간)
  *
  * 대상 조건 (모두 만족):
  *  - payment_status = 'pending' (미결제)
@@ -67,73 +69,106 @@ function deadlineText(endMs: number): string {
   }).format(new Date(endMs));
 }
 
-function buildEmail(name: string, openUrl: string, fromEmail: string, endMs: number, pixelUrl = "") {
-  const safeName = name.trim() || "당신";
-  const esc = escapeHtml(safeName);
+/** 사연 첫 문장 — 메일 본문 인용용 (제목·미리보기 줄에는 넣지 않음: 잠금화면 노출 방지) */
+function storyQuote(story: string): string {
+  const flat = (story || "").replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+  if (!flat) return "";
+  const first = flat.split(/(?<=[.!?。…~])\s|\n/)[0] ?? flat;
+  const cut = first.length > 56 ? `${first.slice(0, 54).trim()}…` : first;
+  return cut;
+}
+
+/* 11/8 개편(운영자 승인): 14일 48통 → 클릭 0. 가격 먼저 → '내 이야기' 먼저.
+   맨 위에 손님이 쓴 첫 문장 + 버튼 하나("내 미리보기 다시 열기", 결제 아님을 명시). 가격 안내는 아래로. */
+function buildEmail(
+  name: string,
+  partner: string,
+  story: string,
+  openUrl: string,
+  fromEmail: string,
+  endMs: number,
+  pixelUrl = ""
+) {
+  const safeName = name.trim();
+  const hello = safeName ? `${safeName}님,` : "안녕하세요,";
+  const esc = escapeHtml(safeName || "내가");
+  const partnerName = partner.trim();
+  const quote = storyQuote(story);
   const offer = FIRST_OFFER_PRICE_KRW.toLocaleString();
   const regular = RITUAL_REGULAR_PRICE_KRW.toLocaleString();
   const until = deadlineText(endMs);
   /* 정보통신망법: 영리 목적 광고성 정보는 (광고) 표기 + 수신거부 안내 */
-  const subject = `(광고) [월하연] ${safeName}님, 24시간 동안 ${offer}원으로 이어 볼 수 있어요`;
+  const subject = safeName
+    ? `(광고) [월하연] ${safeName}님이 남긴 이야기, 아직 그대로 있어요`
+    : `(광고) [월하연] 남겨 주신 이야기, 아직 그대로 있어요`;
+  const lead = partnerName
+    ? `${partnerName}님과의 이야기를 들려주셨던 거, 기억나세요?`
+    : `들려주셨던 이야기, 기억나세요?`;
 
   const text = [
-    `${safeName}님,`,
+    hello,
     ``,
-    `그날 들려주신 이야기의 다음 장이 그대로 남아 있어요.`,
-    `무료 미리보기에서 본 흐름에서, 이제 "그래서 어떻게 해야 하지?"를 정리할 차례예요.`,
+    lead,
+    quote ? `“${quote}”` : ``,
     ``,
-    `■ 이 메일을 받은 때부터 24시간, 첫 구매가 ${offer}원 (정가 ${regular}원)`,
-    `   ${until}까지`,
+    `월화가 그 이야기를 읽고 남긴 미리보기가 그대로 있어요.`,
+    `아래 링크로 다시 입력 없이 바로 열려요. (눌러도 결제되지 않아요)`,
+    openUrl,
     ``,
-    `월화의 메시지에는 들려주신 사연을 바탕으로`,
+    `미리보기 다음 장에는`,
     `· 지금 할 행동과 멈출 행동`,
     `· 연락을 고려할 때 쓸 첫 문장`,
     `· 상대의 반응에 따른 다음 행동`,
-    `을 담아요.`,
+    `이 들어 있어요.`,
     ``,
-    `아래 링크를 누르면 다시 입력할 필요 없이 내 미리보기로 바로 이어집니다.`,
-    openUrl,
-    ``,
-    `1회 결제 · 결제 후 보통 1~3분이면 완성 · 결과를 열어보기 전이면 7일 안에 전액 환불`,
+    `■ 이 메일을 받은 때부터 24시간, 첫 구매가 ${offer}원 (정가 ${regular}원) · ${until}까지`,
+    `1회 결제 · 결과를 열어보기 전이면 7일 안에 전액 환불`,
+    `월하연은 결과를 보장하지 않아요. 관계를 돌아보는 참고 자료예요.`,
     ``,
     `— 월하연 月下緣`,
     ``,
     `이 메일은 월하연 소식 수신에 동의하신 분께 발송되었습니다.`,
     `더 받고 싶지 않으시면 이 메일에 "수신거부"라고 회신해 주세요.`,
-  ].join("\n");
+  ]
+    .filter((l, i, a) => !(l === `` && a[i - 1] === ``))
+    .join("\n");
+
+  const quoteHtml = quote
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px;"><tr><td bgcolor="#16110d" style="background-color:#16110d;border-left:3px solid #c9a96e;border-radius:6px;padding:16px 18px;">
+        <p style="font-size:11px;letter-spacing:0.12em;color:#c9a96e;margin:0 0 8px;">${safeName ? `${esc}님이 쓴 첫 문장` : "내가 쓴 첫 문장"}</p>
+        <p style="font-size:15px;line-height:1.9;color:#efe9dc;margin:0;">“${escapeHtml(quote)}”</p>
+      </td></tr></table>`
+    : "";
 
   const html = `<!doctype html><html lang="ko"><body style="margin:0;padding:0;background-color:#0a0908;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">월화의 미리보기가 그대로 있어요. 다시 입력 없이 바로 열려요.</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0a0908" style="background-color:#0a0908;"><tr><td align="center" bgcolor="#0a0908" style="background-color:#0a0908;">
-  <div style="background-color:#0a0908;text-align:left;max-width:520px;margin:0 auto;padding:44px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
-    <p style="font-size:11px;letter-spacing:0.3em;color:#c9a96e;margin:0 0 28px;">月下緣 · 월하연</p>
-    <p style="font-size:16px;line-height:2;margin:0 0 18px;">${esc}님,</p>
-    <p style="font-size:15px;line-height:2.1;color:#d8d2c6;margin:0 0 26px;">
-      그날 들려주신 이야기의 다음 장이 그대로 남아 있어요.<br/>
-      무료 미리보기에서 본 흐름에서, 이제<br/>
-      <b style="color:#efe9dc;">“그래서 어떻게 해야 하지?”</b>를 정리할 차례예요.
+  <div style="background-color:#0a0908;text-align:left;max-width:520px;margin:0 auto;padding:36px 24px;font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#efe9dc;">
+    <p style="font-size:11px;letter-spacing:0.3em;color:#c9a96e;margin:0 0 22px;">月下緣 · 월하연</p>
+    <p style="font-size:16px;line-height:1.9;margin:0 0 6px;">${escapeHtml(hello)}</p>
+    <p style="font-size:15px;line-height:1.9;color:#d8d2c6;margin:0 0 18px;">${escapeHtml(lead)}</p>
+    ${quoteHtml}
+    <a href="${openUrl}"
+       style="display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:16px;font-weight:600;">
+      내 미리보기 다시 열기
+    </a>
+    <p style="font-size:12px;line-height:1.8;color:#a9a294;text-align:center;margin:10px 0 30px;">
+      다시 입력할 필요 없어요 · 눌러도 결제되지 않아요
     </p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid rgba(201,169,110,.45);border-radius:14px;"><tr><td bgcolor="#16110d" style="background-color:#16110d;border-radius:14px;padding:22px 20px;text-align:center;">
-      <p style="font-size:12px;letter-spacing:0.12em;color:#c9a96e;margin:0 0 10px;">이 메일을 받은 때부터 24시간 · 첫 구매가</p>
-      <p style="margin:0 0 6px;font-size:14px;color:#8d8779;text-decoration:line-through;">${regular}원</p>
-      <p style="margin:0;font-size:34px;font-weight:700;color:#efe9dc;letter-spacing:0.02em;">${offer}원</p>
-      <p style="margin:12px 0 0;font-size:13px;color:#d4a24c;">${escapeHtml(until)}까지</p>
-    </td></tr></table>
-    <p style="font-size:14px;line-height:2.05;color:#d8d2c6;margin:26px 0 8px;">월화의 메시지에는 들려주신 사연을 바탕으로</p>
-    <p style="font-size:14px;line-height:2.05;color:#efe9dc;margin:0 0 30px;">
+    <p style="font-size:14px;line-height:2;color:#d8d2c6;margin:0 0 6px;">미리보기 다음 장에는</p>
+    <p style="font-size:14px;line-height:2;color:#efe9dc;margin:0 0 24px;">
       · 지금 할 행동과 멈출 행동<br/>
       · 연락을 고려할 때 쓸 첫 문장<br/>
       · 상대의 반응에 따른 다음 행동<br/>
-      <span style="color:#d8d2c6;">을 담아요.</span>
+      <span style="color:#d8d2c6;">이 들어 있어요.</span>
     </p>
-    <a href="${openUrl}"
-       style="display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:17px 20px;font-size:16px;font-weight:600;">
-      ${offer}원으로 내 이야기 이어 보기
-    </a>
-    <p style="font-size:12px;line-height:1.9;color:#a9a294;text-align:center;margin:14px 0 0;">
-      다시 입력할 필요 없이 내 미리보기로 바로 이어져요<br/>
-      1회 결제 · 결제 후 보통 1~3분이면 완성 · 열어보기 전이면 7일 안에 전액 환불
-    </p>
-    <p style="font-size:12px;color:#8d8779;line-height:1.9;margin:36px 0 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid rgba(201,169,110,.3);border-radius:12px;"><tr><td bgcolor="#120e0b" style="background-color:#120e0b;border-radius:12px;padding:14px 18px;">
+      <p style="font-size:12px;line-height:1.9;color:#c9a96e;margin:0;">이 메일을 받은 때부터 24시간 · 첫 구매가</p>
+      <p style="font-size:14px;line-height:1.9;color:#efe9dc;margin:0;"><span style="color:#8d8779;text-decoration:line-through;">${regular}원</span> → <b>${offer}원</b> · ${escapeHtml(until)}까지</p>
+      <p style="font-size:12px;line-height:1.9;color:#a9a294;margin:4px 0 0;">1회 결제 · 결과를 열어보기 전이면 7일 안에 전액 환불</p>
+    </td></tr></table>
+    <p style="font-size:12px;color:#8d8779;line-height:1.9;margin:28px 0 0;">
+      월하연은 결과를 보장하지 않아요. 관계를 돌아보는 참고 자료예요.<br/>
       이 메일은 월하연 소식 수신에 동의하신 분께 발송되었습니다.<br/>
       더 받고 싶지 않으시면 이 메일(${escapeHtml(fromEmail)})에
       "수신거부"라고 회신해 주세요.
@@ -142,6 +177,17 @@ function buildEmail(name: string, openUrl: string, fromEmail: string, endMs: num
 
   return { subject, text, html };
 }
+
+/** 광고성 메일 발송 금지 시간 (KST 21:00~08:00) */
+function inQuietHours(nowMs: number): boolean {
+  const h = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Seoul", hour: "numeric", hour12: false }).format(new Date(nowMs))
+  ) % 24;
+  return h >= 21 || h < 8;
+}
+
+/* 운영자 확인용 테스트 메일 — 받는 사람은 고정(운영자), 손님 사연은 쓰지 않고 예시 문장만 */
+const TEST_TO = "dkjy1416@naver.com";
 
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
@@ -156,7 +202,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const mode = body.mode === "send" ? "send" : "count";
+  const mode = body.mode === "send" ? "send" : body.mode === "test" ? "test" : "count";
   const limit = Math.min(
     Math.max(Number(body.limit) || DEFAULT_LIMIT, 1),
     200
@@ -165,8 +211,36 @@ export async function POST(request: Request) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
   const siteUrl = sanitizeSiteUrl(process.env.SITE_URL);
-  if (mode === "send" && (!apiKey || !fromEmail || !siteUrl)) {
+  if ((mode === "send" || mode === "test") && (!apiKey || !fromEmail || !siteUrl)) {
     return NextResponse.json({ ok: false, error: "config_missing" }, { status: 500 });
+  }
+
+  if (mode === "test") {
+    const mail = buildEmail(
+      "예시",
+      "민호",
+      "[예시] 1년 반을 만났고 두 달 전에 민호가 먼저 헤어지자고 했어요. 그 뒤로 연락은 한 번도 없었어요.",
+      `${siteUrl}/apply`,
+      fromEmail!,
+      Date.now() + FIRST_OFFER_WINDOW_MS
+    );
+    try {
+      const r = await new Resend(apiKey).emails.send({
+        from: `월하연 月下緣 <${fromEmail}>`,
+        to: TEST_TO,
+        subject: `[테스트] ${mail.subject}`,
+        text: mail.text,
+        html: mail.html,
+      });
+      if (r.error) return NextResponse.json({ ok: false, error: "send_failed" }, { status: 500 });
+    } catch {
+      return NextResponse.json({ ok: false, error: "send_failed" }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, mode, sent: 1, to: TEST_TO });
+  }
+
+  if (mode === "send" && inQuietHours(Date.now())) {
+    return NextResponse.json({ ok: false, error: "quiet_hours" }, { status: 400 });
   }
 
   const now = Date.now();
@@ -177,7 +251,7 @@ export async function POST(request: Request) {
   const res = await supabase
     .from("ritual_orders")
     .select(
-      "id, order_number, applicant_name, email, created_at, remind_sent_at"
+      "id, order_number, applicant_name, partner_name, story, email, created_at, remind_sent_at"
     )
     .eq("payment_status", "pending")
     .eq("consent_marketing", true)
@@ -228,7 +302,15 @@ export async function POST(request: Request) {
     const pixelUrl = `${siteUrl}/api/remind/px?order=${encodeURIComponent(row.order_number)}&t=${encodeURIComponent(token)}&src=remind`;
     /* 발송 직전 시각 기준 24시간 — 실제 기록(remind_sent_at)은 발송 직후라 안내한 마감보다 몇 초 늦게 끝나 손님에게 불리하지 않음 */
     const sendStart = Date.now();
-    const mail = buildEmail(row.applicant_name ?? "", openUrl, fromEmail!, sendStart + FIRST_OFFER_WINDOW_MS, pixelUrl);
+    const mail = buildEmail(
+      row.applicant_name ?? "",
+      typeof row.partner_name === "string" ? row.partner_name : "",
+      typeof row.story === "string" ? row.story : "",
+      openUrl,
+      fromEmail!,
+      sendStart + FIRST_OFFER_WINDOW_MS,
+      pixelUrl
+    );
 
     try {
       const r = await resend.emails.send(
@@ -239,7 +321,7 @@ export async function POST(request: Request) {
           text: mail.text,
           html: mail.html,
         },
-        { idempotencyKey: `remind-v2-${row.order_number}` }
+        { idempotencyKey: `remind-v3-${row.order_number}` }
       );
       if (r.error) {
         failed += 1;
