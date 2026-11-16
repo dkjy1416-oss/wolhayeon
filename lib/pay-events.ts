@@ -25,7 +25,8 @@ export type ClientPayEvent =
   | "external_open_click"
   | "preview_lock_click"
   | "preview_hesitate"
-  | "pay_leave_popup";
+  | "pay_leave_popup"
+  | "pay_cancel_popup";
 
 export function logPayEvent(
   orderNumber: string,

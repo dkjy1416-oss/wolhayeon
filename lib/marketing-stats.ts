@@ -104,6 +104,12 @@ export interface MarketingStats {
   browsers?: { label: string; payPage: number; payWindow: number; paid: number }[];
   /** 11/4: 미리보기 가격 아래 '망설여지는 이유' 응답 (주문당 마지막 답 1개) · paid = 그 뒤 결제까지 간 수 */
   hesitations?: { label: string; count: number; paid: number }[];
+  /** 11/16: 결제 화면에 온 주문이 어디서 멈췄나 (주문당 1개, 가장 멀리 간 단계) */
+  payExit?: { label: string; count: number }[];
+  /** 11/16: 결제 화면 이탈 할인 안내 팝업 (주문 수) · paidAfter = 팝업을 본 뒤 결제한 주문 */
+  leavePopup?: { shown: number; stay: number; leave: number; paidAfter: number };
+  /** 11/16: 결제창 취소 후 월화 팝업 (주문 수) · reasons = 고른 이유 */
+  cancelPopup?: { shown: number; retry: number; paidAfter: number; reasons: { label: string; count: number }[] };
 }
 
 const empty = (): Funnel => ({
@@ -579,10 +585,81 @@ export async function getMarketingStats(days: number): Promise<MarketingStats> {
   }
   const hesitations = [...hesMap.values()].sort((a, b) => b.count - a.count);
 
+  /* 11/16: 결제 화면에서 어디서 나갔나 — 결제 화면을 연 주문마다 가장 멀리 간 단계 하나 */
+  const evsOf = new Map<string, { event: string; code: string | null }[]>();
+  for (const p of payEvents) {
+    const on = p.order_number as string;
+    const a = evsOf.get(on) ?? [];
+    a.push(p);
+    evsOf.set(on, a);
+  }
+  const EXIT_ORDER = [
+    "결제 완료",
+    "결제창에서 취소하고 나감",
+    "결제창 오류·실패",
+    "결제창을 열고 그냥 나감",
+    "결제 버튼은 봤지만 안 누름",
+    "결제 버튼까지 안 내려오고 나감",
+  ];
+  const exitMap = new Map<string, number>();
+  for (const [on, list] of evsOf) {
+    if (!list.some((p) => p.event === "pay_page_view")) continue;
+    const cancelled = list.some((p) => (p.event === "pay_request_error" || p.event === "pay_fail") && !!p.code && CANCEL_CODES.has(p.code));
+    const failed = list.some(
+      (p) => (p.event === "pay_request_error" || p.event === "pay_fail" || p.event === "confirm_failed") && !(p.code && CANCEL_CODES.has(p.code))
+    );
+    const opened = list.some((p) => p.event === "pay_request");
+    const sawBtn = list.some((p) => p.event === "pay_page_leave" && /^(paybtn|clicked|error)_/.test(p.code ?? ""));
+    const label = paidSet.has(on)
+      ? EXIT_ORDER[0]
+      : cancelled
+        ? EXIT_ORDER[1]
+        : failed
+          ? EXIT_ORDER[2]
+          : opened
+            ? EXIT_ORDER[3]
+            : sawBtn
+              ? EXIT_ORDER[4]
+              : EXIT_ORDER[5];
+    exitMap.set(label, (exitMap.get(label) ?? 0) + 1);
+  }
+  const payExit = EXIT_ORDER.filter((l) => exitMap.has(l)).map((label) => ({ label, count: exitMap.get(label) ?? 0 }));
+
+  const ordersCode = (event: string, code: string) =>
+    new Set<string>(payEvents.filter((p) => p.event === event && p.code === code).map((p) => p.order_number));
+  const lpShown = ordersCode("pay_leave_popup", "shown");
+  const leavePopup = {
+    shown: lpShown.size,
+    stay: ordersCode("pay_leave_popup", "stay").size,
+    leave: ordersCode("pay_leave_popup", "leave").size,
+    paidAfter: [...lpShown].filter((o) => paidSet.has(o)).length,
+  };
+  const cpShown = ordersCode("pay_cancel_popup", "shown");
+  const CANCEL_REASON_LABELS: Record<string, string> = {
+    reason_price: "가격이 부담돼요",
+    reason_method: "결제 수단·절차가 불편해요",
+    reason_later: "조금 더 생각해 볼게요",
+    reason_other: "다른 이유",
+  };
+  const reasonCount = new Map<string, number>();
+  for (const k of Object.keys(CANCEL_REASON_LABELS)) {
+    const n = ordersCode("pay_cancel_popup", k).size;
+    if (n > 0) reasonCount.set(CANCEL_REASON_LABELS[k], n);
+  }
+  const cancelPopup = {
+    shown: cpShown.size,
+    retry: ordersCode("pay_cancel_popup", "retry").size,
+    paidAfter: [...cpShown].filter((o) => paidSet.has(o)).length,
+    reasons: [...reasonCount.entries()].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count),
+  };
+
   return {
     offerBuckets: bucketRows,
     browsers,
     hesitations,
+    payExit,
+    leavePopup,
+    cancelPopup,
     days,
     since,
     trackingSince,

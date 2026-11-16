@@ -35,6 +35,7 @@ export const CLIENT_PAY_EVENTS = [
   "preview_lock_click", // 미리보기 잠긴 항목 클릭 → 결제 안내로 이동 (code: 항목 번호) (10/30)
   "preview_hesitate", // 미리보기 가격 아래 '망설여지는 이유' 한 번 탭 (code: price | trust | enough | later | pay | other) (11/4)
   "pay_leave_popup", // 결제 화면에서 나가려 할 때 할인 안내 팝업 (code: shown | stay | leave) (11/16)
+  "pay_cancel_popup", // 결제창 취소 후 월화 팝업 (code: shown | retry | close | reason_price | reason_method | reason_later | reason_other) (11/16)
 ] as const;
 
 /** 서버에서만 기록하는 이벤트 */
