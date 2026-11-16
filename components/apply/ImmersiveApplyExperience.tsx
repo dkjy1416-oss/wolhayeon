@@ -70,7 +70,7 @@ const INTRO_MESSAGES = [
 ];
 const INTRO_STEP_MS = 2000;
 
-const STEP_KEY = "wolhayeon_immersive_step_v1";
+const STEP_KEY = "wolhayeon_immersive_step_v2"; // 11/16 순서 개편으로 v2
 
 type Phase = "intro" | "questions" | "outro";
 
@@ -104,6 +104,7 @@ interface StepDef {
 }
 
 const STEPS: StepDef[] = [
+  /* 11/16 순서 개편: 공감 질문 먼저, 신상 질문은 뒤로 (필드명·저장 형식은 그대로) */
   {
     id: "applicant_name",
     kind: "text",
@@ -113,6 +114,148 @@ const STEPS: StepDef[] = [
     valid: (a) => a.applicant_name.trim().length > 0,
     get: (a) => a.applicant_name,
     set: (a, v) => ({ ...a, applicant_name: String(v) }),
+  },
+  {
+    id: "relationship_type",
+    kind: "select",
+    question: "두 사람은 어떤 관계였나요?",
+    options: RELATIONSHIP_TYPE_OPTIONS,
+    valid: (a) =>
+      a.relationship_type !== "" &&
+      (a.relationship_type !== "other" ||
+        a.relationship_type_other.trim().length > 0),
+    get: (a) => a.relationship_type,
+    set: (a, v) => {
+      const value = String(v);
+      return {
+        ...a,
+        relationship_type: value,
+        relationship_type_other:
+          value === "other" ? a.relationship_type_other : "",
+        breakup_elapsed: isBreakupRelated(value) ? a.breakup_elapsed : null,
+        breakup_initiator: isBreakupRelated(value)
+          ? a.breakup_initiator
+          : null,
+      };
+    },
+  },
+  {
+    id: "breakup_elapsed",
+    kind: "select",
+    question: "두 사람이 멀어진 지\n얼마나 되었나요?",
+    options: BREAKUP_ELAPSED_OPTIONS,
+    visible: (a) => isBreakupRelated(a.relationship_type),
+    valid: (a) => a.breakup_elapsed !== null && a.breakup_elapsed !== "",
+    get: (a) => a.breakup_elapsed ?? "",
+    set: (a, v) => ({ ...a, breakup_elapsed: String(v) }),
+  },
+  {
+    id: "contact_status",
+    kind: "select",
+    question: "지금 두 사람은\n연락을 하고 있나요?",
+    options: CONTACT_STATUS_OPTIONS,
+    valid: (a) => a.contact_status !== "",
+    get: (a) => a.contact_status,
+    set: (a, v) => ({ ...a, contact_status: String(v) }),
+  },
+  {
+    id: "breakup_initiator",
+    kind: "select",
+    question: "멀어지자는 이야기는\n어느 쪽에서 먼저 나왔나요?",
+    options: BREAKUP_INITIATOR_OPTIONS,
+    visible: (a) => isBreakupRelated(a.relationship_type),
+    valid: (a) => a.breakup_initiator !== null && a.breakup_initiator !== "",
+    get: (a) => a.breakup_initiator ?? "",
+    set: (a, v) => ({ ...a, breakup_initiator: String(v) }),
+  },
+  {
+    id: "last_conversation",
+    kind: "select",
+    question: "마지막으로 이야기를 나눈 건\n언제였나요?",
+    options: LAST_CONVERSATION_OPTIONS,
+    valid: (a) => a.last_conversation !== "",
+    get: (a) => a.last_conversation,
+    set: (a, v) => ({ ...a, last_conversation: String(v) }),
+  },
+  {
+    id: "current_emotion",
+    kind: "select",
+    question: "{name}님,\n지금 그 사람을 떠올리면\n가장 먼저 어떤 마음이 올라오나요?",
+    options: CURRENT_EMOTION_OPTIONS,
+    valid: (a) => a.current_emotion !== "",
+    get: (a) => a.current_emotion,
+    set: (a, v) => ({ ...a, current_emotion: String(v) }),
+  },
+  {
+    id: "pain_points",
+    kind: "multi",
+    question: "요즘 가장 마음을 힘들게 하는 건\n무엇인가요?",
+    sub: `가장 가까운 것을 ${PAIN_POINTS_MAX}개까지 골라주세요.`,
+    options: PAIN_POINT_OPTIONS,
+    valid: (a) => a.pain_points.length > 0,
+    get: (a) => a.pain_points,
+    set: (a, v) => ({ ...a, pain_points: v as string[] }),
+  },
+  {
+    id: "main_wish",
+    kind: "select",
+    question: "지금 월화에게\n가장 알고 싶은 건 무엇인가요?",
+    options: MAIN_WISH_OPTIONS,
+    valid: (a) => a.main_wish !== "",
+    get: (a) => a.main_wish,
+    set: (a, v) => ({ ...a, main_wish: String(v) }),
+  },
+  {
+    id: "story",
+    kind: "textarea",
+    question: "두 사람의 이야기를\n편하게 들려주세요.",
+    sub: "한 줄도 괜찮아요.\n길게 쓸수록 편지가 더 내 이야기처럼 써져요.",
+    placeholder: "생각나는 대로 편하게 적어주세요.",
+    maxLen: STORY_MAX,
+    valid: (a) => a.story.trim().length > 0,
+    get: (a) => a.story,
+    set: (a, v) => ({ ...a, story: String(v) }),
+  },
+  {
+    /* 11/16: 18(남은 말)·19(달라졌으면)·21(하고 싶은 말)을 한 화면으로 — 필드는 last_conversation_memory 그대로 */
+    id: "last_conversation_memory",
+    kind: "textarea",
+    question: "월화에게 더 하고 싶은 말이 있나요?",
+    sub: "마지막 대화에서 남은 말, 다시 이어진다면 달라졌으면 하는 것,\n무엇이든 괜찮아요. 없으면 넘어가도 돼요.",
+    placeholder: "예: 마지막에 미안하다는 말만 남기고 연락이 끊겼어요.",
+    maxLen: 500,
+    optional: true,
+    valid: () => true,
+    get: (a) => a.last_conversation_memory,
+    set: (a, v) => ({ ...a, last_conversation_memory: String(v) }),
+  },
+  {
+    id: "partner_new_relationship",
+    kind: "select",
+    question: "{partner}님 곁에\n새로운 사람이 있는지 알고 계신가요?",
+    options: PARTNER_NEW_RELATIONSHIP_OPTIONS,
+    valid: (a) => a.partner_new_relationship !== "",
+    get: (a) => a.partner_new_relationship,
+    set: (a, v) => ({ ...a, partner_new_relationship: String(v) }),
+  },
+  {
+    id: "safety_concerns",
+    kind: "multi",
+    question: "혹시 두 사람 사이에\n이런 일이 있었나요?",
+    sub: "{name}님의 마음을 안전하게 듣기 위한 질문이에요.\n해당되는 것이 없다면 '없음'을 골라주세요.",
+    options: SAFETY_CONCERN_OPTIONS,
+    valid: (a) => a.safety_concerns.length > 0,
+    get: (a) => a.safety_concerns,
+    set: (a, v) => ({ ...a, safety_concerns: v as string[] }),
+  },
+  {
+    id: "relationship_duration",
+    kind: "select",
+    question: "두 사람은 얼마나 함께했나요?",
+    options: RELATIONSHIP_DURATION_OPTIONS,
+    valid: (a) => a.relationship_duration !== "",
+    get: (a) => a.relationship_duration,
+    set: (a, v) => ({ ...a, relationship_duration: String(v) }),
   },
   {
     id: "applicant_birth_year",
@@ -163,8 +306,8 @@ const STEPS: StepDef[] = [
     id: "partner_birth_year",
     kind: "year",
     question: "{partner}님은 몇 년생인가요?",
-    sub: "모르시면 비워두고 넘어가도 괜찮아요.",
-    placeholder: "예: 1992 (모르면 비워두세요)",
+    sub: "모르면 아래 [모름]을 눌러 주세요.",
+    placeholder: "예: 1992",
     optional: true,
     valid: (a) =>
       a.partner_birth_year === null ||
@@ -176,204 +319,31 @@ const STEPS: StepDef[] = [
     }),
   },
   {
-    id: "partner_gender",
-    kind: "select",
-    question: "{partner}님에 대해서도\n조금만 알려주세요.",
-    options: PARTNER_GENDER_OPTIONS,
-    optional: true,
-    valid: () => true,
-    get: (a) => a.partner_gender ?? "",
-    set: (a, v) => ({ ...a, partner_gender: v ? String(v) : null }),
-  },
-  {
-    id: "relationship_type",
-    kind: "select",
-    question: "두 사람은 어떤 관계였나요?",
-    options: RELATIONSHIP_TYPE_OPTIONS,
-    valid: (a) =>
-      a.relationship_type !== "" &&
-      (a.relationship_type !== "other" ||
-        a.relationship_type_other.trim().length > 0),
-    get: (a) => a.relationship_type,
-    set: (a, v) => {
-      const value = String(v);
-      return {
-        ...a,
-        relationship_type: value,
-        relationship_type_other:
-          value === "other" ? a.relationship_type_other : "",
-        breakup_elapsed: isBreakupRelated(value) ? a.breakup_elapsed : null,
-        breakup_initiator: isBreakupRelated(value)
-          ? a.breakup_initiator
-          : null,
-      };
-    },
-  },
-  {
-    id: "relationship_duration",
-    kind: "select",
-    question: "두 사람은 얼마나 함께했나요?",
-    options: RELATIONSHIP_DURATION_OPTIONS,
-    valid: (a) => a.relationship_duration !== "",
-    get: (a) => a.relationship_duration,
-    set: (a, v) => ({ ...a, relationship_duration: String(v) }),
-  },
-  {
-    id: "breakup_elapsed",
-    kind: "select",
-    question: "두 사람이 멀어진 지\n얼마나 되었나요?",
-    options: BREAKUP_ELAPSED_OPTIONS,
-    visible: (a) => isBreakupRelated(a.relationship_type),
-    valid: (a) => a.breakup_elapsed !== null && a.breakup_elapsed !== "",
-    get: (a) => a.breakup_elapsed ?? "",
-    set: (a, v) => ({ ...a, breakup_elapsed: String(v) }),
-  },
-  {
-    id: "breakup_initiator",
-    kind: "select",
-    question: "멀어지자는 이야기는\n어느 쪽에서 먼저 나왔나요?",
-    options: BREAKUP_INITIATOR_OPTIONS,
-    visible: (a) => isBreakupRelated(a.relationship_type),
-    valid: (a) => a.breakup_initiator !== null && a.breakup_initiator !== "",
-    get: (a) => a.breakup_initiator ?? "",
-    set: (a, v) => ({ ...a, breakup_initiator: String(v) }),
-  },
-  {
-    id: "last_conversation",
-    kind: "select",
-    question: "마지막으로 이야기를 나눈 건\n언제였나요?",
-    options: LAST_CONVERSATION_OPTIONS,
-    valid: (a) => a.last_conversation !== "",
-    get: (a) => a.last_conversation,
-    set: (a, v) => ({ ...a, last_conversation: String(v) }),
-  },
-  {
-    id: "contact_status",
-    kind: "select",
-    question: "지금 두 사람은\n연락을 하고 있나요?",
-    options: CONTACT_STATUS_OPTIONS,
-    valid: (a) => a.contact_status !== "",
-    get: (a) => a.contact_status,
-    set: (a, v) => ({ ...a, contact_status: String(v) }),
-  },
-  {
-    id: "partner_new_relationship",
-    kind: "select",
-    question: "{partner}님 곁에\n새로운 사람이 있는지 알고 계신가요?",
-    options: PARTNER_NEW_RELATIONSHIP_OPTIONS,
-    valid: (a) => a.partner_new_relationship !== "",
-    get: (a) => a.partner_new_relationship,
-    set: (a, v) => ({ ...a, partner_new_relationship: String(v) }),
-  },
-  {
-    id: "current_emotion",
-    kind: "select",
-    question: "{name}님,\n지금 그 사람을 떠올리면\n가장 먼저 어떤 마음이 올라오나요?",
-    options: CURRENT_EMOTION_OPTIONS,
-    valid: (a) => a.current_emotion !== "",
-    get: (a) => a.current_emotion,
-    set: (a, v) => ({ ...a, current_emotion: String(v) }),
-  },
-  {
-    id: "pain_points",
-    kind: "multi",
-    question: "요즘 가장 마음을 힘들게 하는 건\n무엇인가요?",
-    sub: `가장 가까운 것을 ${PAIN_POINTS_MAX}개까지 골라주세요.`,
-    options: PAIN_POINT_OPTIONS,
-    valid: (a) => a.pain_points.length > 0,
-    get: (a) => a.pain_points,
-    set: (a, v) => ({ ...a, pain_points: v as string[] }),
-  },
-  {
-    id: "story",
-    kind: "textarea",
-    question: "두 사람의 이야기를\n편하게 들려주세요.",
-    sub: "처음 만났을 때부터 지금까지,\n떠오르는 그대로 적어주시면 돼요.",
-    placeholder: "생각나는 대로 편하게 적어주세요.",
-    maxLen: STORY_MAX,
-    valid: (a) => a.story.trim().length > 0,
-    get: (a) => a.story,
-    set: (a, v) => ({ ...a, story: String(v) }),
-  },
-  {
-    id: "last_conversation_memory",
-    kind: "textarea",
-    question: "마지막 대화에서\n아직 마음에 남아 있는 말이 있나요?",
-    sub: "짧게 적어도 괜찮아요.",
-    placeholder: "예: 마지막에 미안하다는 말만 남기고…",
-    maxLen: LAST_MEMORY_MAX,
-    optional: true,
-    valid: () => true,
-    get: (a) => a.last_conversation_memory,
-    set: (a, v) => ({ ...a, last_conversation_memory: String(v) }),
-  },
-  {
-    id: "desired_change",
-    kind: "textarea",
-    question: "만약 다시 이어진다면,\n무엇이 가장 달라졌으면 하나요?",
-    placeholder: "예: 예전처럼 싸우지 않았으면 좋겠어요.",
-    maxLen: DESIRED_CHANGE_MAX,
-    optional: true,
-    valid: () => true,
-    get: (a) => a.desired_change,
-    set: (a, v) => ({ ...a, desired_change: String(v) }),
-  },
-  {
-    id: "main_wish",
-    kind: "select",
-    question: "지금 월화에게\n가장 알고 싶은 건 무엇인가요?",
-    options: MAIN_WISH_OPTIONS,
-    valid: (a) => a.main_wish !== "",
-    get: (a) => a.main_wish,
-    set: (a, v) => ({ ...a, main_wish: String(v) }),
-  },
-  {
-    id: "wish_sentence",
-    kind: "textarea",
-    question: "월화에게 마지막으로\n꼭 들려주고 싶은 말이 있나요?",
-    sub: "없다면 그냥 넘어가도 괜찮아요.",
-    placeholder: "월화에게 전하고 싶은 한마디",
-    maxLen: WISH_SENTENCE_MAX,
-    optional: true,
-    valid: () => true,
-    get: (a) => a.wish_sentence,
-    set: (a, v) => ({ ...a, wish_sentence: String(v) }),
-  },
-  {
-    id: "safety_concerns",
-    kind: "multi",
-    question: "혹시 두 사람 사이에\n이런 일이 있었나요?",
-    sub: "{name}님의 마음을 안전하게 듣기 위한 질문이에요.\n해당되는 것이 없다면 '없음'을 골라주세요.",
-    options: SAFETY_CONCERN_OPTIONS,
-    valid: (a) => a.safety_concerns.length > 0,
-    get: (a) => a.safety_concerns,
-    set: (a, v) => ({ ...a, safety_concerns: v as string[] }),
-  },
-  {
+    /* 11/16: 이메일 + 동의를 한 화면으로 (동의 단계 따로 두지 않음) */
     id: "email",
     kind: "email",
-    question: "이야기의 결과는\n어디로 보내드리면 될까요?",
-    sub: "월화의 편지와 전체 결과를 받아볼 이메일이에요.",
+    question: "마지막이에요.\n이메일만 남겨 주세요.",
+    sub: "미리보기는 이 다음 화면에서 바로 볼 수 있어요.\n이메일은 전체 결과를 보내 드릴 때만 써요.",
     placeholder: "이메일 주소",
-    valid: (a) => isValidEmail(a.email),
+    valid: (a) =>
+      isValidEmail(a.email) && a.consent_processing && a.consent_no_guarantee,
     get: (a) => a.email,
     set: (a, v) => ({ ...a, email: String(v) }),
-  },
-  {
-    id: "consent",
-    kind: "consent",
-    question: "마지막으로,\n이것만 확인해주세요.",
-    valid: (a) => a.consent_processing && a.consent_no_guarantee,
-    get: (a) => null,
-    set: (a) => a,
   },
 ];
 
 /* ---------------- 진행 라벨 (§28) ---------------- */
-function progressLabel(ratio: number): string {
-  if (ratio < 0.4) return "이야기를 듣는 중";
-  if (ratio < 0.8) return "조금 더 들려주세요";
-  return "거의 다 들었어요";
+function progressLabel(index: number, total: number): string {
+  const left = total - index; // 지금 질문 포함 남은 개수
+  if (left <= 3) return `거의 다 왔어요 · ${left}개 남음`;
+  return `${index + 1} / ${total}`;
+}
+
+/* 하나만 고르면 자동으로 넘어가는 질문 (관계 '기타'는 직접 입력이 필요해 제외) */
+function autoAdvances(step: StepDef, value: string): boolean {
+  if (step.kind !== "select") return false;
+  if (step.id === "relationship_type" && value === "other") return false;
+  return true;
 }
 
 /* ---------------- 배경 (한 번만 mount — §10) ---------------- */
@@ -443,7 +413,8 @@ export default function ImmersiveApplyExperience({
   const router = useRouter();
   const [app, setApp] = useState<RitualApplication>({ ...EMPTY_APPLICATION });
   const [loaded, setLoaded] = useState(false);
-  const [phase, setPhase] = useState<Phase>("intro");
+  /* 11/16: 인트로 없이 바로 첫 질문 (광고로 처음 온 사람이 기다리지 않게) */
+  const [phase, setPhase] = useState<Phase>("questions");
   const [step, setStep] = useState(0);
   const [introIdx, setIntroIdx] = useState(0);
   const [anim, setAnim] = useState<"in" | "out">("in");
@@ -518,6 +489,28 @@ export default function ImmersiveApplyExperience({
     trackEvent("apply_step", { step: cur.id });
   }, [phase, cur]);
 
+  /* 첫 질문이 보이면 '신청 시작' 1회 기록 (예전엔 인트로 버튼을 눌러야 기록됐음) */
+  useEffect(() => {
+    if (!loaded || phase !== "questions") return;
+    try {
+      if (sessionStorage.getItem("wolhayeon_apply_started") === "1") return;
+      sessionStorage.setItem("wolhayeon_apply_started", "1");
+    } catch {
+      /* noop */
+    }
+    trackEvent("apply_start");
+  }, [loaded, phase]);
+
+  const curIdRef = useRef<string | undefined>(undefined);
+  curIdRef.current = cur?.id;
+  const advanceTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (advanceTimer.current) window.clearTimeout(advanceTimer.current);
+    },
+    []
+  );
+
   const name = app.applicant_name.trim();
   const partner = app.partner_name.trim();
   const fill = useCallback(
@@ -563,12 +556,43 @@ export default function ImmersiveApplyExperience({
 
   const onBack = () => {
     if (phase === "questions" && safeStep === 0) {
-      goTo("intro");
-      setStep(0);
+      router.push("/");
       return;
     }
     if (safeStep > 0) goTo(safeStep - 1);
   };
+
+  /* 하나만 고르는 질문: 고른 항목을 0.3초 보여 준 뒤 자동으로 다음 질문 */
+  const onPicked = (value: string) => {
+    if (!cur || !autoAdvances(cur, value)) return;
+    const id = cur.id;
+    const idx = safeStep;
+    if (advanceTimer.current) window.clearTimeout(advanceTimer.current);
+    advanceTimer.current = window.setTimeout(() => {
+      if (curIdRef.current !== id) return;
+      goTo(idx + 1);
+    }, 300);
+  };
+
+  /* 건너뛰기 (선택 질문) — 답은 비운 채 다음으로 */
+  const onSkip = () => {
+    if (!cur || !cur.optional) return;
+    trackEvent("apply_skip", { step: cur.id });
+    if (safeStep < total - 1) goTo(safeStep + 1);
+  };
+
+  /* 스크롤 상자에 내용이 더 남았는지 (아래 그라데이션 표시용) */
+  const [moreBelow, setMoreBelow] = useState(false);
+  const checkMore = useCallback(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 8);
+  }, []);
+  useEffect(() => {
+    checkMore();
+    const t = window.setTimeout(checkMore, 450);
+    return () => window.clearTimeout(t);
+  }, [checkMore, safeStep, phase, app]);
 
   if (!loaded) {
     /* 복원 판정 전 셸 — 첫 페인트에도 인트로 첫 문장이 보이게 (복원 시 교체) */
@@ -577,10 +601,10 @@ export default function ImmersiveApplyExperience({
         <PersistentVideoBackground video={video} poster={poster} phase="intro" />
         <div className="imm-viewport relative z-10 flex flex-col justify-end px-7 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
           <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
-          <p className="font-display mt-5 text-[1.6rem] font-medium leading-[1.75] text-ivory">
-            {INTRO_MESSAGES[0]}
+          <p className="font-display mt-5 whitespace-pre-line text-[1.25rem] font-medium leading-[1.75] text-ivory">
+            {STEPS[0].question}
           </p>
-          <div className="mt-8 h-[60px]" aria-hidden />
+          <div className="mt-8 h-[56px]" aria-hidden />
         </div>
       </div>
     );
@@ -632,26 +656,46 @@ export default function ImmersiveApplyExperience({
             >
               ←
             </button>
+            {poster && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={poster}
+                alt="월화"
+                className="h-9 w-9 shrink-0 rounded-full border border-gold/30 object-cover object-[50%_22%]"
+              />
+            )}
             <div className="flex-1">
-              <div className="h-px w-full bg-ivory/22">
+              <div className="h-[3px] w-full overflow-hidden rounded-full bg-ivory/18">
                 <div
-                  className="h-px bg-gold/90 transition-all duration-500"
+                  className="h-full rounded-full bg-gold/90 transition-all duration-500"
                   style={{ width: `${((safeStep + 1) / total) * 100}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-[0.62rem] tracking-[0.2em] text-ivory/68">
-                {progressLabel((safeStep + 1) / total)}
+              <p className="mt-1.5 text-[0.7rem] tracking-[0.08em] text-ivory/75 tabular-nums">
+                {progressLabel(safeStep, total)}
               </p>
             </div>
-            <div className="w-11" aria-hidden />
+            {cur.optional && safeStep < total - 1 ? (
+              <button
+                type="button"
+                onClick={onSkip}
+                className="h-11 shrink-0 px-2 text-[0.8rem] text-ivory/80 underline-offset-4 active:opacity-70"
+              >
+                건너뛰기
+              </button>
+            ) : (
+              <div className="w-11" aria-hidden />
+            )}
           </div>
 
           <div className="flex-1" />
 
-          {/* 하단 glass 패널 (§12) */}
+          {/* 하단 glass 패널 (§12) — 11/16: 질문·선택지만 스크롤, [다음]은 스크롤 밖 아래 고정 */}
+          <div className="flex max-h-[calc(100svh-4.75rem)] flex-col rounded-t-[24px] border-t border-x border-gold/15 bg-[rgba(13,11,13,0.86)] backdrop-blur-sm">
           <div
             ref={panelRef}
-            className="max-h-[58svh] overflow-y-auto rounded-t-[24px] border-t border-x border-gold/15 bg-[rgba(13,11,13,0.82)] px-6 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-5 backdrop-blur-sm"
+            onScroll={checkMore}
+            className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pt-5"
           >
             <div key={cur.id} className={anim === "in" ? "imm-q-in" : "imm-q-out"}>
               <p className="font-display whitespace-pre-line text-[1.25rem] font-medium leading-[1.75] text-ivory">
@@ -669,13 +713,32 @@ export default function ImmersiveApplyExperience({
                   app={app}
                   setApp={setApp}
                   fill={fill}
+                  onPicked={onPicked}
+                  onUnknown={() => {
+                    setApp((a) => cur.set(a, null));
+                    if (safeStep < total - 1) goTo(safeStep + 1);
+                  }}
                 />
               </div>
+              <div className="h-4" aria-hidden />
+            </div>
+            {/* 아래에 선택지가 더 있으면 희미하게 표시 */}
+            <div
+              aria-hidden
+              className={`pointer-events-none sticky bottom-0 -mx-6 h-8 bg-gradient-to-t from-[rgba(13,11,13,0.95)] to-transparent transition-opacity duration-300 ${
+                moreBelow ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          </div>
+
+          <div className="shrink-0 border-t border-ivory/8 bg-[rgba(13,11,13,0.96)] px-6 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-3">
 
               {tried && !cur.valid(app) && (
-                <p className="mt-3 text-[0.75rem] text-thread">
+                <p className="mb-2 text-[0.75rem] text-thread">
                   {cur.kind === "email"
-                    ? "이메일 주소를 확인해주세요."
+                    ? isValidEmail(app.email)
+                      ? "필수 확인 두 가지를 눌러 주세요."
+                      : "이메일 주소를 확인해주세요."
                     : cur.kind === "consent"
                       ? "필수 항목 두 가지에 확인이 필요해요."
                       : "이 질문에 답을 남겨주시면 다음으로 넘어갈 수 있어요."}
@@ -685,20 +748,11 @@ export default function ImmersiveApplyExperience({
               <button
                 type="button"
                 onClick={onNext}
-                className="mt-4.5 inline-flex h-[56px] w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-[#5b1720] to-[#341015] text-[0.95rem] font-medium text-ivory active:opacity-85"
+                className="inline-flex h-[54px] w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-[#5b1720] to-[#341015] text-[0.95rem] font-medium text-ivory active:opacity-85"
               >
-                {safeStep >= total - 1
-                  ? "이야기 마치기"
-                  : cur.optional && !cur.valid(app)
-                    ? "다음"
-                    : "다음"}
+                {safeStep >= total - 1 ? "미리보기 받기" : "다음"}
               </button>
-              {cur.optional && (
-                <p className="mt-2 text-center text-[0.68rem] text-ivory-dim/60">
-                  건너뛰어도 괜찮은 질문이에요.
-                </p>
-              )}
-            </div>
+          </div>
           </div>
         </div>
       )}
@@ -819,16 +873,27 @@ function suggestEmailCorrection(email: string): string | null {
 }
 
 /* ---------------- step별 입력 UI ---------------- */
+/* 사연 입력 예시 — 누르면 입력칸에 문장이 이어 붙어요 */
+const STORY_EXAMPLES = [
+  "연락 문제로 자주 다퉜어요.",
+  "마지막엔 제가 먼저 끝내자고 했어요.",
+  "장문으로 사과했는데 단답만 왔어요.",
+];
+
 function StepInput({
   step,
   app,
   setApp,
   fill,
+  onPicked,
+  onUnknown,
 }: {
   step: StepDef;
   app: RitualApplication;
   setApp: React.Dispatch<React.SetStateAction<RitualApplication>>;
   fill: (t: string) => string;
+  onPicked?: (value: string) => void;
+  onUnknown?: () => void;
 }) {
   const inputCls =
     "h-[52px] w-full rounded-2xl border border-ivory/20 bg-ink/55 px-4 text-base text-ivory placeholder:text-ivory-dim/45 focus:border-gold/60 focus:outline-none";
@@ -849,7 +914,7 @@ function StepInput({
 
   if (step.kind === "year") {
     const v = step.get(app) as number | null;
-    return (
+    const yearInput = (
       <input
         className={inputCls}
         placeholder={step.placeholder}
@@ -861,6 +926,19 @@ function StepInput({
           update(digits === "" ? null : Number(digits));
         }}
       />
+    );
+    if (step.id !== "partner_birth_year") return yearInput;
+    return (
+      <div>
+        {yearInput}
+        <button
+          type="button"
+          onClick={() => onUnknown?.()}
+          className="mt-2.5 inline-flex h-11 items-center rounded-full border border-ivory/20 bg-ink/45 px-5 text-[0.85rem] text-ivory-dim active:opacity-80"
+        >
+          모름
+        </button>
+      </div>
     );
   }
 
@@ -902,6 +980,9 @@ function StepInput({
             결과 편지가 이 주소로 발송돼요. 오타면 결과를 받지 못해요.
           </p>
         )}
+        <div className="mt-4">
+          <ConsentList app={app} setApp={setApp} fill={fill} />
+        </div>
       </div>
     );
   }
@@ -910,6 +991,24 @@ function StepInput({
     const v = String(step.get(app) ?? "");
     return (
       <div>
+        {step.id === "story" && (
+          <div className="mb-2.5 flex flex-wrap gap-1.5">
+            {STORY_EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                onClick={() => {
+                  const base = v.trim();
+                  if (base.includes(ex)) return;
+                  update(base ? `${base} ${ex}` : ex);
+                }}
+                className="rounded-full border border-gold/30 bg-ink/55 px-3 py-1.5 text-left text-[0.76rem] text-ivory-dim active:bg-[#3a1219]/80"
+              >
+                + {ex}
+              </button>
+            ))}
+          </div>
+        )}
         <textarea
           className="min-h-[7.5rem] w-full rounded-2xl border border-ivory/20 bg-ink/55 px-4 py-3.5 text-base font-light leading-[1.8] text-ivory placeholder:text-ivory-dim/45 focus:border-gold/60 focus:outline-none"
           placeholder={step.placeholder}
@@ -952,6 +1051,7 @@ function StepInput({
                     return;
                   }
                   update(o.value);
+                  onPicked?.(o.value);
                 }}
                 className={`min-h-[52px] rounded-2xl border px-4 py-3 text-left text-[0.9rem] leading-snug transition-colors ${
                   on
@@ -1047,6 +1147,18 @@ function StepInput({
   }
 
   /* consent */
+  return <ConsentList app={app} setApp={setApp} fill={fill} />;
+}
+
+function ConsentList({
+  app,
+  setApp,
+  fill,
+}: {
+  app: RitualApplication;
+  setApp: React.Dispatch<React.SetStateAction<RitualApplication>>;
+  fill: (t: string) => string;
+}) {
   return (
     <div className="flex flex-col gap-3">
       {(
