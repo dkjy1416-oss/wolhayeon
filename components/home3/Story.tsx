@@ -10,7 +10,7 @@ import { V2, MOMENTS } from "@/components/home2/media";
 import { Big, Cta, Hl, V3 } from "./parts";
 import { Beat, Cut, Gutter, Petals } from "./Webtoon";
 
-export function Hook() {
+export function Hook({ visitors = 0 }: { visitors?: number }) {
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0" aria-hidden>
@@ -39,7 +39,16 @@ export function Hook() {
         </div>
 
         {/* 11/16: 첫 화면에서 바로 시작 버튼 + 가격 한 줄 */}
-        <div className="-mx-5 mt-6">
+        {/* 11/16 요청: 실제 방문 기록(최근 30일 서로 다른 방문자)으로만 표시 · 100명 미만이거나 못 읽으면 숨김 */}
+        {visitors >= 100 && (
+          <div className="mt-7 flex justify-center">
+            <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/90 px-4 py-2 text-[0.84rem] font-semibold text-ivory">
+              최근 한 달간 <b className="text-[1rem] text-[#ff8fab]">{visitors.toLocaleString()}</b>명이 월화를 찾았어요
+              <span aria-hidden className="absolute -bottom-[6px] left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
+            </p>
+          </div>
+        )}
+        <div className={`-mx-5 ${visitors >= 100 ? "mt-4" : "mt-6"}`}>
           <Cta
             id="hero-cta"
             placement="hero"
