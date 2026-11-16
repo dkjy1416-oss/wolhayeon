@@ -33,7 +33,7 @@ import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
 import OfferCountdown from "@/components/pay/OfferCountdown";
 import TossCheckout from "@/components/pay/TossCheckout";
 import LeaveOfferGuard from "@/components/pay/LeaveOfferGuard";
-import BundleUpsell from "@/components/pay/BundleUpsell";
+import PaySheet from "@/components/pay/PaySheet";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
 import { PayIncludes } from "@/components/pay/PayValueBlock";
 import SelectedProduct from "@/components/pay/SelectedProduct";
@@ -73,9 +73,9 @@ function Guard({
 export default async function CompletePage({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string; paytest?: string; product?: string; changed?: string; cancelled?: string }>;
+  searchParams: Promise<{ order?: string; paytest?: string; product?: string; changed?: string; cancelled?: string; sheet?: string }>;
 }) {
-  const { order, paytest, product: productParam, changed, cancelled } = await searchParams;
+  const { order, paytest, product: productParam, changed, cancelled, sheet } = await searchParams;
   /* 운영자 실결제 테스트용: 결제가 닫혀 있어도 ?paytest=1 이면 결제창 표시 */
   const paymentsOpen = PAYMENTS_OPEN || paytest === "1";
   /* 책·패키지 판매: 오픈 전에는 운영자 테스트(?paytest=1)에서만 */
@@ -334,17 +334,6 @@ export default async function CompletePage({
               after={regularPriceFor(product)}
               changed={changed === "1"}
             />
-            {/* 11/16 요청: 패키지도 아래에 펼쳐서 보여 주기 */}
-            {bookSales && (
-              <BundleUpsell
-                orderNumber={orderNumber}
-                current={product}
-                messagePrice={messagePrice}
-                bundlePrice={bundleNowPrice}
-                offerOn={offerOn}
-                extraQuery={paytest === "1" ? "&paytest=1" : ""}
-              />
-            )}
             </>
           ) : (
           <>
@@ -413,6 +402,52 @@ export default async function CompletePage({
               regular={regularPriceFor(product)}
             />
           )}
+          {/* 11/16 요청: 리추얼·패키지는 [결제하기] → 아래에서 올라오는 결제 시트 (패키지 선택 · 금액 내역 · 결제수단) */}
+          {product !== "book" && !upgrade ? (
+            <PaySheet
+              orderNumber={orderNumber}
+              title={PRODUCTS[product].name}
+              current={product}
+              amount={row.payment_amount}
+              regular={regularPriceFor(product)}
+              offerEndsAt={offerEnd}
+              startOpen={sheet === "1"}
+              extraQuery={paytest === "1" ? "&paytest=1" : ""}
+              options={
+                bookSales
+                  ? [
+                      {
+                        key: "message",
+                        name: PRODUCTS.message.name,
+                        desc: "사연 읽기 · 월화의 편지 · 나만의 리추얼 · 21일 가이드",
+                        price: messagePrice,
+                        regular: regularPriceFor("message"),
+                      },
+                      {
+                        key: "bundle",
+                        name: `${PRODUCTS.message.name} + PDF 책`,
+                        desc: "리추얼 전부 + 내 사연으로 만든 PDF 책 약 120쪽",
+                        price: bundleNowPrice,
+                        regular: regularPriceFor("bundle"),
+                        badge: "추천",
+                      },
+                    ]
+                  : []
+              }
+            >
+              <InAppBrowserNotice orderNumber={orderNumber} />
+              <TossCheckout
+                clientKey={clientKey}
+                orderNumber={orderNumber}
+                amount={row.payment_amount}
+                orderName={PRODUCTS[product].orderName}
+                offerEndsAt={offerEnd}
+                regular={regularPriceFor(product)}
+                startCancelled={cancelled === "1"}
+                hideStickyBar
+              />
+            </PaySheet>
+          ) : (
           <div id="pay-anchor" className="mt-7">
             <InAppBrowserNotice orderNumber={orderNumber} />
             <TossCheckout
@@ -425,6 +460,7 @@ export default async function CompletePage({
               startCancelled={cancelled === "1"}
             />
           </div>
+          )}
           {product === "book" && offerEnd && <OfferCountdown endsAt={offerEnd} after={regularPriceFor(product)} className="mt-3 text-center" />}
 
           {/* 테스트 결제 단계 전용 — 실결제 전환 시 제거 (TestModeNotices.tsx 참고) */}
