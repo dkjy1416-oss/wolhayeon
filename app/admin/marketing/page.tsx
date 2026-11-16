@@ -449,6 +449,51 @@ export default async function AdminMarketingPage({
         )}
       </section>
 
+      {/* 11/16: 결제 화면에서 어디서 나갔나 */}
+      <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
+        <p className="text-sm font-semibold">결제 화면, 어디서 나갔나</p>
+        <p className="mt-0.5 text-[0.72rem] text-ivory-dim">결제 화면을 연 주문마다 가장 멀리 간 단계 1개 · 같은 기간 신청 주문 기준</p>
+        {s.payExit && s.payExit.length > 0 ? (
+          <div className="mt-2 space-y-1 text-[0.8rem] tabular-nums">
+            {(() => {
+              const all = s.payExit.reduce((a, r) => a + r.count, 0);
+              return s.payExit.map((r) => (
+                <div key={r.label} className="flex justify-between gap-3">
+                  <span className={r.label === "결제 완료" ? "text-gold" : "text-ivory-dim"}>{r.label}</span>
+                  <span>
+                    {r.count}건 <span className="text-ivory-dim">({all > 0 ? Math.round((r.count / all) * 100) : 0}%)</span>
+                  </span>
+                </div>
+              ));
+            })()}
+          </div>
+        ) : (
+          <p className="mt-2 text-[0.78rem] text-ivory-dim">아직 기록이 없어요</p>
+        )}
+        <div className="mt-3 border-t border-gold-dim/15 pt-2.5 text-[0.78rem] leading-[1.8] text-ivory-dim">
+          <p>
+            나가려 할 때 할인 안내 팝업: 본 주문 <b className="text-ivory">{s.leavePopup?.shown ?? 0}</b> · 계속 보기{" "}
+            <b className="text-ivory">{s.leavePopup?.stay ?? 0}</b> · 그래도 나감 <b className="text-ivory">{s.leavePopup?.leave ?? 0}</b> · 그 뒤 결제{" "}
+            <b className="text-gold">{s.leavePopup?.paidAfter ?? 0}</b>
+          </p>
+          <p>
+            결제창 취소 후 월화 팝업: 본 주문 <b className="text-ivory">{s.cancelPopup?.shown ?? 0}</b> · 다시 결제 누름{" "}
+            <b className="text-ivory">{s.cancelPopup?.retry ?? 0}</b> · 그 뒤 결제 <b className="text-gold">{s.cancelPopup?.paidAfter ?? 0}</b>
+          </p>
+          {s.cancelPopup && s.cancelPopup.reasons.length > 0 && (
+            <p>
+              취소한 이유:{" "}
+              {s.cancelPopup.reasons.map((r, i) => (
+                <span key={r.label}>
+                  {i > 0 && " · "}
+                  {r.label} <b className="text-ivory">{r.count}</b>
+                </span>
+              ))}
+            </p>
+          )}
+        </div>
+      </section>
+
       {/* 일별 */}
       <section className="mt-6 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-4">
         <p className="text-sm font-semibold">날짜별</p>
