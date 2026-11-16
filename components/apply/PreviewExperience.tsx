@@ -45,6 +45,7 @@ import LoopVideo from "@/components/book/LoopVideo";
 import { DELIVERY_TIME_TEXT, DELIVERY_DELAY_TEXT, HOW_IT_WORKS } from "@/lib/service-facts";
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
+import PreviewPaySheet from "@/components/pay/PreviewPaySheet";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
 import { pickSituationGuides, type GuidePick } from "@/lib/situation-guide";
@@ -581,6 +582,33 @@ export default function PreviewExperience({
   useEffect(() => {
     if (phase === "ready") rememberOrder(orderNumber, name);
   }, [phase, orderNumber, name]);
+  /* 11/17: [결제하기] → 이 화면 위로 결제 시트 (주문 확인 화면 없음) */
+  const [pay, setPay] = useState<{ open: boolean; product: "message" | "bundle"; cancelled: boolean }>({
+    open: false,
+    product: "message",
+    cancelled: false,
+  });
+  /* 결제창에서 취소하고 돌아온 경우(?cancelled=1) — 시트를 다시 열고 월화 팝업 */
+  useEffect(() => {
+    if (phase !== "ready") return;
+    try {
+      const u = new URL(window.location.href);
+      const payParam = u.searchParams.get("pay");
+      const pp = payParam === "bundle" || u.searchParams.get("product") === "bundle" ? "bundle" : "message";
+      if (u.searchParams.get("cancelled") === "1") {
+        setPay({ open: true, product: pp, cancelled: true });
+      } else if (payParam === "message" || payParam === "bundle") {
+        /* 홈 '이어보기'·메일 링크 등으로 결제하러 온 경우 — 바로 결제 시트 */
+        setPay({ open: true, product: pp, cancelled: false });
+      }
+      if (payParam) {
+        u.searchParams.delete("pay");
+        window.history.replaceState(window.history.state, "", u.toString());
+      }
+    } catch {
+      /* 무시 */
+    }
+  }, [phase]);
   const stickyStartRef = useRef<HTMLDivElement>(null);
   const mainCtaRef = useRef<HTMLDivElement>(null);
   /* 책 소개가 보이는 동안엔 하단 고정 버튼(메시지 결제)을 숨겨 책 버튼을 가리지 않게 */
@@ -740,6 +768,15 @@ export default function PreviewExperience({
     trackEvent("payment_cta_click", { order: orderNumber });
     logPayEvent(orderNumber, "preview_cta_click", where);
   };
+  /* 결제 링크를 누르면 화면 이동 대신 결제 시트 (책 단독은 기존대로 책 결제 화면으로) */
+  const openPay = (e: React.MouseEvent, where: string, href: string) => {
+    onCtaClick(where);
+    const m = href.match(/product=(message|bundle|book)/);
+    const p = m ? m[1] : "message";
+    if (p === "book") return;
+    e.preventDefault();
+    setPay({ open: true, product: p as "message" | "bundle", cancelled: false });
+  };
   const lock = LOCK_COPY[sit];
   /* 잠긴 항목을 누르면 바로 가격·구매 안내로 (10/30: 잠긴 카드 클릭 7명) */
   const scrollToPrice = () => {
@@ -770,7 +807,7 @@ export default function PreviewExperience({
   const ctaButton = (where: string, label: string, href = mainHref) => (
     <Link
       href={href}
-      onClick={() => onCtaClick(where)}
+      onClick={(e) => openPay(e, where, href)}
       className="cta-glow inline-flex min-h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep px-5 py-3 text-center text-[0.97rem] font-semibold text-ivory transition-opacity active:opacity-85"
     >
       {label}
@@ -1118,7 +1155,7 @@ export default function PreviewExperience({
                   </p>
                   <Link
                     href={bundleHref}
-                    onClick={() => onCtaClick("bundle")}
+                    onClick={(e) => openPay(e, "bundle", bundleHref)}
                     className="mt-3 flex h-12 items-center justify-center rounded-full border border-gold/45 text-[0.9rem] font-medium text-gold active:opacity-80"
                   >
                     월화 패키지로 보기 · {bundleNow.toLocaleString()}원
@@ -1164,6 +1201,7 @@ export default function PreviewExperience({
               {want && (
                 <Link
                   href={messageHref}
+                  onClick={(e) => openPay(e, "message_only", messageHref)}
                   className="mt-3 block text-[0.76rem] text-ivory-dim underline underline-offset-4"
                 >
                   관계 리추얼만 받기 · {priceText}
@@ -1205,6 +1243,17 @@ export default function PreviewExperience({
         {/* 테스트 결제 모드 안내 (라이브 키 전환 시 컴포넌트 내부에서 끔) */}
         <DevPaymentNotice />
       </div>
+      {PAYMENTS_OPEN && (
+        <div className="paper">
+          <PreviewPaySheet
+            orderNumber={orderNumber}
+            open={pay.open}
+            product={pay.product}
+            startCancelled={pay.cancelled}
+            onClose={() => setPay((x) => ({ ...x, open: false }))}
+          />
+        </div>
+      )}
       {PAYMENTS_OPEN && typeof document !== "undefined" && createPortal(
         <div
           className={`paper fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim bg-ink/95 px-4 pt-3 backdrop-blur transition-transform duration-300 ${
@@ -1217,7 +1266,7 @@ export default function PreviewExperience({
           <Link
             href={mainHref}
             tabIndex={showSticky ? 0 : -1}
-            onClick={() => onCtaClick("sticky")}
+            onClick={(e) => openPay(e, "sticky", mainHref)}
             className="mx-auto flex h-12 w-full max-w-[640px] items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-semibold text-ivory active:opacity-85"
           >
             {mainLabel}
