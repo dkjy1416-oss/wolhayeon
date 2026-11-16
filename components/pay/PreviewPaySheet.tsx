@@ -7,6 +7,7 @@
  * - 관리자 로그인 + 운영자 테스트 주문이면 '관리자 무료로 전체 결과 보기'
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import PaySheet from "@/components/pay/PaySheet";
 import TossCheckout from "@/components/pay/TossCheckout";
 import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
@@ -127,7 +128,14 @@ export default function PreviewPaySheet({
   if (ready && firstKey.current === null) firstKey.current = tossKey;
   const cur = (ready?.product ?? want) as "message" | "bundle";
 
-  return (
+  /* 미리보기 화면의 fade-in(transform) 안에서는 fixed 가 화면이 아니라 페이지 맨 아래에 붙는다
+     → 시트는 body 바로 아래에 그린다 */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="paper">
     <PaySheet
       orderNumber={orderNumber}
       title={ready?.title ?? (want === "bundle" ? "월화 패키지" : "월화의 관계 리추얼")}
@@ -198,5 +206,7 @@ export default function PreviewPaySheet({
         </>
       )}
     </PaySheet>
+    </div>,
+    document.body
   );
 }
