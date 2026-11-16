@@ -44,6 +44,7 @@ import { UPGRADE_REASON_TEXT } from "@/lib/book/upgrade-rules";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { redeemChatBundle, BUNDLE_COOKIE } from "@/lib/chat/bundle";
+import { createPreviewToken } from "@/lib/preview-auth";
 
 /** 주문번호 형식 (개인정보 아님 — URL에 넣을 수 있는 유일한 값) */
 const ORDER_NUMBER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
@@ -177,6 +178,23 @@ export default async function CompletePage({
     const cb = (await cookies()).get(BUNDLE_COOKIE)?.value;
     const to = cb ? await redeemChatBundle(orderNumber, cb) : null;
     if (to) redirect(to);
+  }
+
+  /* 11/17 운영자 요청: '주문 확인' 화면은 쓰지 않는다 — 리추얼·패키지 결제 전 주문은
+     미리보기 화면으로 보내 그 위에서 결제 시트를 연다 (책 단독·추가 구매·운영자 결제 테스트는 이 화면 유지) */
+  if (
+    row.payment_status === "pending" &&
+    paytest !== "1" &&
+    isAllowedPrice(row.payment_amount) &&
+    (row.product === "message" || row.product === "bundle" || !row.product)
+  ) {
+    const pt = createPreviewToken(orderNumber);
+    if (pt) {
+      const p = row.product === "bundle" ? "bundle" : "message";
+      redirect(
+        `/apply/preview?order=${encodeURIComponent(orderNumber)}&pt=${encodeURIComponent(pt)}&pay=${p}${cancelled === "1" ? "&cancelled=1" : ""}`
+      );
+    }
   }
 
   /* 이미 결제 완료 → 결제창을 다시 띄우지 않음 */
