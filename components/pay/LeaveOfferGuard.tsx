@@ -135,16 +135,16 @@ export default function LeaveOfferGuard({
       className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-6"
     >
       <div className="w-full max-w-[340px] rounded-[1.6rem] border border-white/10 bg-[#1d181b] px-6 pb-6 pt-7 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
-        <p id="leave-offer-title" className="text-[1.22rem] font-bold leading-[1.55] text-ivory">
+        <p id="leave-offer-title" className="text-[1.22rem] font-bold leading-[1.55] text-[#f7f0e8]">
           할인 받은{" "}
           <span className="rounded-md bg-[#4a1621] px-1.5 text-[#ff8fab]">{saved.toLocaleString()}원</span>
           <br />
           두고 나가시겠어요?
         </p>
-        <p className="mt-3 text-[0.86rem] leading-[1.75] text-ivory-dim">
+        <p className="mt-3 text-[0.86rem] leading-[1.75] text-[#cfc4bd]">
           {left > 0 ? (
             <>
-              <b className="tabular-nums text-ivory">{fmt(left)}</b> 뒤에 첫 구매 할인이 끝나요.
+              <b className="tabular-nums text-[#f7f0e8]">{fmt(left)}</b> 뒤에 첫 구매 할인이 끝나요.
               <br />
               그 뒤에는 {regular.toLocaleString()}원으로 결제돼요.
             </>
@@ -162,7 +162,7 @@ export default function LeaveOfferGuard({
         <button
           type="button"
           onClick={leave}
-          className="mt-3 w-full text-center text-[0.84rem] text-ivory-dim underline underline-offset-4"
+          className="mt-3 w-full text-center text-[0.84rem] text-[#cfc4bd] underline underline-offset-4"
         >
           나갈래요
         </button>
