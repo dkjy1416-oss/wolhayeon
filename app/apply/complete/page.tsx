@@ -73,9 +73,9 @@ function Guard({
 export default async function CompletePage({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string; paytest?: string; product?: string; changed?: string }>;
+  searchParams: Promise<{ order?: string; paytest?: string; product?: string; changed?: string; cancelled?: string }>;
 }) {
-  const { order, paytest, product: productParam, changed } = await searchParams;
+  const { order, paytest, product: productParam, changed, cancelled } = await searchParams;
   /* 운영자 실결제 테스트용: 결제가 닫혀 있어도 ?paytest=1 이면 결제창 표시 */
   const paymentsOpen = PAYMENTS_OPEN || paytest === "1";
   /* 책·패키지 판매: 오픈 전에는 운영자 테스트(?paytest=1)에서만 */
@@ -422,6 +422,7 @@ export default async function CompletePage({
               orderName={PRODUCTS[product].orderName}
               offerEndsAt={offerEnd}
               regular={regularPriceFor(product)}
+              startCancelled={cancelled === "1"}
             />
           </div>
           {product === "book" && offerEnd && <OfferCountdown endsAt={offerEnd} after={regularPriceFor(product)} className="mt-3 text-center" />}
