@@ -46,6 +46,7 @@ import { DELIVERY_TIME_TEXT, DELIVERY_DELAY_TEXT, HOW_IT_WORKS } from "@/lib/ser
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
 import PreviewPaySheet from "@/components/pay/PreviewPaySheet";
+import ResultCaptures from "@/components/apply/ResultCaptures";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
 import { pickSituationGuides, type GuidePick } from "@/lib/situation-guide";
@@ -907,6 +908,24 @@ export default function PreviewExperience({
         </div>
       </section>
       <div ref={stickyStartRef} aria-hidden />
+
+      {/* ---------- 02-1. 실제 결과 화면 캡처 — 24시간·7일 먼저 (11/17 운영자 요청) ---------- */}
+      <section className="mt-6 px-6" aria-label="실제 결과 화면 예시">
+        <div className="mx-auto max-w-[640px]">
+          <ResultCaptures
+            orderNumber={orderNumber}
+            name={name || null}
+            stanceLabel={NOW_STANCE_LABELS[stance] ?? ""}
+            period={preview.now_plan.period}
+            onTap={(k) => {
+              logPayEvent(orderNumber, "preview_lock_click", `capture_${k}`);
+              if (!PAYMENTS_OPEN) return;
+              onCtaClick(`capture_${k}`);
+              setPay({ open: true, product: want === "bundle" ? "bundle" : "message", cancelled: false });
+            }}
+          />
+        </div>
+      </section>
 
       {/* ---------- 05. 무료 미리보기 vs 전체 리추얼 구성 — 10/30 판정 카드 바로 아래로 이동 + 구매 버튼 ---------- */}
       <section className="mt-6 px-6">
