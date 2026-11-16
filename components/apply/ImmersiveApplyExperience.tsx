@@ -1159,8 +1159,36 @@ function ConsentList({
   setApp: React.Dispatch<React.SetStateAction<RitualApplication>>;
   fill: (t: string) => string;
 }) {
+  /* 11/16 요청: 맨 위 '전체 동의' — 필수 2개 + 선택 1개를 한 번에 켜고 끔 (각 항목은 아래에서 따로 바꿀 수 있음) */
+  const allOn = Boolean(app.consent_processing && app.consent_no_guarantee && app.consent_marketing);
   return (
     <div className="flex flex-col gap-3">
+      <button
+        type="button"
+        aria-pressed={allOn}
+        onClick={() =>
+          setApp((a) => ({
+            ...a,
+            consent_processing: !allOn,
+            consent_no_guarantee: !allOn,
+            consent_marketing: !allOn,
+          }))
+        }
+        className={`flex min-h-[56px] items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors ${
+          allOn ? "border-gold bg-[#4a1621]/80" : "border-ivory/30 bg-ink/60"
+        }`}
+      >
+        <span
+          aria-hidden
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[0.7rem] ${
+            allOn ? "border-gold bg-gold text-ink" : "border-ivory/50 text-transparent"
+          }`}
+        >
+          ✓
+        </span>
+        <span className="text-[0.95rem] font-semibold text-ivory">전체 동의</span>
+        <span className="ml-auto text-[0.7rem] text-ivory-dim">선택 항목 포함</span>
+      </button>
       {(
         [
           [
