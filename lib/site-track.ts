@@ -82,10 +82,25 @@ function firstTouch(): FirstTouch {
   return cur;
 }
 
+/** 11/17: 관리자가 '관리자로 보기'(주소에 admin=1)로 연 탭 — 손님 통계에 남기지 않는다 (탭이 닫힐 때까지) */
+export function isAdminView(): boolean {
+  try {
+    if (typeof window === "undefined") return false;
+    if (new URLSearchParams(location.search).get("admin") === "1") {
+      sessionStorage.setItem("wh_admin_view", "1");
+      return true;
+    }
+    return sessionStorage.getItem("wh_admin_view") === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function sendSiteEvent(event: string, props?: Record<string, string>): void {
   try {
     if (typeof window === "undefined") return;
     if (location.pathname.startsWith("/admin")) return;
+    if (isAdminView()) return;
     const ft = firstTouch();
     const body = JSON.stringify({
       vid: visitorId(),

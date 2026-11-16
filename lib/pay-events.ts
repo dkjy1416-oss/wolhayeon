@@ -1,5 +1,7 @@
 "use client";
 
+import { isAdminView } from "@/lib/site-track";
+
 /**
  * 결제 퍼널 이벤트 전송 (브라우저).
  * 페이지를 떠나는 순간(결제창 이동 등)에도 유실되지 않도록 sendBeacon 우선.
@@ -34,6 +36,7 @@ export function logPayEvent(
   event: ClientPayEvent,
   code?: string | null
 ): void {
+  if (isAdminView()) return;
   try {
     const body = JSON.stringify({ orderNumber, event, code: code ?? null });
     if (typeof navigator !== "undefined" && navigator.sendBeacon) {
