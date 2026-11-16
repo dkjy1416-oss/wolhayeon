@@ -33,6 +33,7 @@ import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
 import OfferCountdown from "@/components/pay/OfferCountdown";
 import TossCheckout from "@/components/pay/TossCheckout";
 import LeaveOfferGuard from "@/components/pay/LeaveOfferGuard";
+import BundleUpsell from "@/components/pay/BundleUpsell";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
 import { PayIncludes } from "@/components/pay/PayValueBlock";
 import SelectedProduct from "@/components/pay/SelectedProduct";
@@ -323,6 +324,7 @@ export default async function CompletePage({
           {upgrade && upgrade.ok ? (
             <UpgradeSelected amount={row.payment_amount} endsAt={upgrade.endsAt} />
           ) : product !== "book" ? (
+            <>
             <SelectedProduct
               product={product}
               amount={row.payment_amount}
@@ -332,6 +334,18 @@ export default async function CompletePage({
               after={regularPriceFor(product)}
               changed={changed === "1"}
             />
+            {/* 11/16 요청: 패키지도 아래에 펼쳐서 보여 주기 */}
+            {bookSales && (
+              <BundleUpsell
+                orderNumber={orderNumber}
+                current={product}
+                messagePrice={messagePrice}
+                bundlePrice={bundleNowPrice}
+                offerOn={offerOn}
+                extraQuery={paytest === "1" ? "&paytest=1" : ""}
+              />
+            )}
+            </>
           ) : (
           <>
           {bookSales && !(product === "book" && row.payment_amount === BOOK_COUPON_PRICE_KRW) && (
@@ -406,6 +420,8 @@ export default async function CompletePage({
               orderNumber={orderNumber}
               amount={row.payment_amount}
               orderName={PRODUCTS[product].orderName}
+              offerEndsAt={offerEnd}
+              regular={regularPriceFor(product)}
             />
           </div>
           {product === "book" && offerEnd && <OfferCountdown endsAt={offerEnd} after={regularPriceFor(product)} className="mt-3 text-center" />}
