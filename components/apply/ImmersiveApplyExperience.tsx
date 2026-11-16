@@ -232,7 +232,7 @@ const STEPS: StepDef[] = [
   {
     id: "partner_new_relationship",
     kind: "select",
-    question: "{partner}님 곁에\n새로운 사람이 있는지 알고 계신가요?",
+    question: "그 사람 곁에\n새로운 사람이 있는지 알고 계신가요?",
     options: PARTNER_NEW_RELATIONSHIP_OPTIONS,
     valid: (a) => a.partner_new_relationship !== "",
     get: (a) => a.partner_new_relationship,
