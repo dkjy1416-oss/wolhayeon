@@ -2,7 +2,7 @@
 import Image from "next/image";
 import TrackedCtaLink from "@/components/TrackedCtaLink";
 
-export default function ChatPromo({ paid = 0 }: { paid?: number }) {
+export default function ChatPromo() {
   const card = "flex items-center gap-3 rounded-2xl border border-[#e46b8a]/40 bg-[#1b1316] p-3 active:opacity-85";
   return (
     <section className="px-5 py-6">
@@ -30,11 +30,6 @@ export default function ChatPromo({ paid = 0 }: { paid?: number }) {
           <span aria-hidden className="flex-none text-gold">→</span>
         </TrackedCtaLink>
       </div>
-      {paid >= 5 && (
-        <p className="mt-3 text-center text-[0.78rem] text-ivory-dim">
-          지금까지 <b className="text-ivory">{paid}건</b>의 전체 결과가 전달됐어요 · 결제 전 무료 미리보기
-        </p>
-      )}
     </section>
   );
 }
