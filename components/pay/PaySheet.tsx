@@ -47,6 +47,11 @@ export default function PaySheet({
   startOpen = false,
   extraQuery = "",
   children,
+  open: openProp,
+  onOpenChange,
+  showBar = true,
+  onSelect,
+  busy = false,
 }: {
   orderNumber: string;
   title: string;
@@ -59,8 +64,22 @@ export default function PaySheet({
   extraQuery?: string;
   /** 결제수단 + 결제 버튼 (TossCheckout) */
   children: ReactNode;
+  /** 11/17: 미리보기 화면에서 쓸 때 — 바깥에서 열고 닫음 */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** 화면 하단 고정 [결제하기] 버튼 (미리보기에서는 미리보기 자체 버튼을 씀) */
+  showBar?: boolean;
+  /** 상품 바꾸기 — 주면 링크 대신 이 함수를 부름(화면 이동 없이) */
+  onSelect?: (key: "message" | "bundle") => void;
+  /** 상품을 바꾸는 중 */
+  busy?: boolean;
 }) {
-  const [open, setOpen] = useState(startOpen);
+  const [openState, setOpenState] = useState(startOpen);
+  const open = openProp ?? openState;
+  const setOpen = (v: boolean) => {
+    if (openProp === undefined) setOpenState(v);
+    onOpenChange?.(v);
+  };
   const [warn, setWarn] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const saved = Math.max(0, regular - amount);
@@ -114,6 +133,7 @@ export default function PaySheet({
   return (
     <>
       {/* 화면 하단 고정 버튼 — 누르면 결제 시트 */}
+      {showBar && (
       <div
         className="fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim bg-ink/95 px-4 pt-3 backdrop-blur"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
@@ -135,6 +155,7 @@ export default function PaySheet({
           )}
         </p>
       </div>
+      )}
 
       {/* 결제 시트 */}
       <div
@@ -203,6 +224,16 @@ export default function PaySheet({
                     <div key={o.key} aria-current="true">
                       {inner}
                     </div>
+                  ) : onSelect ? (
+                    <button
+                      key={o.key}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => onSelect(o.key)}
+                      className="block w-full text-left active:opacity-85 disabled:opacity-60"
+                    >
+                      {inner}
+                    </button>
                   ) : (
                     <Link key={o.key} href={`${base}&product=${o.key}&changed=1&sheet=1${extraQuery}`} scroll={false} className="block active:opacity-85">
                       {inner}
@@ -230,7 +261,7 @@ export default function PaySheet({
             </div>
           </dl>
 
-          <div id="pay-anchor" className="mt-5">
+          <div id="pay-anchor" className={`mt-5 transition-opacity ${busy ? "pointer-events-none opacity-50" : ""}`}>
             {children}
           </div>
         </div>
