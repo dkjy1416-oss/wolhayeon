@@ -170,6 +170,8 @@ export default function TossCheckout(props: {
   /** 11/16: 결제창 취소 팝업에 보여 줄 첫 구매가 마감 시각·정가 (없으면 안내 생략) */
   offerEndsAt?: number | null;
   regular?: number;
+  /** 11/16: 휴대폰 결제창에서 취소하고 돌아온 경우(?cancelled=1) — 들어오자마자 월화 팝업 */
+  startCancelled?: boolean;
 }) {
   return props.clientKey.includes("_gck_") ? (
     <TossWidgetCheckout {...props} />
@@ -219,6 +221,7 @@ function TossWindowCheckout({
   failPath = "/payment/fail",
   offerEndsAt = null,
   regular,
+  startCancelled = false,
 }: {
   clientKey: string;
   orderNumber: string;
@@ -228,6 +231,7 @@ function TossWindowCheckout({
   failPath?: string;
   offerEndsAt?: number | null;
   regular?: number;
+  startCancelled?: boolean;
 }) {
   const paymentRef = useRef<ReturnType<
     Awaited<ReturnType<typeof loadTossPayments>>["payment"]
@@ -237,7 +241,18 @@ function TossWindowCheckout({
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   /* 11/16: 결제창에서 취소하고 돌아오면 월화 팝업 */
-  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(startCancelled);
+  /* 새로고침해도 다시 뜨지 않게 주소의 cancelled=1 을 지운다 */
+  useEffect(() => {
+    if (!startCancelled) return;
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("cancelled");
+      window.history.replaceState(window.history.state, "", u.toString());
+    } catch {
+      /* 무시 */
+    }
+  }, [startCancelled]);
 
   useEffect(() => {
     let cancelled = false;
@@ -402,7 +417,9 @@ function TossWindowCheckout({
           regular={regular}
           onRetry={() => {
             setCancelOpen(false);
-            void handlePay();
+            /* 결제 수단이 아직 준비 전이면 결제 버튼으로 안내 */
+            if (ready) void handlePay();
+            else document.getElementById("pay-anchor")?.scrollIntoView({ behavior: "smooth", block: "center" });
           }}
           onClose={() => setCancelOpen(false)}
         />
@@ -457,6 +474,7 @@ function TossWidgetCheckout({
   failPath = "/payment/fail",
   offerEndsAt = null,
   regular,
+  startCancelled = false,
 }: {
   clientKey: string;
   orderNumber: string;
@@ -466,13 +484,25 @@ function TossWidgetCheckout({
   failPath?: string;
   offerEndsAt?: number | null;
   regular?: number;
+  startCancelled?: boolean;
 }) {
   const widgetsRef = useRef<TossPaymentsWidgets | null>(null);
   const [ready, setReady] = useState(false);
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   /* 11/16: 결제창에서 취소하고 돌아오면 월화 팝업 */
-  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(startCancelled);
+  /* 새로고침해도 다시 뜨지 않게 주소의 cancelled=1 을 지운다 */
+  useEffect(() => {
+    if (!startCancelled) return;
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("cancelled");
+      window.history.replaceState(window.history.state, "", u.toString());
+    } catch {
+      /* 무시 */
+    }
+  }, [startCancelled]);
 
   useEffect(() => {
     let cancelled = false;
@@ -575,7 +605,9 @@ function TossWidgetCheckout({
           regular={regular}
           onRetry={() => {
             setCancelOpen(false);
-            void handlePay();
+            /* 결제 수단이 아직 준비 전이면 결제 버튼으로 안내 */
+            if (ready) void handlePay();
+            else document.getElementById("pay-anchor")?.scrollIntoView({ behavior: "smooth", block: "center" });
           }}
           onClose={() => setCancelOpen(false)}
         />
