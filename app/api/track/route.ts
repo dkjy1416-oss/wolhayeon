@@ -12,6 +12,7 @@ const EVENTS = new Set([
   "apply_start",
   "apply_complete",
   "apply_step",
+  "apply_skip",
   "order_created",
   "preview_view",
   "payment_cta_click",
