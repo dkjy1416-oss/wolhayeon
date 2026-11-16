@@ -7,7 +7,6 @@ import { getPublicReviews } from "@/lib/reviews";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
 import ResumeCard from "@/components/home2/ResumeCard";
 import ChatPromo from "@/components/home3/ChatPromo";
-import { getPaidCount } from "@/lib/paid-count";
 import ShortsRow from "@/components/home2/ShortsRow";
 import StickyCta from "@/components/home2/StickyCta";
 import { FAQ } from "@/components/home2/content";
@@ -26,7 +25,6 @@ export const metadata: Metadata = {
 /** 10/16 3차 — 한 줄로 길게 이어지는 상세페이지형 홈 (공감 → 월화 → 상품 POINT 1~5 → 마지막 버튼) */
 export default async function Home() {
   const reviews = await getPublicReviews(8);
-  const paid = await getPaidCount();
   return (
     <div className="min-h-screen bg-[#0a0809]">
       <div data-fx-root className="relative mx-auto min-h-screen w-full max-w-[480px] bg-[#120e10] shadow-[0_0_80px_rgba(0,0,0,0.8)]">
@@ -35,7 +33,6 @@ export default async function Home() {
         <main>
           <Hook />
           <ResumeCard />
-          <ChatPromo paid={paid} />
           <Turn />
           <Mystery />
           <MeetWolhwa />
@@ -53,6 +50,8 @@ export default async function Home() {
             <BookAddon />
           </div>
           <ShortsRow />
+          {/* 11/16: 카톡 분석·책·무료 가이드는 FAQ 위로 (첫 화면 시선 분산 방지) */}
+          <ChatPromo />
           <section className="px-5 pb-14">
             <p className="text-center text-[0.86rem] font-bold tracking-[0.1em] text-gold">자주 묻는 질문</p>
             <div className="mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl border border-white/10 bg-[#1d181b]">
