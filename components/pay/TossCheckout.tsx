@@ -10,6 +10,7 @@ import {
 } from "@tosspayments/tosspayments-sdk";
 import { logPayEvent } from "@/lib/pay-events";
 import { inAppName } from "@/components/pay/InAppBrowserNotice";
+import PayCancelPopup from "@/components/pay/PayCancelPopup";
 
 /** 토스 SDK 오류에서 코드만 안전하게 꺼냄 */
 function errorCode(e: unknown): string | null {
@@ -166,6 +167,9 @@ export default function TossCheckout(props: {
   /** 카톡 분석 등 다른 상품은 자체 승인 화면으로 (기본: 재회 분석 /payment/success) */
   successPath?: string;
   failPath?: string;
+  /** 11/16: 결제창 취소 팝업에 보여 줄 첫 구매가 마감 시각·정가 (없으면 안내 생략) */
+  offerEndsAt?: number | null;
+  regular?: number;
 }) {
   return props.clientKey.includes("_gck_") ? (
     <TossWidgetCheckout {...props} />
@@ -213,6 +217,8 @@ function TossWindowCheckout({
   orderName = ORDER_NAME,
   successPath = "/payment/success",
   failPath = "/payment/fail",
+  offerEndsAt = null,
+  regular,
 }: {
   clientKey: string;
   orderNumber: string;
@@ -220,6 +226,8 @@ function TossWindowCheckout({
   orderName?: string;
   successPath?: string;
   failPath?: string;
+  offerEndsAt?: number | null;
+  regular?: number;
 }) {
   const paymentRef = useRef<ReturnType<
     Awaited<ReturnType<typeof loadTossPayments>>["payment"]
@@ -228,6 +236,8 @@ function TossWindowCheckout({
   const [ready, setReady] = useState(false);
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  /* 11/16: 결제창에서 취소하고 돌아오면 월화 팝업 */
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -300,6 +310,8 @@ function TossWindowCheckout({
       const msg = payErrorMessage(e);
       setErrorMsg(msg);
       setPaying(false);
+      const c = errorCode(e);
+      if (c && CANCEL_CODES.has(c)) setCancelOpen(true);
     }
   };
 
@@ -382,6 +394,19 @@ function TossWindowCheckout({
         전자금융거래 약관 동의 후 결제가 진행됩니다.
       </p>
 
+      {cancelOpen && (
+        <PayCancelPopup
+          orderNumber={orderNumber}
+          amount={amount}
+          offerEndsAt={offerEndsAt}
+          regular={regular}
+          onRetry={() => {
+            setCancelOpen(false);
+            void handlePay();
+          }}
+          onClose={() => setCancelOpen(false)}
+        />
+      )}
       {errorMsg && (
         <p className="mt-4 text-center text-sm leading-relaxed text-thread">
           {errorMsg}
@@ -430,6 +455,8 @@ function TossWidgetCheckout({
   orderName = ORDER_NAME,
   successPath = "/payment/success",
   failPath = "/payment/fail",
+  offerEndsAt = null,
+  regular,
 }: {
   clientKey: string;
   orderNumber: string;
@@ -437,11 +464,15 @@ function TossWidgetCheckout({
   orderName?: string;
   successPath?: string;
   failPath?: string;
+  offerEndsAt?: number | null;
+  regular?: number;
 }) {
   const widgetsRef = useRef<TossPaymentsWidgets | null>(null);
   const [ready, setReady] = useState(false);
   const [paying, setPaying] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  /* 11/16: 결제창에서 취소하고 돌아오면 월화 팝업 */
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -508,6 +539,8 @@ function TossWidgetCheckout({
       const msg = payErrorMessage(e);
       setErrorMsg(msg);
       setPaying(false);
+      const c = errorCode(e);
+      if (c && CANCEL_CODES.has(c)) setCancelOpen(true);
     }
   };
 
@@ -534,6 +567,19 @@ function TossWidgetCheckout({
             : "결제 화면 불러오는 중…"}
       </button>
 
+      {cancelOpen && (
+        <PayCancelPopup
+          orderNumber={orderNumber}
+          amount={amount}
+          offerEndsAt={offerEndsAt}
+          regular={regular}
+          onRetry={() => {
+            setCancelOpen(false);
+            void handlePay();
+          }}
+          onClose={() => setCancelOpen(false)}
+        />
+      )}
       {errorMsg && (
         <p className="mt-4 text-center text-sm leading-relaxed text-thread">
           {errorMsg}

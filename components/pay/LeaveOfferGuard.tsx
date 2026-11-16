@@ -82,8 +82,8 @@ export default function LeaveOfferGuard({
       if (!a || a.target === "_blank") return;
       const url = new URL(a.href, location.href);
       if (url.origin !== location.origin) return;
-      /* 같은 결제 화면 안의 이동(상품 바꾸기 등)과 환불정책은 막지 않음 */
-      if (url.pathname === location.pathname || url.pathname.startsWith("/refund")) return;
+      /* 같은 결제 화면 안의 이동(상품 바꾸기 등)·환불정책·책 미리보기는 막지 않음 */
+      if (url.pathname === location.pathname || url.pathname.startsWith("/refund") || url.pathname.startsWith("/book")) return;
       e.preventDefault();
       pendingHref.current = a.href;
       show();
