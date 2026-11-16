@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import CancelReturn from "@/components/pay/CancelReturn";
 import { logPayEventServer } from "@/lib/pay-events-server";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +42,13 @@ export default async function PaymentFailPage({
   /* 11/16: 휴대폰은 결제창이 새 화면으로 열려, 취소하면 이 페이지로 온다.
      취소(실패 아님)면 결제 화면으로 바로 돌려보내 월화 팝업을 띄운다 (기록은 위에서 이미 남김). */
   if (orderNumber && (code === "PAY_PROCESS_CANCELED" || code === "USER_CANCEL")) {
-    redirect(`/apply/complete?order=${encodeURIComponent(orderNumber)}&cancelled=1`);
+    /* 11/17: 미리보기에서 시작한 결제면 미리보기로(시트+월화 팝업), 아니면 결제 화면으로 */
+    return (
+      <CancelReturn
+        orderNumber={orderNumber}
+        fallback={`/apply/complete?order=${encodeURIComponent(orderNumber)}&cancelled=1`}
+      />
+    );
   }
 
   const friendly =
