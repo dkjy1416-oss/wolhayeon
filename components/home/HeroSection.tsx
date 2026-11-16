@@ -75,7 +75,7 @@ export default function HeroSection({
             내 관계 무료로 보기
           </TrackedCtaLink>
           <p className="mt-3 text-center text-[0.72rem] font-light text-ivory-dim/85">
-            질문 3분 · 미리보기 무료 · 정기결제 없음
+            5분 정도 · 미리보기 무료 · 정기결제 없음
           </p>
         </div>
       </div>

@@ -576,7 +576,7 @@ export default async function BookPage({
             <PriceCards id="pick" />
             <ol className="mt-8 grid grid-cols-4 gap-2 text-center">
               {[
-                ["1", "사연 쓰기", "3분"],
+                ["1", "사연 쓰기", "5분 정도"],
                 ["2", "무료 미리보기", "바로"],
                 ["3", "결제", "1회"],
                 ["4", "책 도착", "1~3분"],

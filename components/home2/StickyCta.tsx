@@ -6,15 +6,24 @@ import TrackedCtaLink from "@/components/TrackedCtaLink";
 
 export default function StickyCta() {
   const [nearEnd, setNearEnd] = useState(false);
+  /* 11/16: 첫 화면의 큰 버튼이 보이는 동안은 숨기고, 지나간 뒤부터 따라다님 */
+  const [heroVisible, setHeroVisible] = useState(true);
   useEffect(() => {
     const t = document.getElementById("final-cta");
     const io = t ? new IntersectionObserver((es) => setNearEnd(es.some((e) => e.isIntersecting))) : null;
     if (t && io) io.observe(t);
+    const h = document.getElementById("hero-cta");
+    const io2 = h
+      ? new IntersectionObserver((es) => setHeroVisible(es.some((e) => e.isIntersecting || e.boundingClientRect.top > 0)))
+      : null;
+    if (h && io2) io2.observe(h);
+    else setHeroVisible(false);
     return () => {
       io?.disconnect();
+      io2?.disconnect();
     };
   }, []);
-  const visible = !nearEnd;
+  const visible = !nearEnd && !heroVisible;
   return (
     <div
       className={`fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[480px] border-t border-gold-dim bg-ink/95 px-4 pt-2.5 backdrop-blur transition-transform duration-300 ${visible ? "translate-y-0" : "translate-y-full"}`}
@@ -28,9 +37,9 @@ export default function StickyCta() {
         tabIndex={visible ? 0 : -1}
         className="flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.96rem] font-semibold"
       >
-        월화에게 이야기하기
+        내 사연으로 무료 미리보기
       </TrackedCtaLink>
-      <p className="mt-1 text-center text-[0.72rem] text-ivory-dim">질문 3분 · 미리보기 무료 · 정기결제 없음</p>
+      <p className="mt-1 text-center text-[0.72rem] text-ivory-dim">5분 정도 · 미리보기 무료 · 정기결제 없음</p>
     </div>
   );
 }

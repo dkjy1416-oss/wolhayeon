@@ -8,6 +8,7 @@ export type FunnelEvent =
   | "apply_start"
   | "apply_complete"
   | "apply_step"
+  | "apply_skip"
   | "preview_view"
   | "payment_cta_click"
   | "email_typo_fix_applied"

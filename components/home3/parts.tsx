@@ -8,9 +8,9 @@ export const V3 = {
   hands: "/wolhwa/v2/hands.webp",
 };
 
-export function Cta({ placement, label = "내 사연으로 무료 미리보기", sub = true }: { placement: string; label?: string; sub?: boolean }) {
+export function Cta({ placement, label = "내 사연으로 무료 미리보기", sub = true, id }: { placement: string; label?: string; sub?: boolean | string; id?: string }) {
   return (
-    <div className="px-5">
+    <div className="px-5" id={id}>
       <TrackedCtaLink
         event="home_cta_click"
         placement={placement}
@@ -19,7 +19,7 @@ export function Cta({ placement, label = "내 사연으로 무료 미리보기",
       >
         {label}
       </TrackedCtaLink>
-      {sub && <p className="mt-2 text-center text-[0.76rem] text-ivory-dim">사연 입력 후 바로 · 미리보기 무료 · 3분이면 충분해요</p>}
+      {sub && <p className="mt-2 text-center text-[0.76rem] text-ivory-dim">{typeof sub === "string" ? sub : "질문 18~20개 · 5분 정도 · 미리보기 무료"}</p>}
     </div>
   );
 }

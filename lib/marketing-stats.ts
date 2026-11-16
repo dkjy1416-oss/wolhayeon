@@ -66,10 +66,11 @@ export interface Funnel {
 
 /** 질문 묶음 완료 지점 — 다음 묶음의 첫 질문에 도달하면 앞 묶음 완료로 본다 */
 export const QUESTION_CHECKPOINTS: Array<{ key: "q1" | "q2" | "q3" | "q4"; step: string; label: string }> = [
-  { key: "q1", step: "partner_name", label: "질문 1 완료 (내 정보)" },
-  { key: "q2", step: "relationship_type", label: "질문 2 완료 (상대 정보)" },
-  { key: "q3", step: "story", label: "질문 3 완료 (관계 상황)" },
-  { key: "q4", step: "email", label: "질문 4 완료 (사연)" },
+  /* 11/16 순서 개편: 관계 상황 → 마음 → 사연 → 내 정보 */
+  { key: "q1", step: "last_conversation", label: "질문 1 완료 (관계 상황)" },
+  { key: "q2", step: "story", label: "질문 2 완료 (지금 마음)" },
+  { key: "q3", step: "relationship_duration", label: "질문 3 완료 (사연·안전 확인)" },
+  { key: "q4", step: "email", label: "질문 4 완료 (내 정보)" },
 ];
 const CANCEL_CODES = new Set(["USER_CANCEL", "PAY_PROCESS_CANCELED", "PAY_PROCESS_ABORTED"]);
 

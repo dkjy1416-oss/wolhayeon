@@ -4,6 +4,7 @@
  */
 import Image from "next/image";
 import LoopVideo from "@/components/book/LoopVideo";
+import { FIRST_OFFER_PRICE_KRW } from "@/lib/ritual-types";
 import TrackedCtaLink from "@/components/TrackedCtaLink";
 import { V2, MOMENTS } from "@/components/home2/media";
 import { Big, Cta, Hl, V3 } from "./parts";
@@ -35,6 +36,15 @@ export function Hook() {
             <span className="rounded-full bg-[#3a3134] px-3 py-2 text-[0.74rem] text-ivory-dim">전송</span>
           </div>
           <p className="mt-2 text-right text-[0.64rem] text-ivory-dim/60">예시 화면</p>
+        </div>
+
+        {/* 11/16: 첫 화면에서 바로 시작 버튼 + 가격 한 줄 */}
+        <div className="-mx-5 mt-6">
+          <Cta
+            id="hero-cta"
+            placement="hero"
+            sub={`미리보기 무료 · 전체 결과 첫 구매 ${FIRST_OFFER_PRICE_KRW.toLocaleString()}원 · 정기결제 없음`}
+          />
         </div>
 
         <p className="mt-8 text-[1.02rem] leading-[1.8] text-ivory-dim">

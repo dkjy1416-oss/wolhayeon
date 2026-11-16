@@ -100,7 +100,7 @@ export default function WhatYouGetSection() {
         <Reveal>
           <ol className="mt-6 grid grid-cols-3 gap-2 text-center">
             {[
-              ["사연 쓰기", "3분"],
+              ["사연 쓰기", "5분 정도"],
               ["무료 미리보기", "바로"],
               ["전체 결과", "결제 후 1~3분"],
             ].map(([t, s], i) => (

@@ -90,7 +90,7 @@ export default function NoSendGuide() {
             </p>
             <div className="mt-4 flex flex-col gap-2.5">
               <Link href="/apply?utm_source=guide&utm_medium=free&utm_content=no_send" className="cta-glow inline-flex min-h-14 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#a83a57] to-burgundy-deep px-5 text-[0.98rem] font-bold text-[#fbf7f2]">
-                사연 3분 · 무료 미리보기 받기
+                사연 5분 · 무료 미리보기 받기
               </Link>
               <Link href="/chat?utm_source=guide&utm_medium=free&utm_content=no_send" className="inline-flex min-h-13 w-full items-center justify-center rounded-full border border-[#e46b8a]/60 px-5 py-3 text-[0.94rem] font-semibold text-[#e46b8a]">
                 💬 그 사람 카톡으로 1분 무료 분석
