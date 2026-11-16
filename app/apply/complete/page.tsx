@@ -32,6 +32,7 @@ import PayEventPing from "@/components/pay/PayEventPing";
 import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
 import OfferCountdown from "@/components/pay/OfferCountdown";
 import TossCheckout from "@/components/pay/TossCheckout";
+import LeaveOfferGuard from "@/components/pay/LeaveOfferGuard";
 import { TestPaymentNotice } from "@/components/pay/TestModeNotices";
 import { PayIncludes } from "@/components/pay/PayValueBlock";
 import SelectedProduct from "@/components/pay/SelectedProduct";
@@ -389,7 +390,16 @@ export default async function CompletePage({
 
           </>
           )}
-          <div className="mt-7">
+          {/* 11/16 요청: 나가려 할 때 할인 금액 안내 — 첫 구매가가 실제로 적용 중일 때만 */}
+          {offerEnd && product !== "book" && regularPriceFor(product) > row.payment_amount && (
+            <LeaveOfferGuard
+              orderNumber={orderNumber}
+              endsAt={offerEnd}
+              amount={row.payment_amount}
+              regular={regularPriceFor(product)}
+            />
+          )}
+          <div id="pay-anchor" className="mt-7">
             <InAppBrowserNotice orderNumber={orderNumber} />
             <TossCheckout
               clientKey={clientKey}
