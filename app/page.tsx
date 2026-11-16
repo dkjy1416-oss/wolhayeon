@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import AutoFx from "@/components/fx/AutoFx";
 import Footer from "@/components/Footer";
 import { getPublicReviews } from "@/lib/reviews";
+import { getRecentVisitorCount } from "@/lib/visitor-count";
 import RealReviewsSection from "@/components/home/RealReviewsSection";
 import ResumeCard from "@/components/home2/ResumeCard";
 import ChatPromo from "@/components/home3/ChatPromo";
@@ -24,14 +25,14 @@ export const metadata: Metadata = {
 
 /** 10/16 3차 — 한 줄로 길게 이어지는 상세페이지형 홈 (공감 → 월화 → 상품 POINT 1~5 → 마지막 버튼) */
 export default async function Home() {
-  const reviews = await getPublicReviews(8);
+  const [reviews, visitors] = await Promise.all([getPublicReviews(8), getRecentVisitorCount()]);
   return (
     <div className="min-h-screen bg-[#0a0809]">
       <div data-fx-root className="relative mx-auto min-h-screen w-full max-w-[480px] bg-[#120e10] shadow-[0_0_80px_rgba(0,0,0,0.8)]">
         <AutoFx />
         <Header ctaLabel="무료 미리보기" />
         <main>
-          <Hook />
+          <Hook visitors={visitors} />
           <ResumeCard />
           <Turn />
           <Mystery />
