@@ -23,6 +23,9 @@ import DeliveryButton from "@/components/admin/DeliveryButton";
 import GenerateResultButton from "@/components/admin/GenerateResultButton";
 import CustomerEmailForm from "@/components/admin/CustomerEmailForm";
 import { getOrderAttribution, touchLabel } from "@/lib/order-attribution";
+import AdminViewLinks from "@/components/admin/AdminViewLinks";
+import { createPreviewToken } from "@/lib/preview-auth";
+import { isOperatorEmail } from "@/lib/admin-util";
 
 export const dynamic = "force-dynamic";
 
@@ -147,6 +150,19 @@ export default async function AdminOrderDetailPage({
           )}
         </div>
       </div>
+
+      {/* 11/17: 관리자로 보기 — 미리보기·전체 결과를 손님 화면 그대로 */}
+      {(() => {
+        const pt = createPreviewToken(order.order_number);
+        return (
+          <AdminViewLinks
+            orderNumber={order.order_number}
+            previewHref={pt ? `/apply/preview?order=${encodeURIComponent(order.order_number)}&pt=${encodeURIComponent(pt)}&admin=1` : null}
+            resultHref={result?.result_token ? `/result/${encodeURIComponent(result.result_token)}?admin=1` : null}
+            canFree={order.payment_status === "pending" && isOperatorEmail(order.email)}
+          />
+        );
+      })()}
 
       {/* 유입 경로 (첫 유입 · 마지막 유입) */}
       <div className="mt-3 rounded-xl border border-gold-dim/25 bg-ink-soft px-5 py-3.5 text-xs text-ivory-dim">
