@@ -172,6 +172,8 @@ export default function TossCheckout(props: {
   regular?: number;
   /** 11/16: 휴대폰 결제창에서 취소하고 돌아온 경우(?cancelled=1) — 들어오자마자 월화 팝업 */
   startCancelled?: boolean;
+  /** 11/16: 결제 시트 안에 넣을 때 — 화면 하단 고정 결제 버튼은 시트가 대신한다 */
+  hideStickyBar?: boolean;
 }) {
   return props.clientKey.includes("_gck_") ? (
     <TossWidgetCheckout {...props} />
@@ -222,6 +224,7 @@ function TossWindowCheckout({
   offerEndsAt = null,
   regular,
   startCancelled = false,
+  hideStickyBar = false,
 }: {
   clientKey: string;
   orderNumber: string;
@@ -232,6 +235,7 @@ function TossWindowCheckout({
   offerEndsAt?: number | null;
   regular?: number;
   startCancelled?: boolean;
+  hideStickyBar?: boolean;
 }) {
   const paymentRef = useRef<ReturnType<
     Awaited<ReturnType<typeof loadTossPayments>>["payment"]
@@ -432,6 +436,7 @@ function TossWindowCheckout({
       {payTimeout.stuck && !errorMsg && <PayStuckNotice />}
 
       {typeof document !== "undefined" &&
+        !hideStickyBar &&
         createPortal(
           <div
             className={`paper fixed inset-x-0 bottom-0 z-40 border-t border-gold-dim bg-ink/95 px-4 pt-3 backdrop-blur transition-transform duration-300 ${
@@ -485,6 +490,7 @@ function TossWidgetCheckout({
   offerEndsAt?: number | null;
   regular?: number;
   startCancelled?: boolean;
+  hideStickyBar?: boolean;
 }) {
   const widgetsRef = useRef<TossPaymentsWidgets | null>(null);
   const [ready, setReady] = useState(false);
