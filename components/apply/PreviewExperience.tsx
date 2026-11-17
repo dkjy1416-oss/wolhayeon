@@ -47,6 +47,7 @@ import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
 import PreviewPaySheet from "@/components/pay/PreviewPaySheet";
 import ResultCaptures from "@/components/apply/ResultCaptures";
+import RollingCount from "@/components/home3/RollingCount";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
 import { pickSituationGuides, type GuidePick } from "@/lib/situation-guide";
@@ -353,12 +354,14 @@ export default function PreviewExperience({
   continueToken,
   readingVideo,
   readingPoster,
+  customers = 0,
 }: {
   orderNumber: string;
   previewToken: string | null;
   continueToken: string | null;
   readingVideo: string | null;
   readingPoster: string | null;
+  customers?: number;
 }) {
   const [phase, setPhase] = useState<"loading" | "ready" | "delayed" | "expired">(
     "loading"
@@ -1281,6 +1284,19 @@ export default function PreviewExperience({
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
           aria-hidden={!showSticky}
         >
+          {/* 11/17 요청: 홈과 같은 누적 고객 말풍선 (실제 집계 · 100명 미만이면 숨김). .paper 안이라 글자색은 고정값 */}
+          {customers >= 100 && (
+            <div className={`pointer-events-none absolute inset-x-0 -top-11 flex justify-center transition-opacity duration-300 ${showSticky ? "opacity-100" : "opacity-0"}`}>
+              <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/95 px-3.5 py-1.5 text-[0.8rem] font-semibold text-[#f3ece2] shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
+                누적 고객{" "}
+                <b className="mx-0.5 text-[1.02rem] text-[#ff8fab] [text-shadow:0_0_12px_rgba(255,143,171,0.5)]">
+                  <RollingCount value={customers} />
+                </b>
+                명이 월화를 찾았어요
+                <span aria-hidden className="absolute -bottom-[5px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
+              </p>
+            </div>
+          )}
           {!want && offerEndsAt && <OfferCountdown bar endsAt={offerEndsAt} after={regularPriceFor("message")} className="mx-auto mb-2 max-w-[640px]" />}
           <Link
             href={mainHref}
