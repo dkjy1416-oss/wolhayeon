@@ -2,6 +2,7 @@ import Link from "next/link";
 import fs from "fs";
 import path from "path";
 import PreviewExperience from "@/components/apply/PreviewExperience";
+import { getSiteTotals } from "@/lib/site-totals";
 
 function found(publicPath: string): string | null {
   try {
@@ -41,6 +42,9 @@ export default async function ApplyPreviewPage({
     );
   }
 
+  /* 11/17: 하단 버튼 위 "누적 고객 N명" (홈과 같은 수 · 1시간 캐시) */
+  const totals = await getSiteTotals().catch(() => null);
+
   return (
     <main className="min-h-[100svh] w-full overflow-hidden">
       <PreviewExperience
@@ -53,6 +57,7 @@ export default async function ApplyPreviewPage({
         }
         readingVideo={found("book/v3/w-reading.mp4")}
         readingPoster={found("book/v3/w-reading.webp")}
+        customers={totals?.visitors ?? 0}
       />
     </main>
   );
