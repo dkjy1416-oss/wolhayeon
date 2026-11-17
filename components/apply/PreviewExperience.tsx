@@ -48,6 +48,8 @@ import { logPayEvent } from "@/lib/pay-events";
 import PreviewPaySheet from "@/components/pay/PreviewPaySheet";
 import ResultCaptures from "@/components/apply/ResultCaptures";
 import RollingCount from "@/components/home3/RollingCount";
+import Totals from "@/components/home3/Totals";
+import type { SiteTotals } from "@/lib/site-totals";
 import { loadWant, type WantProduct } from "@/lib/purchase-intent";
 import { trackEvent } from "@/lib/analytics";
 import { pickSituationGuides, type GuidePick } from "@/lib/situation-guide";
@@ -355,6 +357,7 @@ export default function PreviewExperience({
   readingVideo,
   readingPoster,
   customers = 0,
+  totals = null,
 }: {
   orderNumber: string;
   previewToken: string | null;
@@ -362,6 +365,7 @@ export default function PreviewExperience({
   readingVideo: string | null;
   readingPoster: string | null;
   customers?: number;
+  totals?: SiteTotals | null;
 }) {
   const [phase, setPhase] = useState<"loading" | "ready" | "delayed" | "expired">(
     "loading"
@@ -929,6 +933,13 @@ export default function PreviewExperience({
           />
         </div>
       </section>
+
+      {/* ---------- 11/17 운영자 요청: 홈과 같은 누적 숫자 블록 (실제 집계). .paper 안이라 색 변수를 원래 밤 톤으로 되돌림 ---------- */}
+      {totals && (
+        <div className="-my-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
+          <Totals totals={totals} />
+        </div>
+      )}
 
       {/* ---------- 05. 무료 미리보기 vs 전체 리추얼 구성 — 10/30 판정 카드 바로 아래로 이동 + 구매 버튼 ---------- */}
       <section className="mt-6 px-6">
