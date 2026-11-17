@@ -48,9 +48,20 @@ export default function OfferCountdown({
   }
   if (bar) {
     return (
-      <p className={`text-center text-[0.9rem] font-semibold text-ivory ${className}`}>
-        할인혜택 종료까지 <span className="tabular-nums text-[#ffd84d]">{fmt(left)}</span>
-      </p>
+      /* 11/17 요청: 눈에 띄게 — 흰 카드 + 큰 빨간 시계 + 남은 시간 막대(24시간 기준). 색은 테마와 무관하게 고정 */
+      <div
+        className={`relative flex items-center justify-between overflow-hidden rounded-2xl border border-[#eba3ab] bg-white px-4 py-2.5 shadow-[0_2px_10px_rgba(208,20,44,0.08)] ${className}`}
+        role="timer"
+        aria-label={`첫 구매 할인 마감까지 ${fmt(left)}`}
+      >
+        <span className="text-[0.84rem] font-bold text-[#2b2326]">첫 구매 할인 마감까지</span>
+        <span className="tabular-nums text-[1.5rem] font-extrabold leading-none tracking-tight text-[#d0142c]">{fmt(left)}</span>
+        <span
+          aria-hidden
+          className="absolute bottom-0 left-0 h-[3px] rounded-r-full bg-[#d0142c] transition-[width] duration-1000"
+          style={{ width: `${Math.min(100, Math.max(2, (left / (24 * 3600 * 1000)) * 100))}%` }}
+        />
+      </div>
     );
   }
   if (showEnd) {
