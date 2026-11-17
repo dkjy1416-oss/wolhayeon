@@ -102,7 +102,7 @@ export default function HoldCard({
           </button>
         )}
       </div>
-      <div className="-mt-6 px-6 pb-6">
+      <div className="relative z-10 -mt-6 px-6 pb-6">
         {offerOn && <Digits ms={left} />}
         <p className="mt-4 break-keep text-[1.6rem] font-extrabold leading-[1.35] tracking-[-0.02em] text-[#f7f0e8]">
           {offerOn ? (
