@@ -27,7 +27,8 @@ export const metadata: Metadata = {
 /** 10/16 3차 — 한 줄로 길게 이어지는 상세페이지형 홈 (공감 → 월화 → 상품 POINT 1~5 → 마지막 버튼) */
 export default async function Home() {
   const [reviews, totals] = await Promise.all([getPublicReviews(8), getSiteTotals().catch(() => null)]);
-  const customers = totals?.stories ?? 0;
+  /* 11/17 요청: 말풍선은 가장 큰 사람 수 = 누적 방문자(중복 제외) */
+  const customers = totals?.visitors ?? 0;
   return (
     <div className="min-h-screen bg-[#0a0809]">
       <div data-fx-root className="relative mx-auto min-h-screen w-full max-w-[480px] bg-[#120e10] shadow-[0_0_80px_rgba(0,0,0,0.8)]">
