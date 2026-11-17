@@ -57,6 +57,7 @@ function ymd(iso: string): string {
 
 export default function Totals({ totals }: { totals: SiteTotals }) {
   const rows = [
+    { label: "월화를 찾아온 분", value: totals.visitors ?? 0, suffix: "명" },
     { label: "사연을 들려준 분", value: totals.stories, suffix: "명" },
     { label: "무료 미리보기를 받아 본 분", value: totals.previews, suffix: "명" },
     { label: "누적 페이지 방문", value: totals.views, suffix: "회" },
@@ -77,7 +78,7 @@ export default function Totals({ totals }: { totals: SiteTotals }) {
         </div>
         <p className="mt-8 break-keep text-center text-[0.72rem] leading-[1.7] text-ivory-dim/70">
           월하연 내부 집계 · 운영자 테스트 주문 제외 · {ymd(totals.at)} 기준. 페이지 방문은 같은 분이 여러 번 들어온 것도 포함한
-          조회 수예요.
+          조회 수, 찾아온 분은 같은 기기를 한 번으로 센 수예요.
         </p>
       </div>
     </section>
