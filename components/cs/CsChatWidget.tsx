@@ -109,7 +109,7 @@ export default function CsChatWidget() {
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (pathname === "/apply" || pathname === "/apply/confirm") {
+    if (pathname === "/apply" || pathname === "/apply/confirm" || pathname === "/apply/preview") {
       setOpen(false);
     }
   }, [pathname]);
@@ -597,7 +597,8 @@ export default function CsChatWidget() {
   const ghostBtn =
     "inline-flex h-10 items-center justify-center rounded-full border border-gold-dim/35 px-4 text-[0.8rem] text-ivory active:opacity-80";
 
-  if (pathname === "/apply" || pathname === "/apply/confirm") {
+  /* 11/17 요청: 미리보기 화면에서는 고객센터 버튼 숨김 (하단 결제 버튼과 겹침) */
+  if (pathname === "/apply" || pathname === "/apply/confirm" || pathname === "/apply/preview") {
     return null;
   }
 
