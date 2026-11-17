@@ -108,7 +108,7 @@ export default async function AdminDashboard() {
         .limit(500),
       supabase
         .from("payment_events")
-        .select("order_number, event")
+        .select("order_number, event, code")
         .gt("created_at", todayStart)
         .in("event", ["pay_fail", "confirm_failed", "amount_mismatch"])
         .limit(2000),
@@ -154,9 +154,18 @@ export default async function AdminDashboard() {
   );
   const openIncidents = incidentRes.error ? null : (incidentRes.data ?? []).length;
   const csToday = csChatRes.error ? null : (csChatRes.data ?? []).length;
+  /* 11/17: 결제창 취소(고객이 닫음)와 운영자 테스트 주문은 실패로 세지 않음 — 진짜 실패(카드 거절·승인 실패 등)만 */
+  const CANCEL_CODES = new Set(["USER_CANCEL", "PAY_PROCESS_CANCELED", "PAY_PROCESS_ABORTED"]);
+  const operatorOrders = new Set(
+    ((recentRes.data ?? []) as OrderRow[]).filter((r) => isOperatorEmail(r.email)).map((r) => r.order_number)
+  );
   const payFailToday = failRes.error
     ? null
-    : new Set((failRes.data ?? []).map((e: { order_number: string }) => e.order_number)).size;
+    : new Set(
+        ((failRes.data ?? []) as { order_number: string; event: string; code: string | null }[])
+          .filter((e) => !(e.code && CANCEL_CODES.has(e.code)) && !operatorOrders.has(e.order_number))
+          .map((e) => e.order_number)
+      ).size;
 
   /* 결제 10분이 지났는데 결과가 아직 안 만들어진 메시지·패키지 주문 (자동 처리 누락) */
   const tenMinAgo = Date.now() - 10 * 60 * 1000;
