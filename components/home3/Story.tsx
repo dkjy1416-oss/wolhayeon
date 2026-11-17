@@ -7,9 +7,12 @@ import LoopVideo from "@/components/book/LoopVideo";
 import RollingCount from "./RollingCount";
 import { FIRST_OFFER_PRICE_KRW } from "@/lib/ritual-types";
 import TrackedCtaLink from "@/components/TrackedCtaLink";
-import { V2, MOMENTS } from "@/components/home2/media";
+import { MOMENTS } from "@/components/home2/media";
 import { Big, Cta, Hl, V3 } from "./parts";
-import { Beat, Cut, Gutter, Petals } from "./Webtoon";
+import { Gutter, MyLine, NoteLine, Petals, TalkCut } from "./Webtoon";
+
+/** 11/17: 월화 릴스에서 잘라 낸 월화 클로즈업 반복 영상 */
+const TALK = (k: string) => ({ video: `/wolhwa/v3/${k}.mp4`, poster: `/wolhwa/v3/${k}.webp` });
 
 export function Hook({ visitors = 0 }: { visitors?: number }) {
   return (
@@ -146,9 +149,9 @@ export function MeetWolhwa() {
   return (
     <section className="pb-14">
       <div className="relative">
-        <Cut src={V2.greet} alt="손을 내밀며 맞이하는 월화" ratio="aspect-[4/5]" pos="object-top" say={<>당신의 이야기를<br />끝까지 들어 드릴게요.</>}>
+        <TalkCut {...TALK("greet")} alt="이야기를 건네는 월화" ratio="aspect-[4/5]" say={"당신의 이야기를\n끝까지 들어 드릴게요."}>
           <Petals n={7} />
-        </Cut>
+        </TalkCut>
       </div>
       <div className="mx-5 mt-0 relative rounded-[1.4rem] border border-gold/30 bg-[#1d181b] px-5 py-5">
         <p className="font-display text-[1.7rem] font-bold text-ivory">
@@ -169,22 +172,18 @@ export function Webtoon() {
   return (
     <section className="relative pb-14">
       <Gutter>{"그날 밤에도,\n보내지 못한 메시지가 남아 있었어요"}</Gutter>
-      <Beat>
-        연락해도…
-        <br />
-        괜찮을까?
-      </Beat>
-      <Cut src={V3.smile} alt="미소 짓는 월화" say={<>혹시…<br />아직 망설이고 계신가요?</>} />
+      <MyLine text={"연락해도…\n괜찮을까?"} />
+      <TalkCut {...TALK("smile")} alt="말을 건네는 월화" say={"혹시…\n아직 망설이고 계신가요?"} />
       <Gutter>{"읽고, 지우고,\n다시 쓰고"}</Gutter>
-      <Cut src={V2.listen} alt="편지를 읽는 월화" right say={<>관계에는<br />타이밍이 있어요.</>} />
-      <Beat kind="caption">월화는 당신의 사연을 끝까지 읽어요</Beat>
-      <Cut src={V2.write} alt="편지를 쓰는 월화" say={<>오늘 보내지 않은 한 줄이,<br />내일의 대화를<br />지켜 주기도 해요.</>}>
+      <TalkCut {...TALK("listen")} alt="이야기하는 월화" right say={"관계에는\n타이밍이 있어요."} />
+      <NoteLine>월화는 당신의 사연을 끝까지 읽어요</NoteLine>
+      <TalkCut {...TALK("write")} alt="조용히 말하는 월화" say={"오늘 보내지 않은 한 줄이,\n내일의 대화를\n지켜 주기도 해요."}>
         <Petals />
-      </Cut>
+      </TalkCut>
       <Gutter tall>{"그리고 오늘 밤,\n당신에게 건네는 한 통의 편지"}</Gutter>
-      <Cut src={V2.offer} alt="봉투를 건네는 월화" right say={<>오늘 밤,<br />같이 천천히 정리해 볼까요?</>}>
+      <TalkCut {...TALK("offer")} alt="함께 정리하자고 말하는 월화" right say={"오늘 밤,\n같이 천천히 정리해 볼까요?"}>
         <Petals n={6} />
-      </Cut>
+      </TalkCut>
       <div className="relative z-[6] mt-6">
         <Cta placement="webtoon" />
       </div>
@@ -269,7 +268,7 @@ export function Prepared() {
         </Big>
       </div>
       <div className="relative mt-6">
-        <Cut src={V3.explain} alt="책을 펼쳐 설명하는 월화" right say={<>사주를 몰라도 괜찮아요.<br />겪은 이야기만 들려주세요.</>} />
+        <TalkCut {...TALK("explain")} alt="설명하는 월화" right say={"사주를 몰라도 괜찮아요.\n겪은 이야기만 들려주세요."} />
       </div>
       <div className="relative mt-0 px-5 text-center">
         <p className="text-[0.96rem] text-gold">내 사연으로 쓰는 편지와 리추얼</p>

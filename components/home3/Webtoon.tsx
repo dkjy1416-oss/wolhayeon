@@ -8,7 +8,8 @@
  * - 매화 꽃잎이 천천히 떨어지는 효과 (움직임 줄이기 설정이면 멈춤)
  */
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import LoopVideo from "@/components/book/LoopVideo";
 
 export const BUBBLE = {
   speech: "/wolhwa/v2/bubble-speech.webp?v=3",
@@ -161,6 +162,172 @@ export function Beat({ children, kind = "thought", className = "" }: { children:
       <ArtBubble inline kind={kind} className={`mx-auto ${kind === "caption" ? "w-[86%]" : "w-[60%]"}`}>
         {children}
       </ArtBubble>
+    </div>
+  );
+}
+
+/* ================================================================
+ * 11/17 운영자 요청 — 그림 말풍선 대신 '월화가 말하는 영상 + 대화처럼 타자 치는 문장'.
+ * 영상: 월화 릴스의 월화 클로즈업만 잘라 2~3초 반복 (소리 없음, 화면에 보일 때만 재생).
+ * 문장: 화면에 들어오면 '…' 입력 중 표시 → 한 글자씩 써진다. 움직임 줄이기 설정이면 바로 전체.
+ * ================================================================ */
+
+function useSeen<T extends HTMLElement>(threshold = 0.35) {
+  const ref = useRef<T>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setSeen(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setSeen(true);
+          io.disconnect();
+        }
+      },
+      { threshold }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [threshold]);
+  return [ref, seen] as const;
+}
+
+/** 화면에 들어오면 입력 중(…) → 한 글자씩. 반환: [보여 줄 글자, 입력중 여부, 끝났는지] */
+function useTyped(text: string, start: boolean, wait = 650, speed = 42) {
+  const [n, setN] = useState(0);
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    if (!start) return;
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setN(text.length);
+      return;
+    }
+    setTyping(true);
+    let i = 0;
+    let timer = 0;
+    const t0 = window.setTimeout(() => {
+      setTyping(false);
+      timer = window.setInterval(() => {
+        i += 1;
+        setN(i);
+        if (i >= text.length) window.clearInterval(timer);
+      }, speed);
+    }, wait);
+    return () => {
+      window.clearTimeout(t0);
+      window.clearInterval(timer);
+    };
+  }, [start, text, wait, speed]);
+  return [text.slice(0, n), typing, n >= text.length] as const;
+}
+
+function TypingDots() {
+  return (
+    <span aria-hidden className="inline-flex items-center gap-1 py-1">
+      {[0, 1, 2].map((i) => (
+        <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-current opacity-70" style={{ animationDelay: `${i * 140}ms` }} />
+      ))}
+    </span>
+  );
+}
+
+/** 월화가 말하는 한 컷 — 반복 영상 + 아래에서 대화처럼 써지는 한 줄 */
+export function TalkCut({
+  video,
+  poster,
+  alt,
+  say,
+  right = false,
+  ratio = "aspect-[3/4]",
+  children,
+}: {
+  video: string;
+  poster: string;
+  alt: string;
+  /** 줄바꿈은 \n */
+  say: string;
+  right?: boolean;
+  ratio?: string;
+  children?: React.ReactNode;
+}) {
+  const [ref, seen] = useSeen<HTMLDivElement>(0.3);
+  const [shown, typing, done] = useTyped(say, seen, 700);
+  return (
+    <div ref={ref} className={`relative ${seen ? "wt-in" : ""}`}>
+      <div className={`wt-cut relative ${ratio} w-full overflow-hidden`}>
+        <div className="wt-zoom absolute inset-0 [mask-image:linear-gradient(to_bottom,transparent,black_8%,black_80%,transparent)]">
+          <LoopVideo src={video} poster={poster} label={alt} className="h-full w-full object-cover object-top" />
+        </div>
+        {children}
+      </div>
+      <div className={`relative z-10 -mt-[22%] flex px-4 pb-6 ${right ? "justify-end" : "justify-start"}`}>
+        <div className={`flex max-w-[86%] items-end gap-2 ${right ? "flex-row-reverse" : ""}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={poster} alt="" aria-hidden className="h-9 w-9 shrink-0 rounded-full object-cover object-top ring-2 ring-gold/60" />
+          <div className={`min-w-0 ${right ? "text-right" : ""}`}>
+            <p className="mb-1 text-[0.72rem] font-semibold tracking-wider text-gold">월화</p>
+            <p
+              aria-label={say.replace(/\n/g, " ")}
+              className={`inline-block whitespace-pre-line rounded-2xl border border-gold/35 bg-[#1b1416]/88 px-4 py-3 text-left text-[1.02rem] font-semibold leading-[1.6] text-[#f4ebe0] shadow-[0_10px_30px_rgba(0,0,0,0.55)] backdrop-blur-md [word-break:keep-all] ${
+                right ? "rounded-tr-md" : "rounded-tl-md"
+              }`}
+            >
+              {typing ? (
+                <TypingDots />
+              ) : (
+                <span aria-hidden>
+                  {shown}
+                  {!done && seen && <span className="ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[2px] animate-pulse bg-gold" />}
+                  {!seen && <span className="invisible">{say}</span>}
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 보내지 못한 내 메시지 (속마음) — 오른쪽 분홍 말풍선이 써지다 멈춘다 */
+export function MyLine({ text, note = "보내지 못한 메시지" }: { text: string; note?: string }) {
+  const [ref, seen] = useSeen<HTMLDivElement>(0.6);
+  const [shown, , done] = useTyped(text, seen, 250, 70);
+  return (
+    <div ref={ref} className="relative z-[6] flex flex-col items-end px-6 py-7">
+      <p
+        aria-label={text.replace(/\n/g, " ")}
+        className="max-w-[78%] whitespace-pre-line rounded-2xl rounded-tr-md border border-dashed border-[#e46b8a]/60 bg-[#3a1f29]/90 px-4 py-3 text-[1.02rem] font-semibold leading-[1.6] text-[#fbe9ee] [word-break:keep-all]"
+      >
+        <span aria-hidden>
+          {shown || "\u00a0"}
+          <span className={`ml-0.5 inline-block h-[1.05em] w-[2px] translate-y-[2px] bg-[#e46b8a] ${done ? "animate-pulse" : ""}`} />
+        </span>
+      </p>
+      <p className="mt-1.5 text-[0.7rem] text-ivory-dim/70">{note} · 전송 안 함</p>
+    </div>
+  );
+}
+
+/** 컷 사이 한 줄 안내 (그림 없이) */
+export function NoteLine({ children }: { children: React.ReactNode }) {
+  const [ref, seen] = useSeen<HTMLDivElement>(0.6);
+  return (
+    <div ref={ref} className="relative z-[6] px-8 py-8 text-center">
+      <p
+        className={`inline-flex items-center gap-2 text-[0.98rem] font-semibold tracking-[-0.01em] text-gold transition-all duration-700 ${
+          seen ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
+        }`}
+      >
+        <span aria-hidden className="h-px w-6 bg-gold/50" />
+        {children}
+        <span aria-hidden className="h-px w-6 bg-gold/50" />
+      </p>
     </div>
   );
 }
