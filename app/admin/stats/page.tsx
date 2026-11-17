@@ -328,8 +328,10 @@ export default async function AdminStatsPage() {
         fails: [...failMap.entries()]
           .map(([k, set]) => {
             const [event, code] = k.split("|");
+            /* 11/17: 취소 코드는 실패가 아니라 고객이 결제창을 닫은 것 */
+            const cancel = ["USER_CANCEL", "PAY_PROCESS_CANCELED", "PAY_PROCESS_ABORTED"].includes(code);
             return {
-              label: FAIL_LABELS[event] ?? event,
+              label: cancel ? "결제창 취소" : FAIL_LABELS[event] ?? event,
               code,
               orders: set.size,
             };
