@@ -58,6 +58,7 @@ export default async function ApplyPreviewPage({
         readingVideo={found("book/v3/w-reading.mp4")}
         readingPoster={found("book/v3/w-reading.webp")}
         customers={totals?.visitors ?? 0}
+        totals={totals}
       />
     </main>
   );
