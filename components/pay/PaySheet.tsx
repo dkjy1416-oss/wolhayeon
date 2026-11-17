@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { logPayEvent } from "@/lib/pay-events";
+import HoldCard from "./HoldCard";
 
 type Option = {
   key: "message" | "bundle";
@@ -20,20 +21,9 @@ type Option = {
   badge?: string;
 };
 
-function left(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return h > 0 ? `${h}시간 ${m}분` : `${m}분 ${s % 60}초`;
-}
 function clock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
   return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map((n) => String(n).padStart(2, "0")).join(":");
-}
-function endText(endsAt: number): string {
-  const d = new Date(endsAt + 9 * 3600 * 1000);
-  const h = d.getUTCHours();
-  return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일 ${h < 12 ? "오전" : "오후"} ${h % 12 || 12}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
 }
 
 export default function PaySheet({
@@ -266,47 +256,24 @@ export default function PaySheet({
           </div>
         </div>
 
-        {/* X → 할인 사라짐 카드 */}
+        {/* X → 할인 사라짐 카드 (11/17: 월화 영상 + 큰 타이머) */}
         {warn && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/55 px-6">
-            <div className="w-full max-w-[340px] rounded-[1.6rem] bg-ink px-6 pb-6 pt-7 text-center shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
-              <p className="text-[2rem]" aria-hidden>
-                ⏳
-              </p>
-              <p className="mt-2 text-[1.2rem] font-bold leading-[1.5] text-ivory">
-                할인 받은 <span className="text-thread">{saved.toLocaleString()}원</span>,
-                <br />
-                {offerOn ? `${left(remain)} 뒤면 사라져요` : "이제 사라졌어요"}
-              </p>
-              {offerEndsAt && (
-                <p className="mt-2 text-[0.84rem] leading-[1.75] text-ivory-dim">
-                  첫 구매 할인은 신청하고 하루(24시간)만 적용돼요.
-                  <br />
-                  {endText(offerEndsAt)}부터는 {regular.toLocaleString()}원이에요.
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setWarn(false);
-                  logPayEvent(orderNumber, "pay_sheet", "warn_stay");
-                }}
-                className="mt-6 flex h-[52px] w-full items-center justify-center rounded-full bg-gradient-to-b from-burgundy to-burgundy-deep text-[1rem] font-bold text-ivory"
-              >
-                {amount.toLocaleString()}원 할인가로 결제하기
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setWarn(false);
-                  setOpen(false);
-                  logPayEvent(orderNumber, "pay_sheet", "warn_close");
-                }}
-                className="mt-3 w-full text-center text-[0.84rem] text-ivory-dim underline underline-offset-4"
-              >
-                다음에 할게요
-              </button>
-            </div>
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/70 px-5">
+            <HoldCard
+              saved={saved}
+              offerEndsAt={offerEndsAt}
+              regular={regular}
+              stayLabel={offerOn ? "할인 받고 계속하기" : `${amount.toLocaleString()}원 결제 계속하기`}
+              onStay={() => {
+                setWarn(false);
+                logPayEvent(orderNumber, "pay_sheet", "warn_stay");
+              }}
+              onLeave={() => {
+                setWarn(false);
+                setOpen(false);
+                logPayEvent(orderNumber, "pay_sheet", "warn_close");
+              }}
+            />
           </div>
         )}
       </div>
