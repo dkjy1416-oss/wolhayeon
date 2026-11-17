@@ -175,11 +175,7 @@ export function Webtoon() {
       <MyLine text={"연락해도…\n괜찮을까?"} />
       <TalkCut {...TALK("smile")} alt="말을 건네는 월화" say={"혹시…\n아직 망설이고 계신가요?"} />
       <Gutter>{"읽고, 지우고,\n다시 쓰고"}</Gutter>
-      <TalkCut {...TALK("listen")} alt="이야기하는 월화" right say={"관계에는\n타이밍이 있어요."} />
       <NoteLine>월화는 당신의 사연을 끝까지 읽어요</NoteLine>
-      <TalkCut {...TALK("write")} alt="조용히 말하는 월화" say={"오늘 보내지 않은 한 줄이,\n내일의 대화를\n지켜 주기도 해요."}>
-        <Petals />
-      </TalkCut>
       <Gutter tall>{"그리고 오늘 밤,\n당신에게 건네는 한 통의 편지"}</Gutter>
       <TalkCut {...TALK("offer")} alt="함께 정리하자고 말하는 월화" right say={"오늘 밤,\n같이 천천히 정리해 볼까요?"}>
         <Petals n={6} />
@@ -267,10 +263,7 @@ export function Prepared() {
           <Hl>준비했어요!</Hl>
         </Big>
       </div>
-      <div className="relative mt-6">
-        <TalkCut {...TALK("explain")} alt="설명하는 월화" right say={"사주를 몰라도 괜찮아요.\n겪은 이야기만 들려주세요."} />
-      </div>
-      <div className="relative mt-0 px-5 text-center">
+      <div className="relative mt-6 px-5 text-center">
         <p className="text-[0.96rem] text-gold">내 사연으로 쓰는 편지와 리추얼</p>
         <p className="font-display mt-1 text-[2rem] font-bold leading-[1.3] text-ivory">
           월화의
