@@ -241,7 +241,7 @@ export default function PaySheet({
             </div>
             {saved > 0 && (
               <div className="flex justify-between">
-                <dt className="text-thread">{offerOn ? "지금 결제 시 할인" : "할인"}</dt>
+                <dt className="text-thread">{offerOn ? "첫 구매 할인" : "할인"}</dt>
                 <dd className="text-thread">-{saved.toLocaleString()}원</dd>
               </div>
             )}
