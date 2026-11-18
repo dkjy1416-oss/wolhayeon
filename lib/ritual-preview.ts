@@ -64,6 +64,8 @@ export type PreviewOutcome =
       offerEndsAt: number | null;
       /** 결제 안내 문구를 고르기 위한 상황 구분 (사연 원문은 보내지 않음) */
       situation: PreviewSituation;
+      /** 11/18: 신청서 '가장 알고 싶은 것' 코드 — 미리보기 맨 위 질문을 기기와 무관하게 고정 */
+      mainWish: string;
     }
   | { status: "not_found" }
   | { status: "server_error" };
@@ -156,7 +158,81 @@ function breakupLead(order: RitualOrderRow): string {
   return elapsed ? `헤어진 뒤 ${elapsed} 정도가 지난 지금, ` : "";
 }
 
-export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
+/* ---------- 11/18 운영자 요청 2: '왜 이렇게 판단했는지' 첫 문장에 사연 원문 인용 ----------
+   사연에서 핵심 행동이나 대사 1개를 따옴표로 인용하고, 그 의미를 한 문장으로 푼다.
+   짧은 AI 호출 1번(Haiku) → 검증(인용이 원문에 실제로 있는지, 단정·금지 표현 없는지) → 실패하면 규칙 기반.
+   위험 사연(안전 항목)이거나 사연이 짧으면 인용하지 않고 기존처럼 선택지 기반. */
+const QUOTE_MODEL = () => process.env.PREVIEW_QUOTE_MODEL?.trim() || "claude-haiku-4-5";
+const QUOTE_CERTAIN_RE = /아직 (?:당신|너|님)을 (?:좋아|사랑)|반드시|확실히|틀림없|분명히 돌아|돌아올 거|다시 만나게 될|속마음은/;
+const norm = (s: string) => s.replace(/[\s"“”‘’'.,!?…~]/g, "");
+
+function ruleQuoteLine(story: string): string | null {
+  const s = story.replace(/\s+/g, " ").trim();
+  if (s.length < 20) return null;
+  const quoted = s.match(/[‘'“"]([^‘’'“”"]{2,30})[’'”"]/);
+  if (quoted) {
+    return sentence(`‘${quoted[1].trim()}’라는 말을 직접 적어 주셨어요. 그 한마디가 지금 두 사람 사이의 거리를 만든 장면과 맞닿아 있을 가능성이 커요.`, 165);
+  }
+  return null;
+}
+
+async function storyQuoteLine(order: RitualOrderRow, highRisk: boolean): Promise<string | null> {
+  const story = (order.story ?? "").replace(/\s+/g, " ").trim();
+  if (highRisk || story.length < 20) return null;
+  const fallback = ruleQuoteLine(story);
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) return fallback;
+  const t0 = Date.now();
+  try {
+    const client = new Anthropic({ apiKey, maxRetries: 0 });
+    const msg = await client.messages.create(
+      {
+        model: QUOTE_MODEL(),
+        max_tokens: 300,
+        system:
+          "당신은 연애 상담 서비스 '월하연'의 안내자 월화입니다. 손님이 쓴 사연에서 지금 관계를 가장 잘 보여 주는 핵심 행동이나 대사 하나를 고르고, 그 의미를 풉니다. " +
+          "규칙: quote는 사연 원문에 그대로 있는 2~30자 구절(고치지 말 것). line은 존댓말 두 문장, 합쳐 150자 이내. " +
+          "첫 문장은 quote를 ‘ ’로 감싸 인용하며 '~라고 쓰셨어요' 또는 '~했다고 쓰셨어요'로 끝냅니다. " +
+          "둘째 문장은 그 행동·말이 관계에 어떻게 쌓였을지를 '~일 가능성이 커요' 또는 '~에 가까워요'로 씁니다. " +
+          "상대의 마음을 단정하지 않습니다(예: '상대는 아직 당신을 좋아해요' 금지). 재회나 결과를 장담하지 않습니다. 손님을 탓하지 않습니다. 점술 표현을 쓰지 않습니다.",
+        messages: [
+          {
+            role: "user",
+            content: `사연:\n${story.slice(0, 1200)}\n\nJSON으로만 답하세요: {"quote": "...", "line": "..."}`,
+          },
+        ],
+      },
+      { timeout: 9_000 }
+    );
+    const text = msg.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+    const j = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)) as { quote?: unknown; line?: unknown };
+    const quote = typeof j.quote === "string" ? j.quote.trim() : "";
+    const line = typeof j.line === "string" ? j.line.replace(/\s+/g, " ").trim() : "";
+    const ok =
+      quote.length >= 2 &&
+      quote.length <= 40 &&
+      norm(story).includes(norm(quote)) &&
+      norm(line).includes(norm(quote)) &&
+      line.length >= 20 &&
+      line.length <= 170 &&
+      !QUOTE_CERTAIN_RE.test(line) &&
+      !PREVIEW_BANNED_RE_TEST(line);
+    console.error(`[preview] quote_${ok ? "ok" : "rejected"} ms=${Date.now() - t0}`);
+    return ok ? line : fallback;
+  } catch {
+    console.error(`[preview] quote_failed ms=${Date.now() - t0}`);
+    return fallback;
+  }
+}
+
+function PREVIEW_BANNED_RE_TEST(s: string): boolean {
+  return previewBannedMatch({ reasons: [s] } as unknown as RitualPreview) !== null;
+}
+
+export function buildInstantPreview(order: RitualOrderRow, quoteLine: string | null = null): RitualPreview {
   const name = clip(order.applicant_name, 18) || "당신";
   const partner = clip(order.partner_name, 18) || "그 사람";
   const emotion = emotionPhrase(order.current_emotion);
@@ -397,13 +473,15 @@ export function buildInstantPreview(order: RitualOrderRow): RitualPreview {
       ? "아직 개인적인 대화는 나눈 적이 없고"
       : `마지막 대화 시점은 ‘${lastTalk}’이고`;
   const durationFact = durationLabel ? `${durationLabel} 함께한 사이이고, ` : "";
-  const reasons = [
+  const reasonsBase = [
     sentence(`${durationFact}${elapsedFact}${talkFact} ${contactFact}.`, 165),
     boundary
       ? sentence(`지금 ${partner}님 쪽은 대화를 이어갈 여유보다 거리를 지키려는 마음이 더 커 보여요.`, 165)
       : sentence(`이 흐름은 마음이 완전히 사라졌다기보다, 대화를 다시 시작하는 것 자체에 부담을 느끼는 쪽에 가까워요.`, 165),
     sentence(`지금 감정을 더 설명하거나 답을 요구하면, ${partner}님은 관계보다 압박감을 먼저 느낄 수 있어요.`, 165),
   ];
+  /* 사연 인용이 있으면 맨 앞에 (최대 3문장 유지) */
+  const reasons = quoteLine ? [quoteLine, reasonsBase[0], reasonsBase[1]] : reasonsBase;
   const bridge = boundary
     ? [
         "아무것도 하지 않는 지금이 가장 답답할 수 있어요.",
@@ -617,6 +695,7 @@ export async function getOrCreatePreview(
           paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), offerAnchor(order)),
           offerEndsAt: offerEndsFor(order),
           situation: previewSituation(order, cached.data.now_plan.stance),
+          mainWish: order.main_wish ?? "",
           generated: true,
         };
       }
@@ -630,7 +709,12 @@ export async function getOrCreatePreview(
        유료 전체 결과 생성은 이 설정과 무관하게 그대로 AI 를 쓴다. */
     const useAi = (process.env.PREVIEW_MODE ?? "template").trim().toLowerCase() === "ai";
     const ai = useAi ? await buildAiPreview(order) : null;
-    const preview = ai ?? buildInstantPreview(order);
+    const preview =
+      ai ??
+      buildInstantPreview(
+        order,
+        await storyQuoteLine(order, (order.safety_concerns ?? []).some((v) => HIGH_RISK_SAFETY_VALUES.includes(v)))
+      );
 
     if (ai || !useAi) {
       const save = await supabase
@@ -654,6 +738,7 @@ export async function getOrCreatePreview(
           paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), offerAnchor(order)),
           offerEndsAt: offerEndsFor(order),
       situation: previewSituation(order, preview.now_plan.stance),
+      mainWish: order.main_wish ?? "",
       generated: ai !== null || !useAi,
     };
   } catch (e) {

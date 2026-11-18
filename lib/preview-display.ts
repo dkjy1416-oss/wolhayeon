@@ -5,7 +5,7 @@
 /** 지금의 행동 기조 */
 export const NOW_STANCES = ["wait", "light_contact", "hold_boundary"] as const;
 export const NOW_STANCE_LABELS: Record<(typeof NOW_STANCES)[number], string> = {
-  wait: "지금은 연락보다 준비",
+  wait: "연락 전 준비 기간",
   light_contact: "짧고 가벼운 연락 가능",
   hold_boundary: "지금은 거리 지키기",
 };
