@@ -56,7 +56,7 @@ export function Hook({ visitors = 0 }: { visitors?: number }) {
           <Cta
             id="hero-cta"
             placement="hero"
-            sub={`미리보기 무료 · 전체 결과 첫 구매 ${FIRST_OFFER_PRICE_KRW.toLocaleString()}원 · 정기결제 없음`}
+            sub={`미리보기 무료 · 미리보기 후 24시간 첫 구매 ${FIRST_OFFER_PRICE_KRW.toLocaleString()}원 · 정기결제 없음`}
           />
         </div>
 
