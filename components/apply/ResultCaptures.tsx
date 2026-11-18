@@ -89,7 +89,8 @@ export default function ResultCaptures({
       <div className="mt-3 rounded-xl border border-burgundy/40 bg-[#f6e9ec] px-4 py-3">
         <p className="text-[0.86rem] leading-[1.7] text-ivory">
           {who} 미리보기 기준은 <b className="text-burgundy">{stanceLabel}</b>
-          {period ? ` · ${period}` : ""}.
+          {/* 11/18 운영자 요청: 무료에서 기간을 못박지 않음 — 시점은 전체 결과에서 */}
+          {period ? " · 내 사연 기준 시점은 전체 결과에서" : ""}
         </p>
         <p className="mt-1 text-[0.8rem] leading-[1.7] text-ivory-dim">
           전체 결과에서는 {who} 사연으로 24시간 할 일, 7일 원칙, 연락 순서, 21일 여정을 새로 써 드려요.

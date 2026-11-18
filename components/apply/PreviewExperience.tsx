@@ -86,7 +86,8 @@ type Stance = Preview["now_plan"]["stance"];
 
 /** 판정 카드 '지금 연락' — 무료에서는 방향까지만 (기간·날짜는 전체 결과에서) */
 const CONTACT_VERDICT: Record<Stance, string> = {
-  wait: "잠시 멈추는 편이 좋아요",
+  /* 11/18 운영자 요청: '멈춤'이 아니라 '조건부 진행' (위험 사연은 hold_boundary/boundary로 따로 처리) */
+  wait: "조건이 맞을 때 한 번, 짧게",
   light_contact: "짧고 가볍게는 괜찮아요",
   hold_boundary: "지금은 거리를 지켜요",
 };
@@ -108,6 +109,30 @@ const ASKED: Record<string, { q: string; next: string[] }> = {
   not_sure: { q: "지금 제 상황, 어떻게 봐야 할까요?", next: ["두 사람 사이에 지금 남아 있는 것은?", "가장 먼저 확인해야 할 한 가지는?", "오늘부터 21일 동안의 순서는?"] },
 };
 
+/** 11/18 운영자 요청 4: 가격 바로 위에 '받는 것' 3줄 · 버튼 문구 (전체 결과에 실제 들어 있는 범위만) */
+const RECEIVE: Record<Situation, { lines: [string, string, string]; label: string; short: string }> = {
+  wait: {
+    lines: ["나에게 맞는 연락 시점과 조건", "바로 보낼 수 있는 첫 문장 (내 사연 기준)", "답장이 왔을 때 / 안 왔을 때 다음 행동"],
+    label: "내 사연으로 연락 시점 + 첫 문장 받기",
+    short: "연락 시점 + 첫 문장 받기",
+  },
+  light: {
+    lines: ["나에게 맞는 연락 시점과 조건", "바로 보낼 수 있는 첫 문장 (내 사연 기준)", "답장이 왔을 때 / 안 왔을 때 다음 행동"],
+    label: "내 사연으로 연락 시점 + 첫 문장 받기",
+    short: "연락 시점 + 첫 문장 받기",
+  },
+  lover: {
+    lines: ["이야기를 다시 꺼낼 시점과 조건", "비난 없이 꺼내는 첫마디 (내 사연 기준)", "상대가 답할 때 / 피할 때 다음 말"],
+    label: "내 사연으로 대화 시점 + 첫마디 받기",
+    short: "대화 시점 + 첫마디 받기",
+  },
+  boundary: {
+    lines: ["내가 지킬 거리의 기준", "연락하고 싶어질 때 바로 할 행동", "흔들리는 밤에 꺼내 볼 문장 (내 사연 기준)"],
+    label: "내 사연으로 거리 기준 + 행동 플랜 받기",
+    short: "거리 기준 + 행동 플랜 받기",
+  },
+};
+
 /** 구버전 저장본: 긴 행동 문장을 카드용으로 짧게 */
 function shortAction(text: string): string {
   const t = text.replace(/[“”"']/g, "").trim();
@@ -127,7 +152,7 @@ type LockCopy = {
 };
 const CONTACT_LOCK: LockCopy = {
   title: "그렇다면 언제 연락해야 할까요?",
-  desc: "지금부터는 관계를 다시 움직이기 위한 실제 행동이 필요합니다.",
+  desc: "지금부터는 관계를 다시 움직일 실제 행동이 필요해요.",
   items: [
     { t: "나에게 맞는 연락 시점", ph: "이 조건이 채워진 다음, 그때 한 번 짧고 가볍게" },
     { t: "첫 연락 실제 문장", ph: "잘 지내? 갑자기 생각나서 연락했어 부담 갖지 말고" },
@@ -158,7 +183,7 @@ const LOCK_COPY: Record<Situation, LockCopy> = {
   lover: {
     ...CONTACT_LOCK,
     title: "그렇다면 언제, 어떻게 다시 이야기를 꺼내야 할까요?",
-    desc: "지금부터는 같은 싸움을 반복하지 않기 위한 실제 행동이 필요합니다.",
+    desc: "지금부터는 같은 싸움을 반복하지 않을 실제 행동이 필요해요.",
     items: [
       { t: "이야기를 다시 꺼낼 시점", ph: "감정이 가라앉은 다음, 이 조건일 때 한 번" },
       { t: "비난 없이 꺼내는 첫마디 문장", ph: "그때 내가 서운했던 건 네가 아니라 그 순간이었어" },
@@ -185,7 +210,7 @@ const LOCK_COPY: Record<Situation, LockCopy> = {
   },
   boundary: {
     title: "그렇다면 지금, 무엇을 해야 할까요?",
-    desc: "지금부터는 거리를 지키면서 내 하루를 붙잡는 실제 행동이 필요합니다.",
+    desc: "지금부터는 거리를 지키면서 내 하루를 붙잡는 실제 행동이 필요해요.",
     items: [
       { t: "내가 지킬 거리의 기준", ph: "상대가 먼저 거리를 풀기 전까지 이 선은 넘지 않기" },
       { t: "연락하고 싶어질 때 바로 할 행동", ph: "보내기 전에 이것부터 하고 그래도 남으면" },
@@ -459,6 +484,8 @@ export default function PreviewExperience({
           setName(json.applicantName.trim());
         }
         if (isAllowedPrice(json.paymentAmount)) setPrice(json.paymentAmount);
+        /* 11/18: 질문은 서버에 저장된 신청서 기준 (다른 기기·브라우저에서 열어도 같은 질문) */
+        if (typeof json.mainWish === "string" && json.mainWish) setWish(json.mainWish);
         if (typeof json.situation === "string" && json.situation in LOCK_COPY)
           setSituation(json.situation as Situation);
         setOfferEndsAt(typeof json.offerEndsAt === "number" ? json.offerEndsAt : null);
@@ -771,7 +798,11 @@ export default function PreviewExperience({
       ? `${name ? `${name}님의 ` : "나의 "}책 받기 · ${BOOK_PRICE_KRW.toLocaleString()}원`
       : want === "bundle"
         ? `월화 패키지로 보기 · ${bundleNow.toLocaleString()}원`
-        : `전체 리추얼 구성 받기 · ${priceText}`;
+        : `${RECEIVE[sit].label} · ${priceText}`;
+  /* 하단 고정 버튼은 폭이 좁아 짧은 문구 */
+  const stickyLabel = want ? mainLabel : `${RECEIVE[sit].short} · ${priceText}`;
+  /* 첫 구매 할인(신청 후 24시간)이 끝나 정가인 주문 — 왜 16,900원인지 밝힘 (11/18) */
+  const offerExpired = !want && !offerOn && !isPromoActive() && price === regularPriceFor("message");
   const onCtaClick = (where: string) => {
     trackEvent("payment_cta_click", { order: orderNumber });
     logPayEvent(orderNumber, "preview_cta_click", where);
@@ -799,7 +830,7 @@ export default function PreviewExperience({
 
   /* 판정 카드 4개 — 짧게, 1~2초 안에 읽히게 */
   const verdictCards: Array<{ k: string; v: string }> = [
-    { k: sit === "lover" ? "지금 대화" : "지금 연락", v: CONTACT_VERDICT[stance] },
+    { k: sit === "lover" ? "지금 대화" : "지금 연락", v: sit === "boundary" ? CONTACT_VERDICT.hold_boundary : CONTACT_VERDICT[stance] },
     { k: "현재 관계", v: preview.relationship_state.label },
     { k: "가장 위험한 행동", v: preview.verdict?.risk ?? shortAction(preview.cautions[0]?.action ?? "") },
     { k: "지금 필요한 것", v: preview.verdict?.need ?? NEED_DEFAULT[stance] },
@@ -874,6 +905,19 @@ export default function PreviewExperience({
       {/* ---------- 01-1. 당신이 물어본 질문 (11/3) ---------- */}
       {(() => {
         const q = ASKED[wish] ?? ASKED.find_direction;
+        /* 11/18 운영자 요청 3-2: 연락하고 싶어 온 손님에게 첫 답이 '멈춰라'가 되지 않게 — 조건부 진행.
+           위험·차단 사연(boundary)과 '정리/내 마음' 질문은 연락을 권하지 않는다. */
+        const label = preview.relationship_state.label;
+        const oneLine =
+          sit === "boundary"
+            ? `${CONTACT_VERDICT.hold_boundary}. 지금 두 사람은 ‘${label}’예요.`
+            : wish === "let_go" || wish === "understand_my_heart"
+              ? `서두르지 않아도 괜찮아요. 지금 두 사람은 ‘${label}’예요.`
+              : stance === "wait"
+                ? sit === "lover"
+                  ? "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 이야기를 꺼내 볼 수 있는 흐름이에요. 그 조건과 첫마디는 전체 결과에서 알려 드려요."
+                  : "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 연락해 볼 수 있는 흐름이에요. 그 조건과 첫 문장은 전체 결과에서 알려 드려요."
+                : `${CONTACT_VERDICT[stance]}. 지금 두 사람은 ‘${label}’예요.`;
         return (
           <section className="mt-4 px-6" aria-label="내가 물어본 질문">
             <div className="mx-auto max-w-[640px] rounded-2xl border-2 border-burgundy/50 bg-[#f6e9ec] px-5 py-5">
@@ -881,7 +925,7 @@ export default function PreviewExperience({
               <p className="font-display mt-1.5 text-[1.3rem] font-bold leading-snug text-ivory">“{q.q}”</p>
               <p className="mt-3 text-[0.76rem] font-semibold text-gold">월화의 한 줄 답 · 무료</p>
               <p className="mt-1 text-[0.98rem] font-semibold leading-[1.6] text-ivory">
-                {CONTACT_VERDICT[stance]}. 지금 두 사람은 ‘{preview.relationship_state.label}’예요.
+                {oneLine}
               </p>
               <p className="mt-4 text-[0.76rem] font-semibold text-gold">전체 결과에서 이어서 답하는 질문</p>
               <ul className="mt-1.5 flex flex-col gap-1.5">
@@ -916,109 +960,6 @@ export default function PreviewExperience({
       </section>
       <div ref={stickyStartRef} aria-hidden />
 
-      {/* ---------- 02-1. 실제 결과 화면 캡처 — 24시간·7일 먼저 (11/17 운영자 요청) ---------- */}
-      <section className="mt-6 px-6" aria-label="실제 결과 화면 예시">
-        <div className="mx-auto max-w-[640px]">
-          <ResultCaptures
-            orderNumber={orderNumber}
-            name={name || null}
-            stanceLabel={NOW_STANCE_LABELS[stance] ?? ""}
-            period={preview.now_plan.period}
-            onTap={(k) => {
-              logPayEvent(orderNumber, "preview_lock_click", `capture_${k}`);
-              if (!PAYMENTS_OPEN) return;
-              onCtaClick(`capture_${k}`);
-              setPay({ open: true, product: want === "bundle" ? "bundle" : "message", cancelled: false });
-            }}
-          />
-        </div>
-      </section>
-
-      {/* ---------- 11/17 운영자 요청: 홈과 같은 누적 숫자 블록 (실제 집계). .paper 안이라 색 변수를 원래 밤 톤으로 되돌림 ---------- */}
-      {totals && (
-        <div className="-my-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
-          <Totals totals={totals} />
-        </div>
-      )}
-
-      {/* ---------- 05. 무료 미리보기 vs 전체 리추얼 구성 — 10/30 판정 카드 바로 아래로 이동 + 구매 버튼 ---------- */}
-      <section className="mt-6 px-6">
-        <div ref={offerRef} className="shadow-paper mx-auto max-w-[640px] rounded-2xl border border-gold-dim bg-ink-soft px-5 py-6">
-          <p className="font-display text-[1.25rem] font-bold leading-snug text-ivory">{lock.title}</p>
-          <p className="mt-2 text-[0.92rem] leading-[1.75] text-ivory-dim">{lock.desc}</p>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-[0.86rem] leading-[1.6]">
-            <div className="rounded-xl bg-ink px-3.5 py-3">
-              <p className="text-[0.78rem] font-semibold text-ivory-dim">무료 미리보기 · 지금 받음</p>
-              <ul className="mt-1.5 flex flex-col gap-1 text-ivory">
-                <li>· 사연에서 읽히는 현재 흐름</li>
-                <li>· 오늘 피할 행동</li>
-                <li>· 결과 일부</li>
-              </ul>
-            </div>
-            <div className="rounded-xl border border-burgundy/40 bg-[#f6e9ec] px-3.5 py-3">
-              <p className="text-[0.78rem] font-semibold text-burgundy">전체 리추얼 구성</p>
-              <ul className="mt-1.5 flex flex-col gap-1 text-ivory">
-                <li>· 관계 흐름·반복 패턴 상세 읽기</li>
-                <li>· 월화의 편지 · 나만의 리추얼</li>
-                <li>· 첫날·7일·21일 실천 가이드</li>
-                <li>· {ROLE_PAID[sit]}</li>
-              </ul>
-            </div>
-          </div>
-          <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">내 사연으로 이어서 열리는 것</p>
-          <ul className="mt-2 flex flex-col gap-2">
-            {lock.items.slice(0, 3).map((it, i) => (
-              <li key={it.t}>
-                <button
-                  type="button"
-                  onClick={() => onLockClick(i + 1)}
-                  className="block w-full rounded-xl border border-gold-dim bg-ink px-4 py-2.5 text-left transition-colors active:border-burgundy/60"
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="text-[0.92rem] font-medium text-ivory">{it.t}</span>
-                    <span aria-hidden className="shrink-0 text-[0.78rem] text-burgundy">🔒 열기</span>
-                  </span>
-                  <span aria-hidden className="mt-0.5 block select-none text-[0.82rem] leading-[1.6] text-ivory-dim blur-[4px]">
-                    {it.ph}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          {PAYMENTS_OPEN && (
-            <>
-            {proof && (proof.paid >= 5 || proof.reviews.length > 0) && (
-              <div className="mt-5 rounded-xl border border-gold-dim bg-ink px-4 py-3">
-                {proof.paid >= 5 && (
-                  <p className="text-[0.84rem] font-semibold text-ivory">지금까지 {proof.paid.toLocaleString()}건의 전체 결과가 전달됐어요</p>
-                )}
-                {proof.reviews.slice(0, 2).map((r, i) => (
-                  <p key={i} className="mt-2 text-[0.82rem] leading-[1.6] text-ivory-dim">
-                    <span className="text-gold">{"★".repeat(Math.max(1, Math.min(5, r.rating)))}</span> “{r.body}{r.body.length >= 120 ? "…" : ""}” <span className="text-[0.74rem]">— {r.name} · {r.month}{r.incentive ? " · 후기 혜택 제공" : ""}</span>
-                  </p>
-                ))}
-              </div>
-            )}
-            <div ref={offerCtaRef} className="mt-5">
-              <p className="mb-2 text-center text-[0.84rem] text-ivory-dim">
-                {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
-                <b className="text-burgundy">{priceText}</b> · 1회 결제 · 정기결제 없음
-              </p>
-              {ctaButton("offer", mainLabel)}
-              <button
-                type="button"
-                onClick={() => scrollToPrice()}
-                className="mt-2 block w-full text-center text-[0.78rem] text-ivory-dim underline underline-offset-4"
-              >
-                구성·환불 기준 먼저 볼게요
-              </button>
-            </div>
-            </>
-          )}
-        </div>
-      </section>
-
-
       {/* ---------- 03. 왜 이렇게 판단했는지 (입력한 사실 기반) ---------- */}
       <section className="mt-10 px-6">
         <div className="mx-auto max-w-[640px]">
@@ -1042,6 +983,91 @@ export default function PreviewExperience({
         </div>
       </section>
 
+      {/* ---------- 11/17 운영자 요청: 홈과 같은 누적 숫자 블록 (실제 집계). .paper 안이라 색 변수를 원래 밤 톤으로 되돌림 ---------- */}
+      {totals && (
+        <div className="-my-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
+          <Totals totals={totals} />
+        </div>
+      )}
+
+      {/* ---------- 05. 무료 미리보기 vs 전체 리추얼 구성 — 10/30 판정 카드 바로 아래로 이동 + 구매 버튼 ---------- */}
+      <section className="mt-6 px-6">
+        <div ref={offerRef} className="shadow-paper mx-auto max-w-[640px] rounded-2xl border border-gold-dim bg-ink-soft px-5 py-6">
+          <p className="font-display text-[1.25rem] font-bold leading-snug text-ivory">{lock.title}</p>
+          <p className="mt-2 text-[0.92rem] leading-[1.75] text-ivory-dim">{lock.desc}</p>
+          <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">내 사연으로 이어서 열리는 것</p>
+          <ul className="mt-2 flex flex-col gap-2">
+            {lock.items.slice(0, 3).map((it, i) => (
+              <li key={it.t}>
+                <button
+                  type="button"
+                  onClick={() => onLockClick(i + 1)}
+                  className="block w-full rounded-xl border border-gold-dim bg-ink px-4 py-2.5 text-left transition-colors active:border-burgundy/60"
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="text-[0.92rem] font-medium text-ivory">{it.t}</span>
+                    <span aria-hidden className="shrink-0 text-[0.78rem] text-burgundy">🔒 열기</span>
+                  </span>
+                  <span aria-hidden className="mt-0.5 block select-none text-[0.82rem] leading-[1.6] text-ivory-dim blur-[4px]">
+                    {it.ph}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {PAYMENTS_OPEN && (
+            <>
+            {proof && proof.reviews.length > 0 && (
+              <div className="mt-5 rounded-xl border border-gold-dim bg-ink px-4 py-3">
+                {/* 11/18: '24건 전달' 같은 작은 숫자는 빼고(위 누적 숫자 블록이 대신) 후기만 */}
+                {proof.reviews.slice(0, 2).map((r, i) => (
+                  <p key={i} className="mt-2 text-[0.82rem] leading-[1.6] text-ivory-dim">
+                    <span className="text-gold">{"★".repeat(Math.max(1, Math.min(5, r.rating)))}</span> “{r.body}{r.body.length >= 120 ? "…" : ""}” <span className="text-[0.74rem]">— {r.name} · {r.month}{r.incentive ? " · 후기 혜택 제공" : ""}</span>
+                  </p>
+                ))}
+              </div>
+            )}
+            <div ref={offerCtaRef} className="mt-5">
+              {/* 11/18 운영자 요청 4: 받는 것 3줄을 가격 바로 위에 크게, 나머지는 '함께 들어 있는 것'으로 작게 */}
+              {!want && (
+                <div className="mb-4 rounded-xl border-2 border-burgundy/50 bg-[#f6e9ec] px-4 py-3.5">
+                  <p className="text-[0.76rem] font-semibold text-burgundy">결제하면 받는 것</p>
+                  <ul className="mt-1.5 flex flex-col gap-1.5">
+                    {RECEIVE[sit].lines.map((l) => (
+                      <li key={l} className="flex gap-2 text-[1rem] font-semibold leading-[1.5] text-ivory">
+                        <span aria-hidden className="text-burgundy">✓</span>
+                        <span className="min-w-0">{l}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2.5 border-t border-burgundy/15 pt-2 text-[0.76rem] leading-[1.65] text-ivory-dim">
+                    함께 들어 있는 것 · 관계 흐름 읽기 · 월화의 편지 · 나만의 리추얼 · 첫날·7일·21일 실천 가이드
+                  </p>
+                </div>
+              )}
+              <p className="mb-2 text-center text-[0.84rem] text-ivory-dim">
+                {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
+                {badge.strike !== null && <span className="mr-1">→ 첫 구매</span>}
+                <b className="text-burgundy">{priceText}</b> · 1회 결제 · 정기결제 없음
+              </p>
+              {offerExpired && (
+                <p className="-mt-1 mb-2 text-center text-[0.74rem] text-ivory-dim">첫 구매 할인(신청 후 24시간)이 끝나 정가로 안내돼요</p>
+              )}
+              {ctaButton("offer", mainLabel)}
+              <button
+                type="button"
+                onClick={() => scrollToPrice()}
+                className="mt-2 block w-full text-center text-[0.78rem] text-ivory-dim underline underline-offset-4"
+              >
+                구성·환불 기준 먼저 볼게요
+              </button>
+            </div>
+            </>
+          )}
+        </div>
+      </section>
+
+
       {/* ---------- 04. 오늘은 이것만 하지 마세요 (최대 3개) ---------- */}
       <section className="mt-10 px-6">
         <div className="mx-auto max-w-[640px]">
@@ -1057,6 +1083,24 @@ export default function PreviewExperience({
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      {/* ---------- 02-1. 실제 결과 화면 캡처 — 24시간·7일 먼저 (11/17 운영자 요청) ---------- */}
+      <section className="mt-6 px-6" aria-label="실제 결과 화면 예시">
+        <div className="mx-auto max-w-[640px]">
+          <ResultCaptures
+            orderNumber={orderNumber}
+            name={name || null}
+            stanceLabel={NOW_STANCE_LABELS[stance] ?? ""}
+            period={preview.now_plan.period}
+            onTap={(k) => {
+              logPayEvent(orderNumber, "preview_lock_click", `capture_${k}`);
+              if (!PAYMENTS_OPEN) return;
+              onCtaClick(`capture_${k}`);
+              setPay({ open: true, product: want === "bundle" ? "bundle" : "message", cancelled: false });
+            }}
+          />
         </div>
       </section>
 
@@ -1093,7 +1137,10 @@ export default function PreviewExperience({
                 </div>
               )}
               <div ref={mainCtaRef} />
-              {ctaButton("main", mainLabel)}
+              {/* 11/18: 결제 버튼은 중간 1번 · 하단 1번만 (여기 버튼은 뺌) */}
+              {offerExpired && (
+                <p className="mb-1 text-center text-[0.76rem] text-ivory-dim">첫 구매 할인(신청 후 24시간)이 끝나 정가로 안내돼요</p>
+              )}
               <ul className="mt-4 grid grid-cols-2 gap-2 text-center text-[0.74rem] leading-[1.5] text-ivory">
                 <li className="rounded-xl border border-gold-dim/20 bg-ink/50 px-2 py-2.5">1회 결제<span className="block text-ivory-dim">정기결제 없음</span></li>
                 <li className="rounded-xl border border-gold-dim/20 bg-ink/50 px-2 py-2.5">결과 제공<span className="block text-ivory-dim">결제 후 {DELIVERY_TIME_TEXT}</span></li>
@@ -1149,7 +1196,51 @@ export default function PreviewExperience({
             </div>
           </section>
 
-          {/* ---------- 09. 선택형: PDF 책도 함께 받고 싶다면 (접힘) ---------- */}
+          {/* ---------- 결제 직전 FAQ (접힘) ---------- */}
+          <section className="mt-10 px-6">
+            <div className="mx-auto max-w-[640px]">
+              <p className="text-[0.72rem] tracking-wider text-gold/80">결제 전에 많이 묻는 것</p>
+              <div className="mt-2 divide-y divide-gold-dim/15 rounded-2xl border border-gold-dim/20 bg-ink-soft">
+                {FAQ.map((f) => (
+                  <details key={f.q} className="group px-4 py-3">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[0.88rem] text-ivory">
+                      <span>Q. {f.q}</span>
+                      <span aria-hidden className="text-ivory-dim transition-transform group-open:rotate-45">+</span>
+                    </summary>
+                    <p className="mt-2 text-[0.82rem] font-light leading-[1.85] text-ivory-dim">{f.a}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ---------- 하단 재결제 CTA (끝까지 읽은 손님) ---------- */}
+          <section className="mt-12 px-6">
+            <div ref={bookRef} className="mx-auto max-w-[640px] text-center">
+              <p className="text-[0.92rem] font-light leading-[1.95] text-ivory">{lock.recap[0]}</p>
+              <p className="font-display mt-1 text-[1.02rem] font-semibold leading-[1.8] text-gold">{lock.recap[1]}</p>
+              <div className="mt-5">{ctaButton("bottom", mainLabel)}</div>
+              {want && (
+                <Link
+                  href={messageHref}
+                  onClick={(e) => openPay(e, "message_only", messageHref)}
+                  className="mt-3 block text-[0.76rem] text-ivory-dim underline underline-offset-4"
+                >
+                  관계 리추얼만 받기 · {priceText}
+                </Link>
+              )}
+            </div>
+            {/* 결론 카드 저장·공유 (이름·사연 없이 판정 라벨과 반응 태그만) */}
+            <div className="mx-auto mt-8 max-w-[640px]">
+              <ShareStoryCard
+                orderNumber={orderNumber}
+                stance={NOW_STANCE_LABELS[stance] ?? ""}
+                tags={preview.partner_reading.modes}
+                line={CONTACT_VERDICT[stance]}
+              />
+            </div>
+          </section>
+          {/* ---------- 09. 선택형: PDF 책 패키지 — 11/18 요청으로 맨 아래로 ---------- */}
           {!want && (
             <section className="mt-10 px-6">
               <details
@@ -1207,50 +1298,6 @@ export default function PreviewExperience({
             </section>
           )}
 
-          {/* ---------- 결제 직전 FAQ (접힘) ---------- */}
-          <section className="mt-10 px-6">
-            <div className="mx-auto max-w-[640px]">
-              <p className="text-[0.72rem] tracking-wider text-gold/80">결제 전에 많이 묻는 것</p>
-              <div className="mt-2 divide-y divide-gold-dim/15 rounded-2xl border border-gold-dim/20 bg-ink-soft">
-                {FAQ.map((f) => (
-                  <details key={f.q} className="group px-4 py-3">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[0.88rem] text-ivory">
-                      <span>Q. {f.q}</span>
-                      <span aria-hidden className="text-ivory-dim transition-transform group-open:rotate-45">+</span>
-                    </summary>
-                    <p className="mt-2 text-[0.82rem] font-light leading-[1.85] text-ivory-dim">{f.a}</p>
-                  </details>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* ---------- 하단 재결제 CTA (끝까지 읽은 손님) ---------- */}
-          <section className="mt-12 px-6">
-            <div ref={bookRef} className="mx-auto max-w-[640px] text-center">
-              <p className="text-[0.92rem] font-light leading-[1.95] text-ivory">{lock.recap[0]}</p>
-              <p className="font-display mt-1 text-[1.02rem] font-semibold leading-[1.8] text-gold">{lock.recap[1]}</p>
-              <div className="mt-5">{ctaButton("bottom", mainLabel)}</div>
-              {want && (
-                <Link
-                  href={messageHref}
-                  onClick={(e) => openPay(e, "message_only", messageHref)}
-                  className="mt-3 block text-[0.76rem] text-ivory-dim underline underline-offset-4"
-                >
-                  관계 리추얼만 받기 · {priceText}
-                </Link>
-              )}
-            </div>
-            {/* 결론 카드 저장·공유 (이름·사연 없이 판정 라벨과 반응 태그만) */}
-            <div className="mx-auto mt-8 max-w-[640px]">
-              <ShareStoryCard
-                orderNumber={orderNumber}
-                stance={NOW_STANCE_LABELS[stance] ?? ""}
-                tags={preview.partner_reading.modes}
-                line={CONTACT_VERDICT[stance]}
-              />
-            </div>
-          </section>
         </>
       ) : (
         <section className="mt-7 px-6">
@@ -1315,7 +1362,7 @@ export default function PreviewExperience({
             onClick={(e) => openPay(e, "sticky", mainHref)}
             className="mx-auto flex h-12 w-full max-w-[640px] items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.9rem] font-semibold text-ivory active:opacity-85"
           >
-            {mainLabel}
+            {stickyLabel}
           </Link>
           {!want && offerEndsAt ? (
             <p className="mx-auto mt-1.5 max-w-[640px] text-center text-[0.68rem] text-ivory-dim/80">
