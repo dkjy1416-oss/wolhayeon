@@ -968,7 +968,7 @@ export default function PreviewExperience({
         const label = preview.relationship_state.label;
         const oneLine =
           sit === "boundary"
-            ? `${CONTACT_VERDICT.hold_boundary}. 지금 두 사람은 ‘${label}’예요.`
+            ? "연락하고 싶은 마음이 드는 건 자연스러워요. 다만 지금은 연락보다 내 마음과 안전을 먼저 지켜야 하는 흐름이에요. 흔들릴 때 무엇을 하면 되는지는 내 사연으로 정리해 드려요."
             : wish === "let_go" || wish === "understand_my_heart"
               ? `서두르지 않아도 괜찮아요. 지금 두 사람은 ‘${label}’예요.`
               : stance === "wait"
@@ -1009,9 +1009,18 @@ export default function PreviewExperience({
                     <span className="text-[0.92rem] font-medium text-ivory">{it.t}</span>
                     <span aria-hidden className="shrink-0 text-[0.78rem] text-burgundy">🔒 열기</span>
                   </span>
-                  <span aria-hidden className="mt-0.5 block select-none text-[0.82rem] leading-[1.6] text-ivory-dim blur-[4px]">
-                    {it.ph}
-                  </span>
+                  {/* 11/19 운영자 요청: 첫 줄 앞부분은 보이고 뒤는 흐리게 — 무엇이 들어 있는지 감이 오게 */}
+                  {(() => {
+                    const w = it.ph.split(" ");
+                    const k = Math.max(1, Math.ceil(w.length / 2));
+                    return (
+                      <span className="mt-0.5 block select-none text-[0.84rem] leading-[1.6] text-ivory-dim">
+                        <span>{w.slice(0, k).join(" ")} </span>
+                        <span aria-hidden className="blur-[4px]">{w.slice(k).join(" ")}</span>
+                        <span aria-hidden className="block blur-[4px]">내 사연의 상황과 시점에 맞춰 이어지는 설명</span>
+                      </span>
+                    );
+                  })()}
                 </button>
               </li>
             ))}
@@ -1031,19 +1040,39 @@ export default function PreviewExperience({
             <div ref={offerCtaRef} className="mt-5">
               <div ref={priceRef} aria-hidden />
               {/* 11/18 운영자 요청 4: 받는 것 3줄을 가격 바로 위에 크게, 나머지는 '함께 들어 있는 것'으로 작게 */}
+              {/* 11/19 운영자 요청: '결제하면 받는 것'을 실제 결과 화면 캡처 + 휴대폰 화면 디자인으로 */}
               {!want && (
-                <div className="mb-4 rounded-xl border-2 border-burgundy/50 bg-[#f6e9ec] px-4 py-3.5">
-                  <p className="text-[0.76rem] font-semibold text-burgundy">결제하면 받는 것</p>
-                  <ul className="mt-1.5 flex flex-col gap-1.5">
-                    {RECEIVE[sit].lines.map((l) => (
-                      <li key={l} className="flex gap-2 text-[1rem] font-semibold leading-[1.5] text-ivory">
-                        <span aria-hidden className="text-burgundy">✓</span>
-                        <span className="min-w-0">{l}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-2.5 border-t border-burgundy/15 pt-2 text-[0.76rem] leading-[1.65] text-ivory-dim">
+                <div className="mb-4 overflow-hidden rounded-2xl border-2 border-burgundy/40 bg-gradient-to-br from-[#f6e9ec] to-[#efe2d6] px-4 pb-4 pt-4">
+                  <p className="text-center text-[0.78rem] font-semibold tracking-[0.08em] text-burgundy">결제하면 이런 화면으로 받아요</p>
+                  <div className="mt-3 flex items-center gap-3">
+                    {/* 휴대폰 프레임 */}
+                    <div className="relative w-[46%] max-w-[190px] shrink-0 rounded-[1.6rem] border-[5px] border-[#1d1a1b] bg-[#1d1a1b] shadow-[0_14px_30px_rgba(60,20,30,0.28)]">
+                      <span aria-hidden className="absolute left-1/2 top-1 z-10 h-[7px] w-[34%] -translate-x-1/2 rounded-full bg-black" />
+                      <div className="relative aspect-[9/17] overflow-hidden rounded-[1.25rem] bg-[#120e0f]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={sit === "boundary" ? "/images/result/result-24h.webp" : "/images/result/result-plan.webp"}
+                          alt="전체 결과 화면 예시 (다른 사연, 흐림 처리)"
+                          loading="lazy"
+                          className="absolute inset-x-0 top-3 w-full"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#120e0f] to-transparent" />
+                        <span className="absolute inset-x-0 bottom-2.5 text-center text-[0.62rem] font-semibold text-[#e9c97a]">🔒 내 사연으로 열려요</span>
+                      </div>
+                    </div>
+                    {/* 받는 것 3줄 (콜아웃) */}
+                    <ol className="flex min-w-0 flex-1 flex-col gap-2">
+                      {RECEIVE[sit].lines.map((l, n) => (
+                        <li key={l} className="relative rounded-xl bg-white/85 px-3 py-2 shadow-[0_2px_8px_rgba(60,20,30,0.08)]">
+                          <span className="mr-1 inline-flex h-[1.15rem] w-[1.15rem] items-center justify-center rounded-full bg-burgundy align-[-0.15em] text-[0.66rem] font-bold text-white">{n + 1}</span>
+                          <span className="break-keep text-[0.86rem] font-semibold leading-[1.45] text-ivory">{l}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  <p className="mt-3 border-t border-burgundy/15 pt-2 text-[0.74rem] leading-[1.65] text-ivory-dim">
                     함께 들어 있는 것 · 21일 가이드 · 월화의 편지 · 나만의 리추얼
+                    <span className="block text-[0.66rem]">화면은 다른 사연의 예시예요. 내 결과는 내 사연으로 새로 써요.</span>
                   </p>
                 </div>
               )}
