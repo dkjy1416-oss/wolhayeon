@@ -688,13 +688,30 @@ export async function getOrCreatePreview(
     if (order.preview_content) {
       const cached = PreviewSchema.safeParse(order.preview_content);
       if (cached.success) {
+        /* 11/19: 11/18 이전에 만들어진 미리보기엔 사연 인용이 없다 — 최근 7일 결제 전 주문이면 한 번 채워 저장 */
+        let pv = cached.data;
+        const quoted = /^[‘'“"]/.test((pv.reasons?.[0] ?? "").trim());
+        const recent = Date.now() - Date.parse(order.created_at) < 7 * 24 * 3600 * 1000;
+        if (!quoted && recent && order.payment_status === "pending" && (order.story ?? "").trim().length >= 20) {
+          const line = await storyQuoteLine(order, (order.safety_concerns ?? []).some((v) => HIGH_RISK_SAFETY_VALUES.includes(v)));
+          if (line) {
+            const base = pv.reasons && pv.reasons.length ? pv.reasons : [];
+            const next = { ...pv, reasons: [line, ...base].slice(0, 3) };
+            const ok = PreviewSchema.safeParse(next);
+            if (ok.success) {
+              pv = ok.data;
+              const up = await supabase.from("ritual_orders").update({ preview_content: pv }).eq("id", order.id);
+              if (up.error) console.error(`[preview] quote_backfill_save_failed code=${up.error.code}`);
+            }
+          }
+        }
         return {
           status: "ready",
-          preview: cached.data,
+          preview: pv,
           applicantName: order.applicant_name,
           paymentAmount: resolveOrderPrice(order.payment_amount, Date.now(), offerAnchor(order)),
           offerEndsAt: offerEndsFor(order),
-          situation: previewSituation(order, cached.data.now_plan.stance),
+          situation: previewSituation(order, pv.now_plan.stance),
           mainWish: order.main_wish ?? "",
           generated: true,
         };
