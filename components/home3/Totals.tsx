@@ -55,7 +55,7 @@ function ymd(iso: string): string {
   return `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, "0")}.${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
-export default function Totals({ totals }: { totals: SiteTotals }) {
+export default function Totals({ totals, compact = false }: { totals: SiteTotals; compact?: boolean }) {
   const rows = [
     { label: "월화를 찾아온 분", value: totals.visitors ?? 0, suffix: "명" },
     { label: "사연을 들려준 분", value: totals.stories, suffix: "명" },
@@ -63,6 +63,31 @@ export default function Totals({ totals }: { totals: SiteTotals }) {
     { label: "누적 페이지 방문", value: totals.views, suffix: "회" },
   ].filter((r) => r.value >= 100);
   if (rows.length === 0) return null;
+  /* 11/19: 미리보기용 한 줄 요약 — 결제 안내까지의 길이를 줄이려고 사람 수 3개만 가로로 */
+  if (compact) {
+    const three = rows.filter((r) => r.suffix === "명").slice(0, 3);
+    return (
+      <section className="px-6" aria-label="지금까지 월하연을 찾은 분들">
+        <div className="mx-auto max-w-[640px] rounded-2xl border border-white/10 bg-[#0d0b0c] px-4 pb-3.5 pt-4">
+          <p className="flex items-center justify-center gap-2 text-center text-[0.9rem] font-semibold text-ivory">
+            <span aria-hidden className="text-[#d4b46a]">❦</span>이미 많은 분이 월화를 찾아왔어요<span aria-hidden className="-scale-x-100 text-[#d4b46a]">❦</span>
+          </p>
+          <div className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${three.length}, minmax(0, 1fr))` }}>
+            {three.map((r) => (
+              <div key={r.label} className="text-center">
+                <p className="font-sans text-[1.35rem] font-extrabold leading-none tracking-[-0.02em] text-ivory">
+                  <RollingCount value={r.value} />
+                  <span className="ml-0.5 text-[0.95rem]">{r.suffix}</span>
+                </p>
+                <p className="mt-1 break-keep text-[0.68rem] leading-[1.35] text-ivory-dim">{r.label}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2.5 text-center text-[0.62rem] text-ivory-dim/70">월하연 내부 집계 · 운영자 테스트 주문 제외 · {ymd(totals.at)} 기준</p>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="relative px-6 py-14" aria-label="지금까지 월하연을 찾은 분들">
       <div className="mx-auto max-w-[480px] rounded-[1.8rem] border border-white/10 bg-[#0d0b0c] px-5 pb-7 pt-9">
