@@ -399,7 +399,7 @@ function TossWindowCheckout({
         type="button"
         onClick={handlePay}
         disabled={!ready || paying}
-        className="mt-6 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85 disabled:opacity-50"
+        className="sticky bottom-3 z-10 mt-6 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-opacity active:opacity-85 disabled:opacity-50"
       >
         {paying
           ? "결제창을 여는 중…"
@@ -594,7 +594,7 @@ function TossWidgetCheckout({
         type="button"
         onClick={handlePay}
         disabled={!ready || paying}
-        className="mt-6 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory transition-opacity active:opacity-85 disabled:opacity-50"
+        className="sticky bottom-3 z-10 mt-6 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-opacity active:opacity-85 disabled:opacity-50"
       >
         {paying
           ? "결제창을 여는 중…"
