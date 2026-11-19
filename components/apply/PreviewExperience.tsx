@@ -99,14 +99,14 @@ const NEED_DEFAULT: Record<Stance, string> = {
 
 /** 11/3 — 신청서 '가장 알고 싶은 것' → 미리보기 맨 위 질문 + 전체 결과에서 이어서 답하는 질문 (전체 결과에 실제 들어 있는 범위만) */
 const ASKED: Record<string, { q: string; next: string[] }> = {
-  reunion: { q: "그 사람과 다시 이어질 수 있을까요?", next: ["다시 이어지려면 무엇이 먼저 달라져야 할까?", "연락한다면 언제, 어떤 첫 문장으로?", "답이 짧거나 없으면 그다음엔?"] },
+  reunion: { q: "다시 가까워지려면 지금 무엇부터 해야 할까요?", next: ["다시 이어지려면 무엇이 먼저 달라져야 할까?", "연락한다면 언제, 어떤 첫 문장으로?", "답이 짧거나 없으면 그다음엔?"] },
   natural_contact: { q: "다시 자연스럽게 연락해도 될까요?", next: ["나에게 맞는 연락 시점은 언제일까?", "부담 없이 보낼 첫 문장은?", "답장이 오면 / 안 오면 다음 행동은?"] },
-  slow_recovery: { q: "관계를 천천히 회복할 수 있을까요?", next: ["지금 관계에서 가장 먼저 풀어야 할 것은?", "첫날·7일·21일 동안 지킬 순서는?", "다시 같은 이유로 멀어지지 않으려면?"] },
-  understand_my_heart: { q: "그 사람을 향한 제 마음은 뭘까요?", next: ["내가 붙잡고 있는 건 그 사람일까, 그때의 나일까?", "이 마음을 망치지 않는 행동 순서는?", "21일 동안 내 마음을 정리하는 리추얼은?"] },
-  let_go: { q: "이 미련을 정리할 수 있을까요?", next: ["미련이 계속 남는 진짜 이유는?", "정리하는 21일 동안의 순서는?", "흔들리는 날 대신 할 행동은?"] },
-  apology: { q: "사과하거나 사과받을 수 있을까요?", next: ["사과가 닿으려면 언제, 어떻게?", "사과 문장 예시와 피해야 할 표현은?", "답이 없을 때 지킬 선은?"] },
+  slow_recovery: { q: "천천히 회복하려면 어떤 순서가 좋을까요?", next: ["지금 관계에서 가장 먼저 풀어야 할 것은?", "첫날·7일·21일 동안 지킬 순서는?", "다시 같은 이유로 멀어지지 않으려면?"] },
+  understand_my_heart: { q: "앞으로 어떻게 해야 할까요?", next: ["내가 붙잡고 있는 건 그 사람일까, 그때의 나일까?", "이 마음을 망치지 않는 행동 순서는?", "21일 동안 내 마음을 정리하는 리추얼은?"] },
+  let_go: { q: "이 마음을 어떻게 정리하면 좋을까요?", next: ["미련이 계속 남는 진짜 이유는?", "정리하는 21일 동안의 순서는?", "흔들리는 날 대신 할 행동은?"] },
+  apology: { q: "사과를 전해도 괜찮은 때일까요?", next: ["사과가 닿으려면 언제, 어떻게?", "사과 문장 예시와 피해야 할 표현은?", "답이 없을 때 지킬 선은?"] },
   find_direction: { q: "앞으로 어떻게 해야 할까요?", next: ["지금 관계가 반복하는 흐름은?", "오늘부터 21일 동안 할 일의 순서는?", "연락할지 기다릴지 판단하는 기준은?"] },
-  not_sure: { q: "지금 제 상황, 어떻게 봐야 할까요?", next: ["두 사람 사이에 지금 남아 있는 것은?", "가장 먼저 확인해야 할 한 가지는?", "오늘부터 21일 동안의 순서는?"] },
+  not_sure: { q: "앞으로 어떻게 해야 할까요?", next: ["두 사람 사이에 지금 남아 있는 것은?", "가장 먼저 확인해야 할 한 가지는?", "오늘부터 21일 동안의 순서는?"] },
 };
 
 /** 11/18 운영자 요청 4: 가격 바로 위에 '받는 것' 3줄 · 버튼 문구 (전체 결과에 실제 들어 있는 범위만) */
@@ -255,6 +255,52 @@ const HESITATE_REASONS: Array<{ k: string; label: string; after: string }> = [
   { k: "pay", label: "결제 방법이나 절차가 불편해요", after: "알려주셔서 고마워요. 카드·간편결제 모두 되고, 인스타 안에서 막히면 '외부 브라우저로 열기'를 눌러 주세요." },
   { k: "other", label: "다른 이유예요", after: "알려주셔서 고마워요. 더 나은 미리보기를 만드는 데 참고할게요." },
 ];
+
+/* ---------- 11/19 지시문 v2-2: 월화가 읽어 주는 4컷 카드 ----------
+   그림은 고정 컷 3종 재사용(생성 비용 0) · 글자만 바뀜 · 첫 장만 즉시, 나머지 lazy · 글자는 이미지보다 먼저 보임 */
+type ReadCard = { img: string | null; text: string; tag: string; cta?: string };
+function ReadingCards({ cards, onFirstLine }: { cards: ReadCard[]; onFirstLine: () => void }) {
+  return (
+    <div className="mt-5">
+      <div className="-mx-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none]" aria-label="월화가 읽어 주는 내 사연">
+        {cards.map((c, i) => (
+          <div
+            key={i}
+            className="relative aspect-[3/4] w-[78%] max-w-[300px] shrink-0 snap-center overflow-hidden rounded-2xl border border-gold-dim bg-[#1a1416]"
+          >
+            {c.img && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={c.img} alt="" aria-hidden loading={i === 0 ? "eager" : "lazy"} decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_25%]" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/0" />
+            <div className="absolute inset-x-0 bottom-0 px-4 pb-4">
+              <p className="text-[0.72rem] font-semibold tracking-[0.08em] text-[#e9c97a]">{i + 1}/{cards.length} · {c.tag}</p>
+              {c.cta !== undefined ? (
+                <>
+                  <div className="mt-2 rounded-2xl rounded-bl-sm bg-white/95 px-3.5 py-3">
+                    <p aria-hidden className="select-none text-[1.05rem] leading-[1.55] text-[#2b2326] blur-[5px]">
+                      요즘 날이 많이 차가워졌더라. 문득 생각나서 짧게 남겨
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onFirstLine}
+                    className="mt-3 w-full rounded-full bg-gradient-to-b from-[#9b2c48] to-[#6e1a31] px-3 py-2.5 text-[0.86rem] font-semibold text-white"
+                  >
+                    {c.cta}
+                  </button>
+                </>
+              ) : (
+                <p className="mt-1.5 break-keep text-[1.125rem] font-semibold leading-[1.55] text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.6)]">{c.text}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-1 text-[0.7rem] text-ivory-dim">옆으로 넘겨 보세요 · AI가 사연을 바탕으로 정리한 내용이에요</p>
+    </div>
+  );
+}
 
 function HesitateCard({ orderNumber }: { orderNumber: string }) {
   const key = `wolhayeon_hesitate_${orderNumber}`;
@@ -412,7 +458,7 @@ export default function PreviewExperience({
 
   /* 내 사연에서 반영한 사실 (10/16 지시문 6) — 이 기기의 신청 데이터 중 선택 항목 라벨만 (자유 입력 원문은 쓰지 않음) */
   const [facts, setFacts] = useState<string[]>([]);
-  const [guides, setGuides] = useState<GuidePick[]>([]);
+  const [, setGuides] = useState<GuidePick[]>([]);
   /* 11/3 — 신청서의 '가장 알고 싶은 것'을 미리보기 맨 위 질문으로 (경쟁사 학습: 상품=손님의 질문) */
   const [wish, setWish] = useState<string>("");
   /* 11/3 — 결제 버튼 옆 실제 숫자·후기 */
@@ -660,7 +706,9 @@ export default function PreviewExperience({
     const onScroll = () => {
       const s0 = stickyStartRef.current?.getBoundingClientRect();
       const m = mainCtaRef.current?.getBoundingClientRect();
-      const pastStart = !!s0 && s0.top < 0;
+      /* v2-5-2: 스크롤 30% 이후 하단 고정 버튼 */
+      const docH = document.documentElement.scrollHeight - window.innerHeight;
+      const pastStart = (!!s0 && s0.top < 0) && docH > 0 && window.scrollY > docH * 0.3;
       const ctaVisible = !!m && m.top < window.innerHeight && m.bottom > 0;
       const bk = bookRef.current?.getBoundingClientRect();
       const bookVisible = !!bk && bk.top < window.innerHeight && bk.bottom > 0;
@@ -818,6 +866,11 @@ export default function PreviewExperience({
   };
   const lock = LOCK_COPY[sit];
   /* 잠긴 항목을 누르면 바로 가격·구매 안내로 (10/30: 잠긴 카드 클릭 7명) */
+  const scrollToOffer = () => {
+    const el = offerCtaRef.current ?? priceRef.current;
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 140, behavior: "smooth" });
+    logPayEvent(orderNumber, "preview_lock_click", "card_first_line");
+  };
   const scrollToPrice = () => {
     const el = priceRef.current ?? mainCtaRef.current;
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -836,10 +889,40 @@ export default function PreviewExperience({
     { k: "지금 필요한 것", v: preview.verdict?.need ?? NEED_DEFAULT[stance] },
   ];
   /* 왜 이렇게 판단했는지 — 구버전 저장본은 기존 해석 문장으로 */
-  const reasons =
+  const reasonsAll =
     preview.reasons && preview.reasons.length
       ? preview.reasons
       : [firstSentence(preview.relationship_state.text), firstSentence(preview.partner_reading.text)];
+  /* 11/19: 사연 인용 문장(‘…’라고 쓰셨어요)은 맨 위 헤더로 올리고, 판단 근거에서는 중복 제거 */
+  const quoteLine = /^[‘'“"]/.test((reasonsAll[0] ?? "").trim()) ? reasonsAll[0] : null;
+  /* v2-4: 판단 근거에도 사연 인용을 그대로 둔다 (인용 → 사실 → 판단) */
+  const reasons = reasonsAll;
+  const risky = sit === "boundary";
+  /* v2-2: 4컷 카드 문구 — 저장된 미리보기에서 만들어 새로고침해도 같다 */
+  const splitFirst = (s: string): [string, string] => {
+    const m = s.match(/^(.+?[요다]\.)\s+(.+)$/);
+    return m ? [m[1], m[2]] : [s, ""];
+  };
+  const [qa, qb] = quoteLine ? splitFirst(quoteLine) : ["", ""];
+  const card1 = quoteLine && !risky ? qa : reasonsAll[0] ?? "";
+  const card2 = quoteLine && !risky && qb ? qb : (quoteLine ? reasonsAll[2] : reasonsAll[1]) ?? firstSentence(preview.partner_reading.text);
+  const card3 = risky
+    ? "지금은 연락보다 나를 지키는 게 먼저예요."
+    : wish === "let_go" || wish === "understand_my_heart"
+      ? "서두르지 않아도 괜찮아요. 지금은 마음을 정리할 순서부터예요."
+      : stance === "light_contact"
+        ? "지금은 짧고 가벼운 연락 한 번이 가능한 흐름이에요."
+        : sit === "lover"
+          ? "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 이야기를 꺼내 볼 수 있는 흐름이에요."
+          : "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 연락해 볼 수 있는 흐름이에요.";
+  const readCards: ReadCard[] = [
+    { img: "/wolhwa/reading-poster.webp", text: card1, tag: quoteLine && !risky ? "내가 쓴 이야기에서" : "내 사연에서" },
+    { img: "/wolhwa/wolhwa-gaze.webp", text: card2, tag: "월화가 읽은 것" },
+    { img: "/wolhwa/ritual-letter.webp", text: card3, tag: "지금 흐름" },
+    risky
+      ? { img: null, text: "두렵거나 위협을 느낀다면 혼자 견디지 마세요. 112(긴급 신고), 1366(여성긴급전화, 24시간)에서 도움을 받을 수 있어요.", tag: "먼저 나를 지키기" }
+      : { img: null, text: "", tag: sit === "lover" ? "내 사연으로 쓴 첫마디" : "내 사연으로 쓴 첫 문장", cta: `${sit === "lover" ? "내 사연으로 첫마디 받기" : "내 사연으로 첫 문장 받기"} · ${priceText}` },
+  ];
   const bridge = preview.bridge && preview.bridge.length ? preview.bridge : lock.bridge;
   const donts = preview.cautions.slice(0, 3);
 
@@ -860,7 +943,7 @@ export default function PreviewExperience({
         <div className="mx-auto max-w-[640px]">
           <div className="flex items-center gap-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/wolhwa/v2/listen.webp" alt="" aria-hidden className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-full border-2 border-gold-dim object-cover object-[50%_18%]" />
+            <img src="/wolhwa/v3/listen.webp" alt="" aria-hidden className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-full border-2 border-gold-dim object-cover object-[50%_18%]" />
             <div className="min-w-0">
               <p className="text-[0.72rem] tracking-[0.2em] text-gold">月下緣 · 무료 미리보기</p>
               <h1 className="font-display mt-1.5 text-[1.45rem] font-bold leading-snug text-ivory">
@@ -871,33 +954,8 @@ export default function PreviewExperience({
           <p className="mt-2 text-[0.92rem] leading-[1.75] text-ivory-dim">
             입력한 사연을 바탕으로 지금의 흐름과 오늘 할 수 있는 것을 먼저 정리했어요.
           </p>
-          {facts.length > 0 && (
-            <div className="mt-5 rounded-2xl border border-gold-dim bg-ink-soft px-5 py-4">
-              <p className="text-[0.76rem] font-semibold tracking-[0.08em] text-gold">내 사연에서 반영한 사실</p>
-              <ul className="mt-2 flex flex-col gap-1.5 text-[0.95rem] leading-[1.6] text-ivory">
-                {facts.map((f) => (
-                  <li key={f} className="flex gap-2">
-                    <span aria-hidden className="text-thread">·</span>
-                    <span className="min-w-0">{f}</span>
-                  </li>
-                ))}
-              </ul>
-              {guides.length > 0 && (
-                <div className="mt-3 border-t border-gold-dim pt-3">
-                  <p className="text-[0.76rem] font-semibold tracking-[0.08em] text-gold">전체 구성에서 참고할 상황 가이드</p>
-                  <ul className="mt-1.5 flex flex-col gap-1 text-[0.9rem] leading-[1.55] text-ivory">
-                    {guides.map((g) => (
-                      <li key={g.n}>
-                        {g.title}
-                        <span className="block text-[0.78rem] text-ivory-dim">{g.reason}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <p className="mt-2 text-[0.8rem] leading-[1.6] text-ivory-dim">이 사실들 때문에, 아래 판단은 ‘지금 무엇을 먼저 확인할지’를 기준으로 썼어요.</p>
-            </div>
-          )}
+          {/* 11/19 지시문 v2-2: 월화가 읽어 주는 4컷 카드 (가로로 넘김) */}
+          <ReadingCards cards={readCards} onFirstLine={scrollToOffer} />
         </div>
       </header>
 
@@ -915,8 +973,8 @@ export default function PreviewExperience({
               ? `서두르지 않아도 괜찮아요. 지금 두 사람은 ‘${label}’예요.`
               : stance === "wait"
                 ? sit === "lover"
-                  ? "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 이야기를 꺼내 볼 수 있는 흐름이에요. 그 조건과 첫마디는 전체 결과에서 알려 드려요."
-                  : "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 연락해 볼 수 있는 흐름이에요. 그 조건과 첫 문장은 전체 결과에서 알려 드려요."
+                  ? "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 이야기를 꺼내 볼 수 있는 흐름이에요. 그 조건과 첫마디는 내 사연으로 알려 드려요."
+                  : "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 연락해 볼 수 있는 흐름이에요. 그 조건과 첫 문장은 내 사연으로 알려 드려요."
                 : `${CONTACT_VERDICT[stance]}. 지금 두 사람은 ‘${label}’예요.`;
         return (
           <section className="mt-4 px-6" aria-label="내가 물어본 질문">
@@ -927,68 +985,11 @@ export default function PreviewExperience({
               <p className="mt-1 text-[0.98rem] font-semibold leading-[1.6] text-ivory">
                 {oneLine}
               </p>
-              <p className="mt-4 text-[0.76rem] font-semibold text-gold">전체 결과에서 이어서 답하는 질문</p>
-              <ul className="mt-1.5 flex flex-col gap-1.5">
-                {q.next.map((t, i) => (
-                  <li key={t}>
-                    <button type="button" onClick={() => onLockClick(10 + i)} className="flex w-full items-center justify-between gap-2 rounded-xl border border-gold-dim bg-ink px-3.5 py-2.5 text-left">
-                      <span className="text-[0.9rem] font-medium text-ivory">{t}</span>
-                      <span aria-hidden className="shrink-0 text-[0.76rem] text-burgundy">🔒</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
             </div>
           </section>
         );
       })()}
-      {/* ---------- 02. 관계 판정 카드 4개 ---------- */}
-      <section className="mt-5 px-6" aria-label="관계 판정">
-        <div className="mx-auto grid max-w-[640px] grid-cols-2 gap-2.5">
-          {verdictCards.map((c, i) => (
-            <div
-              key={c.k}
-              className={`min-w-0 rounded-2xl border px-4 py-4 ${
-                i === 0 ? "border-burgundy/60 bg-[#f6e9ec]" : "border-gold-dim bg-ink-soft"
-              }`}
-            >
-              <p className="text-[0.7rem] tracking-wider text-ivory-dim">{c.k}</p>
-              <p className="mt-1.5 break-keep text-[0.98rem] font-semibold leading-[1.45] text-ivory">{c.v}</p>
-            </div>
-          ))}
-        </div>
-      </section>
       <div ref={stickyStartRef} aria-hidden />
-
-      {/* ---------- 03. 왜 이렇게 판단했는지 (입력한 사실 기반) ---------- */}
-      <section className="mt-10 px-6">
-        <div className="mx-auto max-w-[640px]">
-          <p className="text-[0.76rem] font-semibold tracking-wider text-gold">왜 이렇게 판단했는지 · 입력한 사실 기준</p>
-          <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-gold-dim/25 bg-ink-soft px-5 py-5">
-            {reasons.map((r, i) => (
-              <p key={i} className={`text-[0.92rem] leading-[1.95] ${i === 0 ? "text-ivory" : "font-light text-ivory"}`}>
-                {r}
-              </p>
-            ))}
-            {preview.partner_reading.modes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {preview.partner_reading.modes.map((m) => (
-                  <span key={m} className="rounded-full border border-thread/40 bg-thread/10 px-2.5 py-0.5 text-[0.72rem] text-thread">
-                    상대 반응 · {m}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- 11/17 운영자 요청: 홈과 같은 누적 숫자 블록 (실제 집계). .paper 안이라 색 변수를 원래 밤 톤으로 되돌림 ---------- */}
-      {totals && (
-        <div className="-my-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
-          <Totals totals={totals} />
-        </div>
-      )}
 
       {/* ---------- 05. 무료 미리보기 vs 전체 리추얼 구성 — 10/30 판정 카드 바로 아래로 이동 + 구매 버튼 ---------- */}
       <section className="mt-6 px-6">
@@ -1028,6 +1029,7 @@ export default function PreviewExperience({
               </div>
             )}
             <div ref={offerCtaRef} className="mt-5">
+              <div ref={priceRef} aria-hidden />
               {/* 11/18 운영자 요청 4: 받는 것 3줄을 가격 바로 위에 크게, 나머지는 '함께 들어 있는 것'으로 작게 */}
               {!want && (
                 <div className="mb-4 rounded-xl border-2 border-burgundy/50 bg-[#f6e9ec] px-4 py-3.5">
@@ -1041,7 +1043,7 @@ export default function PreviewExperience({
                     ))}
                   </ul>
                   <p className="mt-2.5 border-t border-burgundy/15 pt-2 text-[0.76rem] leading-[1.65] text-ivory-dim">
-                    함께 들어 있는 것 · 관계 흐름 읽기 · 월화의 편지 · 나만의 리추얼 · 첫날·7일·21일 실천 가이드
+                    함께 들어 있는 것 · 21일 가이드 · 월화의 편지 · 나만의 리추얼
                   </p>
                 </div>
               )}
@@ -1067,6 +1069,36 @@ export default function PreviewExperience({
         </div>
       </section>
 
+
+      {/* ---------- 11/17 운영자 요청: 홈과 같은 누적 숫자 블록 (실제 집계). .paper 안이라 색 변수를 원래 밤 톤으로 되돌림 ---------- */}
+      {totals && (
+        <div className="mt-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
+          <Totals totals={totals} compact />
+        </div>
+      )}
+
+      {/* ---------- 03. 왜 이렇게 판단했는지 (입력한 사실 기반) ---------- */}
+      <section className="mt-10 px-6">
+        <div className="mx-auto max-w-[640px]">
+          <p className="text-[0.76rem] font-semibold tracking-wider text-gold">왜 이렇게 판단했는지 · 입력한 사실 기준</p>
+          <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-gold-dim/25 bg-ink-soft px-5 py-5">
+            {reasons.map((r, i) => (
+              <p key={i} className={`text-[0.92rem] leading-[1.95] ${i === 0 ? "text-ivory" : "font-light text-ivory"}`}>
+                {r}
+              </p>
+            ))}
+            {preview.partner_reading.modes.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {preview.partner_reading.modes.map((m) => (
+                  <span key={m} className="rounded-full border border-thread/40 bg-thread/10 px-2.5 py-0.5 text-[0.72rem] text-thread">
+                    상대 반응 · {m}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* ---------- 04. 오늘은 이것만 하지 마세요 (최대 3개) ---------- */}
       <section className="mt-10 px-6">
@@ -1113,89 +1145,6 @@ export default function PreviewExperience({
             </div>
           </section>
 
-          {/* ---------- 07. 가격 · 제공 방식 · 구매 버튼 ---------- */}
-          <section className="mt-6 scroll-mt-4 px-6">
-            <div ref={priceRef} aria-hidden />
-            <div className="mx-auto max-w-[640px]">
-              {!want && (
-                <div className="mb-3 overflow-hidden rounded-2xl border-2 border-burgundy bg-ink-soft">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/wolhwa/v2/set.webp" alt="편지 · 리추얼 카드 · 실천 가이드" className="block aspect-[16/9] w-full object-cover" />
-                  <div className="px-5 py-4">
-                  <p className="text-[0.78rem] font-semibold text-burgundy">{offerEndsAt ? "이 사연의 첫 구매 혜택" : PRODUCTS.message.name}</p>
-                  <p className="mt-1 text-[0.92rem] text-ivory">{PRODUCTS.message.name}</p>
-                  <p className="mt-0.5 text-[0.8rem] leading-[1.6] text-ivory-dim">내 사연을 반영한 관계 읽기 · 월화의 편지 · 개인 리추얼 · 단계별 실천 가이드</p>
-                  <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
-                    {badge.strike !== null && <span className="text-[0.9rem] text-ivory-dim line-through">{badge.strike.toLocaleString()}원</span>}
-                    <span className="font-display text-[1.7rem] text-burgundy">{priceText}</span>
-                    {badge.strike !== null && badge.strike > price && (
-                      <span className="rounded-full bg-[#f1e6e9] px-2.5 py-0.5 text-[0.76rem] font-semibold text-burgundy">{(badge.strike - price).toLocaleString()}원 할인</span>
-                    )}
-                  </p>
-                  {offerEndsAt && <OfferCountdown endsAt={offerEndsAt} after={regularPriceFor("message")} showEnd className="mt-1" />}
-                  </div>
-                </div>
-              )}
-              <div ref={mainCtaRef} />
-              {/* 11/18: 결제 버튼은 중간 1번 · 하단 1번만 (여기 버튼은 뺌) */}
-              {offerExpired && (
-                <p className="mb-1 text-center text-[0.76rem] text-ivory-dim">첫 구매 할인(신청 후 24시간)이 끝나 정가로 안내돼요</p>
-              )}
-              <ul className="mt-4 grid grid-cols-2 gap-2 text-center text-[0.74rem] leading-[1.5] text-ivory">
-                <li className="rounded-xl border border-gold-dim/20 bg-ink/50 px-2 py-2.5">1회 결제<span className="block text-ivory-dim">정기결제 없음</span></li>
-                <li className="rounded-xl border border-gold-dim/20 bg-ink/50 px-2 py-2.5">결과 제공<span className="block text-ivory-dim">결제 후 {DELIVERY_TIME_TEXT}</span></li>
-                <li className="rounded-xl border border-gold-dim/20 bg-ink/50 px-2 py-2.5">{CONTENT_VIEW_DAYS}일 동안<span className="block text-ivory-dim">다시 열람</span></li>
-                <li className="rounded-xl border border-gold-dim/20 bg-ink/50 px-2 py-2.5">결과 링크<span className="block text-ivory-dim">이메일로도 발송</span></li>
-              </ul>
-              <p className="mt-2.5 text-center text-[0.74rem] leading-[1.8] text-ivory-dim">
-                결과를 열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불 ·{" "}
-                <Link href="/refund" className="underline underline-offset-2">환불정책</Link> ·{" "}
-                <Link href="/guide" className="underline underline-offset-2">이용안내</Link>
-              </p>
-              <div className="mt-4 rounded-xl border border-gold-dim/15 bg-ink/40 px-4 py-3">
-                <p className="text-[0.72rem] font-semibold tracking-wider text-gold/80">어떻게 만들어지나요</p>
-                <ul className="mt-1.5 flex flex-col gap-1 text-[0.74rem] leading-[1.75] text-ivory-dim">
-                  {HOW_IT_WORKS.map((h) => (
-                    <li key={h}>· {h}</li>
-                  ))}
-                  <li>· {DELIVERY_DELAY_TEXT}</li>
-                  <li>· 입력하신 사연은 결과를 만드는 데에만 사용됩니다</li>
-                </ul>
-              </div>
-              {PAYMENTS_OPEN && !want && <HesitateCard orderNumber={orderNumber} />}
-            </div>
-          </section>
-
-          {/* ---------- 08. 월화의 짧은 위로 (영상 없이 짧은 문장만) ---------- */}
-          <section className="night mx-auto mt-10 max-w-[640px] overflow-hidden px-0 sm:rounded-2xl">
-            <div className="relative">
-              <LoopVideo
-                src={`/book/v3/${sit === "boundary" ? "w-mirror" : "w-phone"}.mp4`}
-                poster={`/book/v3/${sit === "boundary" ? "w-mirror" : "w-phone"}.webp`}
-                className="block aspect-[4/3] w-full object-cover"
-              />
-              <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-[#201d20] via-[#201d20]/70 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 px-6 pb-5">
-                <p className="text-[0.76rem] tracking-[0.2em] text-gold">月華 · 월화의 한마디</p>
-                <p className="font-display mt-2 text-[1.12rem] leading-[1.75] text-ivory">{bridge[0] ?? ""}</p>
-              </div>
-            </div>
-          </section>
-          <section className="px-6">
-            <div className="mx-auto flex max-w-[640px] flex-col gap-3">
-              {bridge.slice(1).map((b, i, arr) => (
-                <p
-                  key={i}
-                  className={`text-[0.95rem] leading-[2] ${
-                    i === arr.length - 1 ? "font-display font-semibold text-gold" : "font-light text-ivory"
-                  }`}
-                >
-                  {b}
-                </p>
-              ))}
-            </div>
-          </section>
-
           {/* ---------- 결제 직전 FAQ (접힘) ---------- */}
           <section className="mt-10 px-6">
             <div className="mx-auto max-w-[640px]">
@@ -1219,7 +1168,18 @@ export default function PreviewExperience({
             <div ref={bookRef} className="mx-auto max-w-[640px] text-center">
               <p className="text-[0.92rem] font-light leading-[1.95] text-ivory">{lock.recap[0]}</p>
               <p className="font-display mt-1 text-[1.02rem] font-semibold leading-[1.8] text-gold">{lock.recap[1]}</p>
-              <div className="mt-5">{ctaButton("bottom", mainLabel)}</div>
+              <div ref={mainCtaRef} />
+              <p className="mt-5 mb-2 text-center text-[0.84rem] text-ivory-dim">
+                {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
+                {badge.strike !== null && <span className="mr-1">→ 첫 구매</span>}
+                <b className="text-burgundy">{priceText}</b> · 1회 결제 · 정기결제 없음
+              </p>
+              {offerEndsAt && !want && <OfferCountdown endsAt={offerEndsAt} after={regularPriceFor("message")} showEnd className="mb-3" />}
+              {ctaButton("bottom", mainLabel)}
+              <p className="mt-2.5 text-[0.74rem] leading-[1.8] text-ivory-dim">
+                결제 후 {DELIVERY_TIME_TEXT} 결과 제공 · {CONTENT_VIEW_DAYS}일 동안 다시 열람 · 결과를 열어보기 전이면 {REFUND_WINDOW_DAYS}일 안에 전액 환불
+              </p>
+              {PAYMENTS_OPEN && !want && <div className="mt-4 text-left"><HesitateCard orderNumber={orderNumber} /></div>}
               {want && (
                 <Link
                   href={messageHref}
@@ -1240,64 +1200,6 @@ export default function PreviewExperience({
               />
             </div>
           </section>
-          {/* ---------- 09. 선택형: PDF 책 패키지 — 11/18 요청으로 맨 아래로 ---------- */}
-          {!want && (
-            <section className="mt-10 px-6">
-              <details
-                className="group mx-auto max-w-[640px] rounded-2xl border border-gold-dim/25 bg-ink-soft"
-                onToggle={(e) => {
-                  if ((e.currentTarget as HTMLDetailsElement).open) logPayEvent(orderNumber, "package_open", "preview");
-                }}
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
-                  <span>
-                    <span className="block text-[0.9rem] font-medium text-ivory">PDF 책도 함께 받고 싶다면</span>
-                    <span className="mt-0.5 block text-[0.74rem] text-ivory-dim">
-                      월화 패키지 · {bundleNow.toLocaleString()}원
-                      {offerOn && <span className="ml-1 text-thread">첫 구매 24시간 가격 · 이후 {BUNDLE_REGULAR_PRICE_KRW.toLocaleString()}원</span>}
-                    </span>
-                  </span>
-                  <span aria-hidden className="text-ivory-dim transition-transform group-open:rotate-45">+</span>
-                </summary>
-                <div className="border-t border-gold-dim/15 px-5 pb-5 pt-4">
-                  <ul className="flex flex-col gap-2.5 text-[0.82rem] leading-[1.75]">
-                    <li>
-                      <b className="font-semibold text-ivory">월화의 관계 리추얼</b>
-                      <span className="block font-light text-ivory-dim">지금 제출한 사연에 대한 판단과 다음 행동 · 웹 화면으로 {CONTENT_VIEW_DAYS}일 열람</span>
-                    </li>
-                    <li>
-                      <b className="font-semibold text-ivory">개인 맞춤 PDF 책</b>
-                      <span className="block font-light text-ivory-dim">여러 상황에서 다시 펼쳐 보는 문장 · 체크리스트 · 7일/21일 기록장 · 약 120쪽, 60일 안에 내려받아 계속 보관</span>
-                    </li>
-                    <li>
-                      <b className="font-semibold text-gold">월화 패키지</b>
-                      <span className="block font-light text-ivory-dim">내 사연 분석과 반복해서 꺼내 볼 자료를 함께 받는 구성</span>
-                    </li>
-                  </ul>
-                  <p className="mt-3 rounded-xl bg-ink/60 px-3.5 py-2.5 text-[0.74rem] leading-[1.75] text-ivory-dim">
-                    책에도 연락 시점·문장 이야기가 일부 들어 있어요. 차이는 형식과 쓰는 때예요 — 분석은 지금 내 사연에 대한 답, 책은 흔들릴 때마다 다시 펼치는 자료예요.
-                  </p>
-                  <Link
-                    href={bundleHref}
-                    onClick={(e) => openPay(e, "bundle", bundleHref)}
-                    className="mt-3 flex h-12 items-center justify-center rounded-full border border-gold/45 text-[0.9rem] font-medium text-gold active:opacity-80"
-                  >
-                    월화 패키지로 보기 · {bundleNow.toLocaleString()}원
-                  </Link>
-                  {BOOK_SALES_OPEN && (
-                    <Link
-                      href={`/book?order=${encodeURIComponent(orderNumber)}`}
-                      onClick={() => logPayEvent(orderNumber, "book_view", "preview")}
-                      className="mt-2 block text-center text-[0.74rem] text-ivory-dim underline underline-offset-4"
-                    >
-                      PDF 책 실제 페이지 넘겨 보기
-                    </Link>
-                  )}
-                </div>
-              </details>
-            </section>
-          )}
-
         </>
       ) : (
         <section className="mt-7 px-6">
