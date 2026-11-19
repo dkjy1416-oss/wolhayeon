@@ -83,7 +83,6 @@ export default function Totals({ totals, compact = false }: { totals: SiteTotals
               </div>
             ))}
           </div>
-          <p className="mt-2.5 text-center text-[0.62rem] text-ivory-dim/70">월하연 내부 집계 · 운영자 테스트 주문 제외 · {ymd(totals.at)} 기준</p>
         </div>
       </section>
     );
