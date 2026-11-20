@@ -47,7 +47,7 @@ export function Hook({ visitors = 0 }: { visitors?: number }) {
         {visitors >= 100 && (
           <div className="mt-7 flex justify-center">
             <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/90 px-4 py-2 text-[0.84rem] font-semibold text-ivory">
-              누적 고객 <b className="mx-0.5 text-[1.15rem] text-[#ff8fab] [text-shadow:0_0_14px_rgba(255,143,171,0.55)]"><RollingCount value={visitors} /></b>명이 월화를 찾았어요
+              월하연 방문자 <b className="mx-0.5 text-[1.15rem] text-[#ff8fab] [text-shadow:0_0_14px_rgba(255,143,171,0.55)]"><RollingCount value={visitors} /></b>명
               <span aria-hidden className="absolute -bottom-[6px] left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
             </p>
           </div>
