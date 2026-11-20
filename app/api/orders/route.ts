@@ -17,6 +17,7 @@
 import { NextResponse, after } from "next/server";
 import { randomUUID } from "crypto";
 import { sendPreviewLinkEmail } from "@/lib/preview-link-email";
+import { ctxFromRequest, sendMetaEvent } from "@/lib/meta-capi";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sanitizeAndValidateApplication } from "@/lib/ritual-validation";
 import { createPreviewToken } from "@/lib/preview-auth";
@@ -168,6 +169,11 @@ export async function POST(request: Request) {
         applicantName: data.applicant_name,
         email: data.email,
       })
+    );
+    /* 11/20 메타 전환 API: 신청 완료 (이메일 해시만 · 운영자 제외) */
+    const metaCtx = ctxFromRequest(request);
+    after(() =>
+      sendMetaEvent({ event: "Lead", orderNumber: orderNumberForMail, email: data.email, contentName: "재회분석", ctx: metaCtx })
     );
 
     return NextResponse.json({
