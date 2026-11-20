@@ -55,6 +55,7 @@ import { trackEvent } from "@/lib/analytics";
 import { pickSituationGuides, type GuidePick } from "@/lib/situation-guide";
 import { CONTENT_VIEW_DAYS } from "@/lib/content-access-policy";
 import { REFUND_WINDOW_DAYS } from "@/lib/refund-policy";
+import { px } from "@/lib/meta-pixel";
 import {
   NOW_STANCE_LABELS,
 } from "@/lib/preview-display";
@@ -445,6 +446,11 @@ export default function PreviewExperience({
   const [name, setName] = useState<string>("");
   /* 주문별 결제 금액 — 사과 쿠폰 적용 주문이면 쿠폰가 */
   const [price, setPrice] = useState<number>(() => listPriceKRW());
+  /* 11/20 메타 픽셀: 미리보기 열람 (주문당 1번) */
+  useEffect(() => {
+    if (!preview || !orderNumber) return;
+    px("ViewContent", { content_ids: [orderNumber], content_type: "product", value: price, currency: "KRW" }, { id: `${orderNumber}_ViewContent`, once: `${orderNumber}_ViewContent` });
+  }, [preview, orderNumber, price]);
   const [situation, setSituation] = useState<Situation | null>(null);
   /* 첫 구매가 마감 시각 (신청 후 24시간 · 서버가 정함) */
   const [offerEndsAt, setOfferEndsAt] = useState<number | null>(null);
@@ -862,6 +868,8 @@ export default function PreviewExperience({
     const p = m ? m[1] : "message";
     if (p === "book") return;
     e.preventDefault();
+    /* 11/20 메타 픽셀: 구매 버튼 클릭 (주문당 1번) */
+    px("InitiateCheckout", { value: p === "message" ? price : undefined, currency: "KRW", content_ids: [orderNumber] }, { id: `${orderNumber}_InitiateCheckout`, once: `${orderNumber}_InitiateCheckout` });
     setPay({ open: true, product: p as "message" | "bundle", cancelled: false });
   };
   const lock = LOCK_COPY[sit];

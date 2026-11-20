@@ -58,6 +58,7 @@ import {
   saveStepBackup,
 } from "@/lib/ritual-storage";
 import { trackEvent } from "@/lib/analytics";
+import { px } from "@/lib/meta-pixel";
 
 /* ---------------- 인트로 카피 (§7) ---------------- */
 const INTRO_MESSAGES = [
@@ -499,6 +500,8 @@ export default function ImmersiveApplyExperience({
       /* noop */
     }
     trackEvent("apply_start");
+    /* 11/20 메타 픽셀: 무료 분석 시작 (이 탭에서 1번) */
+    px("StartApplication", {}, { custom: true, once: "start", session: true });
   }, [loaded, phase]);
 
   const curIdRef = useRef<string | undefined>(undefined);
