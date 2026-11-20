@@ -37,12 +37,15 @@ export default function PreviewPaySheet({
   product,
   startCancelled = false,
   onClose,
+  highlights = [],
 }: {
   orderNumber: string;
   open: boolean;
   product: "message" | "bundle";
   startCancelled?: boolean;
   onClose: () => void;
+  /** 11/20: 유형별 핵심 결과 3개 */
+  highlights?: string[];
 }) {
   const clientKey = (process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY ?? "").trim();
   const [data, setData] = useState<Ready | null>(null);
@@ -66,12 +69,15 @@ export default function PreviewPaySheet({
           return;
         }
         if (!j?.ok) {
-          setErr("결제 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
+          setErr("결제 정보를 불러오지 못했어요. 다시 시도해 주세요.");
+          logPayEvent(orderNumber, "pay_sheet_ready", "error");
           return;
         }
         setData(j as Ready);
+        logPayEvent(orderNumber, "pay_sheet_ready", p);
       } catch {
-        setErr("결제 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
+        setErr("결제 정보를 불러오지 못했어요. 다시 시도해 주세요.");
+        logPayEvent(orderNumber, "pay_sheet_ready", "error");
       } finally {
         setBusy(false);
       }
@@ -144,7 +150,8 @@ export default function PreviewPaySheet({
       regular={ready?.regular ?? 0}
       offerEndsAt={ready?.offerEndsAt ?? null}
       options={
-        ready && ready.bookSales
+        /* 11/20 지시문 v3: 기본 흐름에서 39,900원 패키지 제외 — 패키지로 들어온 손님에게만 선택지 */
+        ready && ready.bookSales && product === "bundle"
           ? [
               {
                 key: "message",
@@ -171,8 +178,21 @@ export default function PreviewPaySheet({
       showBar={false}
       onSelect={select}
       busy={busy}
+      highlights={want === "bundle" && cur === "bundle" ? [] : highlights}
     >
-      {err && <p className="mb-3 rounded-xl bg-thread/10 px-4 py-3 text-center text-[0.84rem] text-thread">{err}</p>}
+      {err && (
+        <div className="mb-3 rounded-xl bg-thread/10 px-4 py-3 text-center text-[0.84rem] text-thread">
+          <p>{err}</p>
+          <button
+            type="button"
+            onClick={() => void load(want)}
+            disabled={busy}
+            className="mt-2 min-h-11 rounded-full border border-thread/50 px-5 text-[0.84rem] font-semibold disabled:opacity-60"
+          >
+            {busy ? "다시 불러오는 중…" : "다시 시도"}
+          </button>
+        </div>
+      )}
       {!ready ? (
         <p className="py-6 text-center text-[0.86rem] text-ivory-dim">{busy ? "결제 정보를 불러오는 중…" : ""}</p>
       ) : ready.status === "paid" ? (

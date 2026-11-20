@@ -3,14 +3,14 @@
 /**
  * 11/16 요청: 결제 화면 하단 [결제하기] → 아래에서 올라오는 결제 시트.
  * - 시트 안: 할인 배지 · 패키지 할인 혜택(리추얼 / 월화 패키지) · 금액 내역(판매가 → 지금 결제 시 할인 → 최종 구매가) · 결제수단 · 결제 버튼
- * - 오른쪽 위 X → 첫 구매 할인이 적용 중이면 '할인 사라짐' 카드 (실제 마감 시각 기준 · 지어낸 마감 없음)
+ * - 11/20 지시문 v3: X·바깥을 누르면 그대로 닫힌다 (할인 방어 팝업 없음). 순서 = 상품명 → 핵심 결과 3개 → 최종 금액 → 결제수단·정책 → 결제 버튼.
+ *   금액을 불러오기 전에는 0원을 보이지 않는다.
  * - 상품을 바꾸면 서버가 금액을 다시 정한다(링크 방식) — 주소에 sheet=1 을 붙여 시트를 연 채로 돌아온다.
  * - 결제수단 영역(TossCheckout)은 시트가 닫혀 있어도 항상 DOM에 있다(토스 위젯 초기화가 끊기지 않게).
  */
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { logPayEvent } from "@/lib/pay-events";
-import HoldCard from "./HoldCard";
 
 type Option = {
   key: "message" | "bundle";
@@ -42,6 +42,7 @@ export default function PaySheet({
   showBar = true,
   onSelect,
   busy = false,
+  highlights = [],
 }: {
   orderNumber: string;
   title: string;
@@ -63,6 +64,8 @@ export default function PaySheet({
   onSelect?: (key: "message" | "bundle") => void;
   /** 상품을 바꾸는 중 */
   busy?: boolean;
+  /** 11/20: 이 결제로 받는 핵심 결과 3개 (유형별, 실제 결과에 있는 것만) */
+  highlights?: string[];
 }) {
   const [openState, setOpenState] = useState(startOpen);
   const open = openProp ?? openState;
@@ -70,7 +73,6 @@ export default function PaySheet({
     if (openProp === undefined) setOpenState(v);
     onOpenChange?.(v);
   };
-  const [warn, setWarn] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const saved = Math.max(0, regular - amount);
   const remain = offerEndsAt ? offerEndsAt - now : 0;
@@ -109,13 +111,8 @@ export default function PaySheet({
     logPayEvent(orderNumber, "pay_sheet", "open");
   };
   const pressX = () => {
-    if (offerOn) {
-      setWarn(true);
-      logPayEvent(orderNumber, "pay_sheet", "x_warn");
-    } else {
-      setOpen(false);
-      logPayEvent(orderNumber, "pay_sheet", "close");
-    }
+    setOpen(false);
+    logPayEvent(orderNumber, "pay_sheet", "close");
   };
 
   const base = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
@@ -170,11 +167,15 @@ export default function PaySheet({
               ✕
             </button>
           </div>
-          {saved > 0 && offerOn && (
-            <p className="mt-2 inline-block rounded-full bg-thread/10 px-3 py-1.5 text-[0.84rem] font-semibold text-ivory">
-              총 <b className="text-thread">{saved.toLocaleString()}원</b> 할인받았어요!
-              <span className="ml-1.5 font-normal tabular-nums text-ivory-dim">· {clock(remain)} 남음</span>
-            </p>
+          {highlights.length > 0 && (
+            <ul className="mt-3 flex flex-col gap-1.5">
+              {highlights.slice(0, 3).map((h) => (
+                <li key={h} className="flex gap-2 text-[0.9rem] leading-[1.5] text-ivory">
+                  <span aria-hidden className="text-burgundy">✓</span>
+                  <span className="min-w-0">{h}</span>
+                </li>
+              ))}
+            </ul>
           )}
 
           {options.length > 1 && (
@@ -234,6 +235,7 @@ export default function PaySheet({
             </>
           )}
 
+          {amount > 0 && (
           <dl className="mt-5 space-y-2 text-[0.92rem]">
             <div className="flex justify-between">
               <dt className="text-ivory-dim">상품 판매가</dt>
@@ -249,33 +251,17 @@ export default function PaySheet({
               <dt className="font-semibold text-ivory">최종 구매가</dt>
               <dd className="font-display text-[1.3rem] font-bold text-ivory">{amount.toLocaleString()}원</dd>
             </div>
+            {offerOn && (
+              <p className="text-right text-[0.74rem] tabular-nums text-ivory-dim">첫 구매가 적용 · {clock(remain)} 남음</p>
+            )}
           </dl>
+          )}
 
           <div id="pay-anchor" className={`mt-5 transition-opacity ${busy ? "pointer-events-none opacity-50" : ""}`}>
             {children}
           </div>
         </div>
 
-        {/* X → 할인 사라짐 카드 (11/17: 월화 영상 + 큰 타이머) */}
-        {warn && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/70 px-5">
-            <HoldCard
-              saved={saved}
-              offerEndsAt={offerEndsAt}
-              regular={regular}
-              stayLabel={offerOn ? "할인 받고 계속하기" : `${amount.toLocaleString()}원 결제 계속하기`}
-              onStay={() => {
-                setWarn(false);
-                logPayEvent(orderNumber, "pay_sheet", "warn_stay");
-              }}
-              onLeave={() => {
-                setWarn(false);
-                setOpen(false);
-                logPayEvent(orderNumber, "pay_sheet", "warn_close");
-              }}
-            />
-          </div>
-        )}
       </div>
     </>
   );
