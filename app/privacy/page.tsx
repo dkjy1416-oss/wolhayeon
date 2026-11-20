@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="개인정보처리방침" updated="2026년 9월 13일">
+    <LegalPage title="개인정보처리방침" updated="2026년 11월 20일">
       <LegalSection title="1. 개인정보의 처리 목적">
         <p>
           제이 beauty company(이하 “회사”)는 월하연 서비스 제공을 위해 개인정보를 처리합니다.
@@ -69,6 +69,7 @@ export default function PrivacyPage() {
           <br />· <strong>Anthropic, PBC</strong> — 사용자가 입력한 내용에 기반한
           개인화 콘텐츠 생성.
           <br />· <strong>Plus Five Five, Inc. (Resend)</strong> — 결과 및 안내 이메일 발송.
+          <br />· <strong>Meta Platforms, Inc.</strong> — 광고 성과 측정(메타 픽셀·전환 API).
         </p>
       </LegalSection>
 
@@ -102,6 +103,19 @@ export default function PrivacyPage() {
               <br />보유기간: Anthropic API의 기본 정책에 따라 입력·출력은 통상 30일 이내 삭제
               (법령 준수·정책 집행 등 예외 가능)
               <br />연락처: legal@anthropic.com
+            </p>
+          </div>
+
+          <div className="border-b border-gold-dim/15 p-4">
+            <p className="text-sm font-medium text-ivory">Meta Platforms, Inc.</p>
+            <p className="mt-1 text-sm">
+              이전 항목: 방문·신청·결제 이벤트, 주문번호·결제 금액, SHA-256으로 암호화(해시)된 이메일,
+              접속 기기 정보(브라우저 정보·IP 주소), 광고 측정 쿠키(_fbp, _fbc)
+              <br />국가: 미국
+              <br />시기·방법: 방문·신청·결제 시 메타 픽셀 및 전환 API로 암호화된 네트워크 전송
+              <br />목적: 광고 성과 측정 및 광고 최적화
+              <br />보유기간: Meta의 데이터 정책에 따른 기간
+              <br />연락처: facebook.com/privacy/policy
             </p>
           </div>
 
@@ -144,8 +158,13 @@ export default function PrivacyPage() {
       <LegalSection title="9. 쿠키 및 분석 도구">
         <p>
           월하연은 Vercel Web Analytics를 이용해 페이지 방문과 전환 단계를 분석합니다.
-          현재 설정된 전환 이벤트에는 이름·이메일·사연·주문번호·결제키 등 개인 식별 정보를
+          Vercel Web Analytics 전환 이벤트에는 이름·이메일·사연·주문번호·결제키 등 개인 식별 정보를
           전송하지 않습니다. Vercel Web Analytics는 쿠키 없이 익명화된 통계 방식으로 운영됩니다.
+        </p>
+        <p>
+          광고 성과 측정을 위해 메타 픽셀 및 전환 API로 방문·신청·결제 이벤트와 암호화(해시)된 이메일을
+          Meta Platforms에 전송합니다. 이름·생년·성별·사연 내용·상대방 정보는 전송하지 않습니다.
+          메타 픽셀은 광고 측정용 쿠키(_fbp, _fbc)를 사용하며, 브라우저 설정에서 쿠키를 차단하거나 삭제할 수 있습니다.
         </p>
         <p>
           신청 과정에서는 이용 편의를 위해 브라우저 저장공간에 작성 중인 내용을 임시 저장할 수 있습니다.
@@ -168,7 +187,7 @@ export default function PrivacyPage() {
       <LegalSection title="11. 개인정보처리방침의 변경">
         <p>
           이 방침의 내용이 변경되는 경우 시행 전에 본 페이지를 통해 고지합니다.
-          본 개인정보처리방침은 2026년 9월 13일부터 시행합니다.
+          본 개인정보처리방침은 2026년 9월 13일부터 시행합니다. (2026년 11월 20일 개정: 광고 성과 측정을 위한 메타 픽셀·전환 API 추가)
         </p>
       </LegalSection>
     </LegalPage>
