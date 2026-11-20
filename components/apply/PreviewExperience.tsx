@@ -1001,7 +1001,14 @@ export default function PreviewExperience({
     ["21일 가이드", "매일 하나씩 실행하거나 기록할 행동과 질문"],
   ];
   const bridge = preview.bridge && preview.bridge.length ? preview.bridge : lock.bridge;
-  const donts = preview.cautions.slice(0, 3);
+  /* 11/20 v3: 안전 우려 사연은 '대화 이어가기' 전제 문구 대신 안전 중심 주의사항 (위협·강압을 축소하지 않음) */
+  const donts = safety
+    ? [
+        { action: "상대를 직접 만나거나 혼자 찾아가기", why: "위협이나 강압이 있었다면, 직접 만나는 자리가 가장 위험해질 수 있어요." },
+        { action: "상대의 요구나 압박에 바로 응답하기", why: "급하게 답하지 않아도 괜찮아요. 믿을 수 있는 사람과 먼저 상의해요." },
+        { action: "위협받은 메시지·기록을 지우기", why: "나중에 도움을 요청할 때 필요할 수 있어요. 지우지 말고 따로 보관해 두세요." },
+      ]
+    : preview.cautions.slice(0, 3);
 
   const ctaButton = (where: string, label: string, href = mainHref) => (
     <Link
@@ -1095,7 +1102,7 @@ export default function PreviewExperience({
           <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-gold-dim/25 bg-ink-soft px-5 py-5">
             <div>
               <p className="text-[0.74rem] font-semibold text-burgundy">입력한 사실</p>
-              {(quoteLine && !safety ? [quoteLine, factSentence] : [factSentence]).filter(Boolean).map((r, i) => (
+              {(quoteLine && !safety ? [qa, factSentence] : [factSentence]).filter(Boolean).map((r, i) => (
                 <p key={i} className="mt-1 text-[0.9rem] leading-[1.85] text-ivory">{r}</p>
               ))}
             </div>
