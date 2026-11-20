@@ -20,6 +20,7 @@ import "server-only";
 import { randomUUID } from "crypto";
 import { Resend } from "resend";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { ctxFromHeaders, sendMetaEvent } from "@/lib/meta-capi";
 import { confirmTossPayment, getTossPayment, getTossPaymentByOrderId } from "@/lib/toss";
 import {
   RITUAL_PRICE_KRW,
@@ -180,6 +181,8 @@ export async function confirmOrderPayment(params: {
     const afterPaid = async (method: string | null, amountPaid: number) => {
       await notifyOperatorPaid({ orderNumber, applicantName, amount: amountPaid, method });
       await logPayEventServer(orderNumber, "pay_success", method);
+      /* 11/20 메타 전환 API: 결제 완료 (토스 승인 후 · 브라우저와 같은 event_id) */
+      await sendMetaEvent({ event: "Purchase", orderNumber, value: amountPaid, ctx: await ctxFromHeaders("https://thewolha.com/payment/success") });
       try {
         await track("payment_success");
       } catch {
@@ -429,6 +432,8 @@ export async function reconcilePendingOrder(orderNumber: string): Promise<"paid"
         method: t.method,
       });
       await logPayEventServer(orderNumber, "pay_success", t.method);
+      /* 결제창을 닫아 성공 화면을 못 본 결제 — 서버에서만 Purchase */
+      await sendMetaEvent({ event: "Purchase", orderNumber, value: t.totalAmount });
     }
     return "paid";
   } catch {
