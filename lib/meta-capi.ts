@@ -4,6 +4,7 @@ import "server-only";
  * - Lead(주문 생성) · Purchase(토스 승인 완료)만 서버에서 보낸다. 브라우저 픽셀과 같은 event_id → 메타가 중복 제거.
  * - 고객 정보는 이메일 SHA-256 해시(em)만. 이름·생년·성별·사연·상대 정보는 절대 보내지 않는다.
  * - 운영자·테스트 주문은 보내지 않는다. 단, META_TEST_EVENT_CODE 가 있으면 운영자 주문만 '이벤트 테스트'로 보낸다(실제 집계 X).
+ * - (11/20 토큰·테스트 코드 Vercel 등록 후 재배포)
  * - 토큰은 서버 환경변수(META_CAPI_TOKEN)에만. 없으면 아무것도 하지 않는다. 실패해도 주문·결제에 영향 없음.
  */
 import { createHash } from "crypto";
