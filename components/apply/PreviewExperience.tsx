@@ -40,6 +40,7 @@ import { PAYMENTS_OPEN, BOOK_SALES_OPEN } from "@/lib/payment-availability";
 import PreviewWaiting from "@/components/apply/PreviewWaiting";
 import ShareStoryCard from "@/components/apply/ShareStoryCard";
 import OfferCountdown from "@/components/pay/OfferCountdown";
+import RollingCount from "@/components/home3/RollingCount";
 import ResultExampleCard from "@/components/apply/ResultExampleCard";
 import LoopVideo from "@/components/book/LoopVideo";
 import { DELIVERY_TIME_TEXT, DELIVERY_DELAY_TEXT, HOW_IT_WORKS } from "@/lib/service-facts";
@@ -474,7 +475,7 @@ export default function PreviewExperience({
   const [, setGuides] = useState<GuidePick[]>([]);
   /* 11/3 — 신청서의 '가장 알고 싶은 것'을 미리보기 맨 위 질문으로 (경쟁사 학습: 상품=손님의 질문) */
   const [wish, setWish] = useState<string>("");
-  /* 11/20 지시문 v3: 위협·강압 등 안전 우려(서버 판정) — 112·1366 안내는 이때만, 무료로 */
+  /* 11/20 지시문 v3: 위협·강압 등 안전 우려(서버 판정) — 안전 중심 문구로 전환 */
   const [safety, setSafety] = useState(false);
   /* 11/3 — 결제 버튼 옆 실제 숫자·후기 */
   const [proof, setProof] = useState<{ paid: number; reviews: { rating: number; body: string; name: string; month: string; incentive: boolean }[] } | null>(null);
@@ -938,7 +939,7 @@ export default function PreviewExperience({
     { img: "/wolhwa/wolhwa-gaze.webp", text: card2, tag: "월화가 읽은 것" },
     { img: "/wolhwa/ritual-letter.webp", text: card3, tag: "지금 흐름" },
     risky
-      ? { img: null, text: "두렵거나 위협을 느낀다면 혼자 견디지 마세요. 112(긴급 신고), 1366(여성긴급전화, 24시간)에서 도움을 받을 수 있어요.", tag: "먼저 나를 지키기" }
+      ? { img: null, text: "두렵거나 위협을 느낀다면 혼자 견디지 마세요. 지금은 내 일상과 안전을 먼저 지켜요.", tag: "먼저 나를 지키기" }
       : { img: null, text: "", tag: sit === "lover" ? "내 사연으로 쓴 첫마디" : "내 사연으로 쓴 첫 문장", cta: `${sit === "lover" ? "내 사연으로 첫마디 받기" : "내 사연으로 첫 문장 받기"} · ${priceText}` },
   ];
   /* ---------- 11/20 지시문 v3: 첫 화면 = 질문 → 현재 판단 → 근거 → 오늘 할 행동 → 알 수 없는 것 ---------- */
@@ -954,7 +955,7 @@ export default function PreviewExperience({
   const todayAction: { what: string; why: string } = safety
     ? {
         what: "오늘 안에 믿을 수 있는 사람 한 명에게 지금 상황을 짧게 알려 두세요.",
-        why: "위협이나 강압이 있었다면 혼자 버티지 않는 것이 먼저예요. 위험을 느끼면 112(긴급 신고), 1366(여성긴급전화, 24시간)에 바로 도움을 요청할 수 있어요.",
+        why: "위협이나 강압이 있었다면 혼자 버티지 않는 것이 먼저예요. 지금은 상대의 반응보다 내 일상과 안전을 지키는 쪽을 먼저 정해요.",
       }
     : sit === "boundary"
       ? {
@@ -1366,7 +1367,20 @@ export default function PreviewExperience({
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
           aria-hidden={!showSticky}
         >
-          {/* 11/20 지시문 v3: 하단 고정 영역은 버튼 하나 + 작은 안내 한 줄 (말풍선·큰 타이머 제거 — 버튼보다 강하지 않게) */}
+          {/* 11/17 요청: 홈과 같은 누적 고객 말풍선 (실제 집계 · 100명 미만이면 숨김). .paper 안이라 글자색은 고정값 */}
+          {customers >= 100 && (
+            <div className={`pointer-events-none absolute inset-x-0 -top-11 flex justify-center transition-opacity duration-300 ${showSticky ? "opacity-100" : "opacity-0"}`}>
+              <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/95 px-3.5 py-1.5 text-[0.8rem] font-semibold text-[#f3ece2] shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
+                누적 고객{" "}
+                <b className="mx-0.5 text-[1.02rem] text-[#ff8fab] [text-shadow:0_0_12px_rgba(255,143,171,0.5)]">
+                  <RollingCount value={customers} />
+                </b>
+                명이 월화를 찾았어요
+                <span aria-hidden className="absolute -bottom-[5px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
+              </p>
+            </div>
+          )}
+          {!want && offerEndsAt && <OfferCountdown bar endsAt={offerEndsAt} after={regularPriceFor("message")} className="mx-auto mb-2 max-w-[640px]" />}
           <Link
             href={mainHref}
             tabIndex={showSticky ? 0 : -1}
@@ -1376,7 +1390,9 @@ export default function PreviewExperience({
             {stickyLabel}
           </Link>
           {!want && offerEndsAt ? (
-            <OfferCountdown endsAt={offerEndsAt} after={regularPriceFor("message")} className="mx-auto mt-1.5 max-w-[640px] text-center !text-[0.7rem] !text-ivory-dim" />
+            <p className="mx-auto mt-1.5 max-w-[640px] text-center text-[0.68rem] text-ivory-dim/80">
+              종료 후 {regularPriceFor("message").toLocaleString()}원 · 1회 결제 · 정기결제 없음
+            </p>
           ) : (
             <p className="mx-auto mt-1.5 max-w-[640px] text-center text-[0.68rem] text-ivory-dim/80">
               1회 결제 · 정기결제 없음 · {CONTENT_VIEW_DAYS}일 동안 다시 열람
