@@ -28,6 +28,7 @@ import {
   getOrCreateSubmissionId,
   clearDraftBackup,
 } from "@/lib/ritual-storage";
+import { px } from "@/lib/meta-pixel";
 
 /** 서버가 알려 준 확인 필요 항목 → 손님이 알아볼 수 있는 이름 */
 const FIELD_LABEL: Record<string, string> = {
@@ -117,6 +118,8 @@ export default function ConfirmPage() {
       const json = await res.json().catch(() => null);
       if (res.ok && json?.ok && typeof json.order_number === "string") {
         trackEvent("order_created", { order: json.order_number });
+        /* 11/20 메타 픽셀: 신청 완료 (서버 전환 API 와 같은 event_id) */
+        px("Lead", { content_name: "재회분석" }, { id: `${json.order_number}_Lead`, once: `${json.order_number}_Lead` });
         clearDraftBackup();
         /* 주문 저장 요청에서 이미 만들어진 무료 preview를 다음 화면이
            즉시 쓸 수 있게 세션 캐시에 넘긴다. 실패해도 기존 API fallback 유지. */
