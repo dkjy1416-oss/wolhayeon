@@ -68,6 +68,7 @@ export async function POST(request: Request) {
         paymentAmount: result.paymentAmount,
         situation: result.situation,
         mainWish: result.mainWish,
+        safety: result.safety,
         offerEndsAt: result.offerEndsAt,
         /* false = 템플릿 폴백 — 클라이언트가 읽는 화면을 유지하고
            한 번 더 AI 생성을 시도할 수 있게 알려준다 */
