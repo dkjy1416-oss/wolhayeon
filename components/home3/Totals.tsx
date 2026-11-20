@@ -70,7 +70,7 @@ export default function Totals({ totals, compact = false }: { totals: SiteTotals
       <section className="px-6" aria-label="지금까지 월하연을 찾은 분들">
         <div className="mx-auto max-w-[640px] rounded-2xl border border-white/10 bg-[#0d0b0c] px-4 pb-3.5 pt-4">
           <p className="flex items-center justify-center gap-2 text-center text-[0.9rem] font-semibold text-ivory">
-            <span aria-hidden className="text-[#d4b46a]">❦</span>이미 많은 분이 월화를 찾아왔어요<span aria-hidden className="-scale-x-100 text-[#d4b46a]">❦</span>
+            <span aria-hidden className="text-[#d4b46a]">❦</span>월하연 이용 현황<span aria-hidden className="-scale-x-100 text-[#d4b46a]">❦</span>
           </p>
           <div className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${three.length}, minmax(0, 1fr))` }}>
             {three.map((r) => (
