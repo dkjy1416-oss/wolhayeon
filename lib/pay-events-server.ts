@@ -36,6 +36,8 @@ export const CLIENT_PAY_EVENTS = [
   "preview_hesitate", // 미리보기 가격 아래 '망설여지는 이유' 한 번 탭 (code: price | trust | enough | later | pay | other) (11/4)
   "pay_leave_popup", // 결제 화면에서 나가려 할 때 할인 안내 팝업 (code: shown | stay | leave) (11/16)
   "pay_sheet", // 11/16 결제 시트 (code: open | close | x_warn | warn_stay | warn_close)
+  "paid_example_opened", // 11/20 결과 예시 크게 보기 — 결제 클릭과 별도 (code: 24h | 7d | plan | 21d)
+  "pay_sheet_ready", // 11/20 결제 시트 금액·결제수단 준비 완료 (code: message | bundle | error)
   "pay_cancel_popup", // 결제창 취소 후 월화 팝업 (code: shown | retry | close | reason_price | reason_method | reason_later | reason_other) (11/16)
 ] as const;
 

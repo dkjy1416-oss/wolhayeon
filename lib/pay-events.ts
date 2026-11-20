@@ -29,7 +29,9 @@ export type ClientPayEvent =
   | "preview_hesitate"
   | "pay_leave_popup"
   | "pay_cancel_popup"
-  | "pay_sheet";
+  | "pay_sheet"
+  | "paid_example_opened"
+  | "pay_sheet_ready";
 
 export function logPayEvent(
   orderNumber: string,

@@ -66,6 +66,8 @@ export type PreviewOutcome =
       situation: PreviewSituation;
       /** 11/18: 신청서 '가장 알고 싶은 것' 코드 — 미리보기 맨 위 질문을 기기와 무관하게 고정 */
       mainWish: string;
+      /** 11/20: 위협·강압 등 고위험 안전 우려 — 112·1366 무료 안내를 이때만 보임 (사연 원문은 보내지 않음) */
+      safety: boolean;
     }
   | { status: "not_found" }
   | { status: "server_error" };
@@ -713,6 +715,7 @@ export async function getOrCreatePreview(
           offerEndsAt: offerEndsFor(order),
           situation: previewSituation(order, pv.now_plan.stance),
           mainWish: order.main_wish ?? "",
+          safety: (order.safety_concerns ?? []).some((v) => HIGH_RISK_SAFETY_VALUES.includes(v)),
           generated: true,
         };
       }
@@ -756,6 +759,7 @@ export async function getOrCreatePreview(
           offerEndsAt: offerEndsFor(order),
       situation: previewSituation(order, preview.now_plan.stance),
       mainWish: order.main_wish ?? "",
+      safety: (order.safety_concerns ?? []).some((v) => HIGH_RISK_SAFETY_VALUES.includes(v)),
       generated: ai !== null || !useAi,
     };
   } catch (e) {
