@@ -3,6 +3,7 @@ import "./globals.css";
 import CsChatWidget from "@/components/cs/CsChatWidget";
 import { Analytics } from "@vercel/analytics/next";
 import SiteTracker from "@/components/SiteTracker";
+import MetaPixel from "@/components/MetaPixel";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://thewolha.com"),
@@ -55,6 +56,7 @@ export default function RootLayout({
         <CsChatWidget />
         <Analytics />
         <SiteTracker />
+        <MetaPixel />
       </body>
     </html>
   );
