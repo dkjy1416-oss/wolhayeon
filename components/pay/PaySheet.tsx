@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { logPayEvent } from "@/lib/pay-events";
+import HoldCard from "./HoldCard";
 
 type Option = {
   key: "message" | "bundle";
@@ -73,6 +74,7 @@ export default function PaySheet({
     if (openProp === undefined) setOpenState(v);
     onOpenChange?.(v);
   };
+  const [warn, setWarn] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const saved = Math.max(0, regular - amount);
   const remain = offerEndsAt ? offerEndsAt - now : 0;
@@ -111,8 +113,13 @@ export default function PaySheet({
     logPayEvent(orderNumber, "pay_sheet", "open");
   };
   const pressX = () => {
-    setOpen(false);
-    logPayEvent(orderNumber, "pay_sheet", "close");
+    if (offerOn) {
+      setWarn(true);
+      logPayEvent(orderNumber, "pay_sheet", "x_warn");
+    } else {
+      setOpen(false);
+      logPayEvent(orderNumber, "pay_sheet", "close");
+    }
   };
 
   const base = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
@@ -167,6 +174,12 @@ export default function PaySheet({
               ✕
             </button>
           </div>
+          {saved > 0 && offerOn && (
+            <p className="mt-2 inline-block rounded-full bg-thread/10 px-3 py-1.5 text-[0.84rem] font-semibold text-ivory">
+              총 <b className="text-thread">{saved.toLocaleString()}원</b> 할인받았어요!
+              <span className="ml-1.5 font-normal tabular-nums text-ivory-dim">· {clock(remain)} 남음</span>
+            </p>
+          )}
           {highlights.length > 0 && (
             <ul className="mt-3 flex flex-col gap-1.5">
               {highlights.slice(0, 3).map((h) => (
@@ -262,6 +275,26 @@ export default function PaySheet({
           </div>
         </div>
 
+        {/* X → 할인 사라짐 카드 (11/17: 월화 영상 + 큰 타이머) */}
+        {warn && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/70 px-5">
+            <HoldCard
+              saved={saved}
+              offerEndsAt={offerEndsAt}
+              regular={regular}
+              stayLabel={offerOn ? "할인 받고 계속하기" : `${amount.toLocaleString()}원 결제 계속하기`}
+              onStay={() => {
+                setWarn(false);
+                logPayEvent(orderNumber, "pay_sheet", "warn_stay");
+              }}
+              onLeave={() => {
+                setWarn(false);
+                setOpen(false);
+                logPayEvent(orderNumber, "pay_sheet", "warn_close");
+              }}
+            />
+          </div>
+        )}
       </div>
     </>
   );
