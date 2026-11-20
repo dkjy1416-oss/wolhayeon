@@ -35,11 +35,11 @@ export default function StickyCta({ customers = 0 }: { customers?: number }) {
       {customers >= 100 && (
         <div className={`pointer-events-none absolute inset-x-0 -top-11 flex justify-center transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}>
           <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/95 px-3.5 py-1.5 text-[0.8rem] font-semibold text-ivory shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
-            월하연 방문자{" "}
+            누적 고객{" "}
             <b className="mx-0.5 text-[1.02rem] text-[#ff8fab] [text-shadow:0_0_12px_rgba(255,143,171,0.5)]">
               <RollingCount value={customers} />
             </b>
-            명
+            명이 월화를 찾았어요
             <span aria-hidden className="absolute -bottom-[5px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
           </p>
         </div>
