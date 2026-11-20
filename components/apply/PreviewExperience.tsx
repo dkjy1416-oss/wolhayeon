@@ -947,8 +947,10 @@ export default function PreviewExperience({
   const interpSentence =
     (quoteLine ? qb || reasonsAll[2] : reasonsAll[1]) ?? firstSentence(preview.partner_reading.text);
   /* 판단에 영향을 준 내용 — 고객이 실제로 쓴 문장(인용)과 선택한 사실만. 없는 말을 만들지 않음 */
-  const evidence = [quoteLine && !safety ? qa : null, factSentence].filter((x): x is string => !!x);
-  const evidenceGap = !quoteLine
+  /* 11/21: 안전 우려 사연은 원문을 그대로 인용하지 않되, '구체적 장면이 없다'고 잘못 말하지 않는다 */
+  const safetyFact = "사연에 다툼 중 위협이나 강압으로 느껴질 수 있는 장면이 적혀 있어요.";
+  const evidence = [safety ? safetyFact : quoteLine ? qa : null, factSentence].filter((x): x is string => !!x);
+  const evidenceGap = !quoteLine && !safety
     ? "사연에 구체적인 장면이나 말이 많지 않아, 선택한 정보 위주로 판단했어요."
     : null;
   /* 오늘 할 행동 하나 — 무엇을·언제·어떻게. 안전 안내는 결제와 무관하게 무료 */
@@ -1103,7 +1105,7 @@ export default function PreviewExperience({
           <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-gold-dim/25 bg-ink-soft px-5 py-5">
             <div>
               <p className="text-[0.74rem] font-semibold text-burgundy">입력한 사실</p>
-              {(quoteLine && !safety ? [qa, factSentence] : [factSentence]).filter(Boolean).map((r, i) => (
+              {(safety ? [safetyFact, factSentence] : quoteLine ? [qa, factSentence] : [factSentence]).filter(Boolean).map((r, i) => (
                 <p key={i} className="mt-1 text-[0.9rem] leading-[1.85] text-ivory">{r}</p>
               ))}
             </div>
