@@ -2,6 +2,7 @@
 /**
  * 메타 픽셀 (브라우저) — 11/20 운영자 요청
  * - 픽셀 ID 는 NEXT_PUBLIC_META_PIXEL_ID (없으면 아무것도 하지 않음)
+ *   (11/20 픽셀 '월하연 thewolha.com' 생성 · Vercel Production 환경변수에 등록)
  * - 관리자 화면을 연 브라우저 · ?utm_source=selftest 로 들어온 브라우저는 영구 제외(wh_noads)
  *   단, ?px_test=1 로 들어오면 이 탭(세션)에서만 다시 켠다 (이벤트 테스트용)
  * - 같은 주문의 같은 이벤트는 새로고침해도 1번만 (localStorage)
