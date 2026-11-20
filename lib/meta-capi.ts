@@ -67,7 +67,7 @@ export async function sendMetaEvent(p: {
   contentName?: string;
   ctx?: MetaCtx;
 }): Promise<void> {
-  const pixel = (process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
+  const pixel = (process.env.NEXT_PUBLIC_META_DATASET_ID || "2940533816322888").trim();
   const token = (process.env.META_CAPI_TOKEN || "").trim();
   if (!pixel || !token) return;
   try {

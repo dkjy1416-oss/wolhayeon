@@ -17,7 +17,9 @@ declare global {
   }
 }
 
-export const PIXEL_ID = (process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
+/* 11/20: 토큰 발급이 되는 '비즈니스 포트폴리오' 소유 데이터 세트(공개값). 다른 ID로 바꿀 때만 NEXT_PUBLIC_META_DATASET_ID 사용.
+   (처음 만든 개인 광고계정 픽셀 3367019066832075 는 전환 API 토큰을 못 만들어 쓰지 않음) */
+export const PIXEL_ID = (process.env.NEXT_PUBLIC_META_DATASET_ID || "2940533816322888").trim();
 const BLOCK = "wh_noads";
 const TEST = "wh_pxtest";
 
