@@ -10,6 +10,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import PaySheet from "@/components/pay/PaySheet";
 import TossCheckout from "@/components/pay/TossCheckout";
+import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
+import { preconnect } from "react-dom";
 import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
 import { logPayEvent } from "@/lib/pay-events";
 import { RITUAL_REGULAR_PRICE_KRW, BUNDLE_REGULAR_PRICE_KRW } from "@/lib/ritual-types";
@@ -57,9 +59,13 @@ export default function PreviewPaySheet({
 
   useEffect(() => setWant(product), [product, open]);
 
+  /* 11/21: 결제 시트가 늦게 뜬다 → 미리보기를 보는 동안 결제 정보와 토스 결제 모듈을 미리 준비해 둔다.
+     (미리 불러온 것은 관리자 퍼널에 기록하지 않음 — 시트를 열 때만 pay_sheet_ready 기록) */
+  const fetchedAt = useRef(0);
+  const prefetched = useRef(false);
   const load = useCallback(
-    async (p: "message" | "bundle") => {
-      setBusy(true);
+    async (p: "message" | "bundle", silent = false) => {
+      if (!silent) setBusy(true);
       setErr(null);
       try {
         const r = await fetch(`/api/orders/checkout?order=${encodeURIComponent(orderNumber)}&product=${p}`, { cache: "no-store" });
@@ -69,25 +75,52 @@ export default function PreviewPaySheet({
           return;
         }
         if (!j?.ok) {
+          if (silent) return;
           setErr("결제 정보를 불러오지 못했어요. 다시 시도해 주세요.");
           logPayEvent(orderNumber, "pay_sheet_ready", "error");
           return;
         }
         setData(j as Ready);
-        logPayEvent(orderNumber, "pay_sheet_ready", p);
+        fetchedAt.current = Date.now();
+        if (!silent) logPayEvent(orderNumber, "pay_sheet_ready", p);
       } catch {
+        if (silent) return;
         setErr("결제 정보를 불러오지 못했어요. 다시 시도해 주세요.");
         logPayEvent(orderNumber, "pay_sheet_ready", "error");
       } finally {
-        setBusy(false);
+        if (!silent) setBusy(false);
       }
     },
     [orderNumber]
   );
 
+  /* 화면에 들어오고 잠시 뒤(첫 화면 그리기를 방해하지 않게) 미리 준비 */
+  useEffect(() => {
+    try {
+      preconnect("https://js.tosspayments.com");
+      preconnect("https://api.tosspayments.com");
+      preconnect("https://pay.toss.im");
+    } catch {
+      /* 무시 */
+    }
+    const t = window.setTimeout(() => {
+      if (prefetched.current) return;
+      prefetched.current = true;
+      if (clientKey) loadTossPayments(clientKey).catch(() => {});
+      void load(product, true);
+    }, 1200);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     if (!data || data.product !== want) void load(want);
+    else {
+      /* 미리 받아 둔 정보로 바로 그리고, 오래됐으면 조용히 새로 받기 */
+      logPayEvent(orderNumber, "pay_sheet_ready", want);
+      if (Date.now() - fetchedAt.current > 120_000) void load(want, true);
+    }
     /* 결제 화면 도달 기록(관리자 퍼널 '결제 화면') — 열 때 한 번 */
     if (!viewed.current) {
       viewed.current = true;

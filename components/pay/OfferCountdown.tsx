@@ -2,7 +2,36 @@
 
 /** 첫 구매가 남은 시간 (신청 후 24시간) — 0이 되면 페이지를 새로 읽어 가격·결제 금액을 함께 바꾼다.
     after: 선택한 상품의 할인 종료 후 가격 (regularPriceFor) */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+/* 11/21 운영자 요청: 버튼 위 타이머는 1/100초까지 — 화면 전체를 다시 그리지 않게 글자만 바꾼다 */
+function fmtCs(ms: number): string {
+  const v = Math.max(0, ms);
+  const cs = Math.floor((v % 1000) / 10);
+  return `${fmt(v)}.${String(cs).padStart(2, "0")}`;
+}
+function LiveClock({ endsAt, className }: { endsAt: number; className: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    let raf = 0;
+    let last = "";
+    const tick = () => {
+      const s = fmtCs(endsAt - Date.now());
+      if (s !== last && ref.current) {
+        ref.current.textContent = s;
+        last = s;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [endsAt]);
+  return (
+    <span ref={ref} aria-hidden className={className}>
+      {fmtCs(endsAt - Date.now())}
+    </span>
+  );
+}
 
 function fmt(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -55,7 +84,7 @@ export default function OfferCountdown({
         aria-label={`첫 구매 할인 마감까지 ${fmt(left)}`}
       >
         <span className="text-[0.84rem] font-bold text-[#2b2326]">첫 구매 할인 마감까지</span>
-        <span className="tabular-nums text-[1.5rem] font-extrabold leading-none tracking-tight text-[#d0142c]">{fmt(left)}</span>
+        <LiveClock endsAt={endsAt} className="tabular-nums text-[1.38rem] font-extrabold leading-none tracking-tight text-[#d0142c]" />
         <span
           aria-hidden
           className="absolute bottom-0 left-0 h-[3px] rounded-r-full bg-[#d0142c] transition-[width] duration-1000"

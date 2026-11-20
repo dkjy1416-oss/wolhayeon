@@ -3,7 +3,7 @@
 /**
  * 11/16 요청: 결제 화면 하단 [결제하기] → 아래에서 올라오는 결제 시트.
  * - 시트 안: 할인 배지 · 패키지 할인 혜택(리추얼 / 월화 패키지) · 금액 내역(판매가 → 지금 결제 시 할인 → 최종 구매가) · 결제수단 · 결제 버튼
- * - 11/20 지시문 v3: X·바깥을 누르면 그대로 닫힌다 (할인 방어 팝업 없음). 순서 = 상품명 → 핵심 결과 3개 → 최종 금액 → 결제수단·정책 → 결제 버튼.
+ * - 11/21 운영자 요청: X·바깥을 누르면 항상 월화 카드(할인 중이면 할인 사라짐 카드, 끝났으면 '결제 계속하기' 카드).
  *   금액을 불러오기 전에는 0원을 보이지 않는다.
  * - 상품을 바꾸면 서버가 금액을 다시 정한다(링크 방식) — 주소에 sheet=1 을 붙여 시트를 연 채로 돌아온다.
  * - 결제수단 영역(TossCheckout)은 시트가 닫혀 있어도 항상 DOM에 있다(토스 위젯 초기화가 끊기지 않게).
@@ -113,13 +113,9 @@ export default function PaySheet({
     logPayEvent(orderNumber, "pay_sheet", "open");
   };
   const pressX = () => {
-    if (offerOn) {
-      setWarn(true);
-      logPayEvent(orderNumber, "pay_sheet", "x_warn");
-    } else {
-      setOpen(false);
-      logPayEvent(orderNumber, "pay_sheet", "close");
-    }
+    if (warn) return;
+    setWarn(true);
+    logPayEvent(orderNumber, "pay_sheet", "x_warn");
   };
 
   const base = `/apply/complete?order=${encodeURIComponent(orderNumber)}`;
@@ -282,7 +278,14 @@ export default function PaySheet({
               saved={saved}
               offerEndsAt={offerEndsAt}
               regular={regular}
-              stayLabel={offerOn ? "할인 받고 계속하기" : `${amount.toLocaleString()}원 결제 계속하기`}
+              title={
+                <>
+                  잠깐,
+                  <br />
+                  결제를 그만두시겠어요?
+                </>
+              }
+              stayLabel={offerOn ? "할인 받고 계속하기" : amount > 0 ? `${amount.toLocaleString()}원 결제 계속하기` : "결제 계속하기"}
               onStay={() => {
                 setWarn(false);
                 logPayEvent(orderNumber, "pay_sheet", "warn_stay");
@@ -292,7 +295,9 @@ export default function PaySheet({
                 setOpen(false);
                 logPayEvent(orderNumber, "pay_sheet", "warn_close");
               }}
-            />
+            >
+              <p className="mt-3 text-[0.8rem] leading-[1.7] text-[#cfc4bd]">들려준 사연은 그대로 남아 있어요. 결제는 한 번뿐이고 정기결제는 없어요.</p>
+            </HoldCard>
           </div>
         )}
       </div>
