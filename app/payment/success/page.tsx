@@ -9,6 +9,7 @@ import BookProcessing from "@/components/payment/BookProcessing";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { PreviewCoreSchema } from "@/lib/ritual-preview-schema";
 import { getWaitingVideos } from "@/lib/home-media";
+import MetaPurchase from "@/components/payment/MetaPurchase";
 
 /* 결제 직후 서버에서도 결과·책 제작을 바로 시작 (손님이 창을 닫아도 계속 진행) */
 export const maxDuration = 300;
@@ -169,7 +170,13 @@ export default async function PaymentSuccessPage({
   switch (result.status) {
     case "success":
     case "already_paid":
-      return <SuccessView orderNumber={result.orderNumber} />;
+      return (
+        <>
+          {/* 11/20 메타 픽셀 Purchase (브라우저) */}
+          <MetaPurchase orderNumber={result.orderNumber} amount={Number(params.amount) || 0} />
+          <SuccessView orderNumber={result.orderNumber} />
+        </>
+      );
     case "not_found":
       return (
         <ErrorView message="주문 정보를 찾을 수 없습니다." retryOrder={null} />
