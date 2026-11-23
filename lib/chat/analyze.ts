@@ -9,36 +9,48 @@ import { z } from "zod";
 import { CHAT_QUESTIONS } from "@/lib/chat/questions";
 import type { ChatOrder, ChatResult } from "@/lib/chat/types";
 
-const s = (max: number) => z.string().min(1).max(max);
+/* 11/23: 길이·개수 제한은 모델 안내(describe)로만 — 조금 넘었다고 결과 전체를 버리지 않게 */
+const s = (max: number) => z.string().min(1).describe(`${max}자 이내`);
 export const ChatResultSchema = z.object({
   summary: s(200),
   type_label: s(30),
   /* 11/23 결과 보강: 월화의 총평 */
   overview: s(800),
-  temperature: z.object({ me: z.number().int().min(0).max(100), partner: z.number().int().min(0).max(100), note: s(260) }),
+  temperature: z.object({ me: z.number().int().describe("0~100"), partner: z.number().int().describe("0~100"), note: s(260) }),
   balance: z.object({ first_contact: s(220), length: s(220), reply_speed: s(220) }),
-  turning_points: z.array(z.object({ when: s(60), what: s(360) })).min(2).max(5),
+  turning_points: z.array(z.object({ when: s(60), what: s(360) })).min(1).describe("2~5개"),
   /* 그 사람은 지금 나를 어떻게 생각할까 — 단정이 아니라 대화에서 보이는 가능성 */
   partner_mind: z.object({
     reading: s(600),
-    clues: z.array(z.object({ quote: s(40), meaning: s(220) })).min(2).max(4),
+    clues: z.array(z.object({ quote: s(40), meaning: s(220) })).min(1).describe("2~4개"),
   }),
   /* 말과 행동의 온도차 */
-  say_vs_do: z.array(z.object({ says: s(120), does: s(180), gap: s(240) })).min(2).max(3),
+  say_vs_do: z.array(z.object({ says: s(120), does: s(180), gap: s(240) })).min(1).describe("2~3개"),
   /* 우리 관계는 어디로 흘러갈까 */
   future_flow: z.object({
     now_stage: s(260),
-    paths: z.array(z.object({ condition: s(140), outcome: s(260) })).length(3),
+    paths: z.array(z.object({ condition: s(140), outcome: s(260) })).min(1).describe("3개"),
   }),
-  partner_signals: z.object({ positive: z.array(s(200)).min(2).max(5), caution: z.array(s(200)).min(2).max(5) }),
-  my_strengths: z.array(s(200)).min(1).max(3),
-  my_patterns: z.array(z.object({ pattern: s(120), why_it_hurts: s(300), instead: s(200) })).min(2).max(3),
-  avoid_messages: z.array(z.object({ text: s(80), why: s(240) })).min(3).max(5),
-  next_messages: z.array(z.object({ text: s(120), when: s(100), intent: s(160), likely_response: s(220) })).length(3),
+  partner_signals: z.object({ positive: z.array(s(200)).min(1).describe("2~5개"), caution: z.array(s(200)).min(1).describe("2~5개") }),
+  my_strengths: z.array(s(200)).min(1).describe("1~3개"),
+  my_patterns: z.array(z.object({ pattern: s(120), why_it_hurts: s(300), instead: s(200) })).min(1).describe("2~3개"),
+  avoid_messages: z.array(z.object({ text: s(80), why: s(240) })).min(1).describe("3~5개"),
+  next_messages: z.array(z.object({ text: s(120), when: s(100), intent: s(160), likely_response: s(220) })).min(1).describe("3개"),
   reply_guide: z.object({ warm: s(260), short: s(260), none: s(260) }),
-  plan: z.array(z.object({ period: s(30), actions: z.array(s(160)).min(2).max(5) })).length(3),
+  plan: z.array(z.object({ period: s(30), actions: z.array(s(160)).min(1).describe("2~5개") })).min(1).describe("3개"),
   closing: s(600),
 });
+
+/** 온도는 0~100으로, 다음 메시지는 3개까지 */
+function tidy(r: z.infer<typeof ChatResultSchema>): ChatResult {
+  const c = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
+  return {
+    ...r,
+    temperature: { ...r.temperature, me: c(r.temperature.me), partner: c(r.temperature.partner) },
+    next_messages: r.next_messages.slice(0, 3),
+  };
+}
+
 const SYSTEM = `당신은 '월하연'의 관계 분석가 '월화'입니다. 손님이 올린 카카오톡 대화(캡처 또는 내보내기 파일)를 직접 읽고, 두 사람의 대화 패턴을 분석해 한국어 결과문을 씁니다.
 
 [원칙]
@@ -114,7 +126,7 @@ ${answerText(o)}
         .map((b) => b.text)
         .join("");
       const parsed = ChatResultSchema.safeParse(JSON.parse(text));
-      if (parsed.success) return parsed.data;
+      if (parsed.success) return tidy(parsed.data);
       console.error(`[chat] schema_invalid ${parsed.error.issues.slice(0, 3).map((i) => i.path.join(".")).join(",")}`);
     } catch (e) {
       console.error(`[chat] analyze_failed ${e instanceof Error ? e.name : "unknown"}`);
@@ -154,13 +166,17 @@ ${text}
         },
         { timeout: 170_000 }
       );
-      if (msg.stop_reason === "max_tokens" || msg.stop_reason === "refusal") continue;
+      if (msg.stop_reason === "max_tokens" || msg.stop_reason === "refusal") {
+        console.error(`[chat] text_stop ${msg.stop_reason}`);
+        continue;
+      }
       const out = msg.content
         .filter((b): b is Anthropic.TextBlock => b.type === "text")
         .map((b) => b.text)
         .join("");
       const parsed = ChatResultSchema.safeParse(JSON.parse(out));
-      if (parsed.success) return parsed.data;
+      if (parsed.success) return tidy(parsed.data);
+      console.error(`[chat] text_schema_invalid ${parsed.error.issues.slice(0, 3).map((i) => i.path.join(".")).join(",")}`);
     } catch (e) {
       console.error(`[chat] analyze_text_failed ${e instanceof Error ? e.name : "unknown"}`);
     }
