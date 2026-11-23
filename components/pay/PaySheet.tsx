@@ -160,7 +160,7 @@ export default function PaySheet({
           className={`absolute inset-x-0 bottom-0 mx-auto max-h-[90svh] w-full max-w-[560px] overflow-y-auto rounded-t-[1.75rem] bg-ink px-5 pt-6 shadow-[0_-12px_40px_rgba(0,0,0,0.35)] transition-transform duration-300 ${
             open ? "translate-y-0" : "translate-y-full"
           }`}
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.25rem)" }}
+          style={{ paddingBottom: 0 }}
         >
           <div className="flex items-start justify-between gap-3">
             <h2 id="pay-sheet-title" className="text-[1.3rem] font-bold leading-snug text-ivory">
@@ -269,6 +269,12 @@ export default function PaySheet({
           <div id="pay-anchor" className={`mt-5 transition-opacity ${busy ? "pointer-events-none opacity-50" : ""}`}>
             {children}
           </div>
+          {/* 11/23 지시문 P0-1: 결제 버튼은 시트 하단에 고정 — 시트를 열자마자 스크롤 없이 보이게 (TossCheckout 이 여기에 그림) */}
+          <div
+            id="pay-sheet-footer"
+            className="sticky bottom-0 z-10 -mx-5 mt-4 border-t border-gold-dim/30 bg-ink px-5 pt-3 empty:hidden"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+          />
         </div>
 
         {/* X → 할인 사라짐 카드 (11/17: 월화 영상 + 큰 타이머) */}

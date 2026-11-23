@@ -44,6 +44,20 @@ const LABEL: Record<string, string> = {
 
 const AUTO_KEY = "wh_ext_tried";
 
+/** 11/23: 외부 브라우저에서 열면 결제 시트가 바로 열리도록 (미리보기 화면은 ?pay=message) */
+function payHref(): string {
+  try {
+    const u = new URL(location.href);
+    if (u.pathname.startsWith("/apply/preview") && !u.searchParams.get("pay")) {
+      u.searchParams.set("pay", u.searchParams.get("product") === "bundle" ? "bundle" : "message");
+    }
+    u.searchParams.delete("cancelled");
+    return u.toString();
+  } catch {
+    return location.href;
+  }
+}
+
 function androidChromeUrl(href: string): string {
   const u = new URL(href);
   return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(href)};end`;
@@ -83,7 +97,7 @@ export default function InAppBrowserNotice({ orderNumber }: { orderNumber: strin
       } catch {
         tried = true; // 저장 불가면 반복 전환 위험 → 자동 전환 생략, 버튼만
       }
-      const to = externalUrl(a, location.href);
+      const to = externalUrl(a, payHref());
       if (!tried && to) {
         logPayEvent(orderNumber, "external_open_click", a === "kakaotalk" ? "kakao_auto" : "line_auto");
         location.href = to;
@@ -96,7 +110,7 @@ export default function InAppBrowserNotice({ orderNumber }: { orderNumber: strin
   const canOpen = app === "kakaotalk" || app === "line" || isAndroid;
 
   const openExternal = () => {
-    const href = location.href;
+    const href = payHref();
     const to = externalUrl(app, href);
     if (to) {
       logPayEvent(orderNumber, "external_open_click", app === "kakaotalk" ? "kakao" : "line");
@@ -110,32 +124,25 @@ export default function InAppBrowserNotice({ orderNumber }: { orderNumber: strin
   const copyLink = async () => {
     logPayEvent(orderNumber, "external_open_click", "copy");
     try {
-      await navigator.clipboard.writeText(location.href);
+      await navigator.clipboard.writeText(payHref());
       setCopied("ok");
     } catch {
       setCopied("manual");
     }
   };
 
+  /* 11/23 지시문 P0-2: 결제 버튼을 밀어내지 않게 한 줄 안내 바로 (결제 버튼은 시트 하단 고정) */
   return (
-    <div className="mb-5 rounded-xl border border-burgundy/40 bg-[#f6e9ec] px-4 py-3.5 text-[0.8rem] leading-[1.75] text-ivory">
-      <p className="font-semibold text-burgundy">{LABEL[app]} 안에서는 결제창이 막힐 수 있어요</p>
-      <p className="mt-1 text-ivory-dim">
-        {canOpen ? (
-          "아래 버튼으로 외부 브라우저에서 열면 바로 결제할 수 있어요. 신청 내용과 금액은 그대로 이어집니다."
-        ) : (
-          <>
-            오른쪽 위 <b className="text-ivory">⋯</b> → <b className="text-ivory">외부 브라우저로 열기</b>
-            (또는 Safari로 열기)를 누르거나, 링크를 복사해 사파리에 붙여넣어 주세요. 신청 내용과 금액은 그대로 이어집니다.
-          </>
-        )}
+    <div className="mb-4 rounded-xl border border-burgundy/30 bg-[#f6e9ec] px-3.5 py-2.5 text-[0.76rem] leading-[1.6] text-ivory">
+      <p className="text-ivory-dim">
+        {LABEL[app]}에서 결제창이 안 열리면 {canOpen ? "외부 브라우저로 열어 주세요" : <>오른쪽 위 <b className="text-ivory">⋯</b> → <b className="text-ivory">외부 브라우저로 열기</b></>} · 신청 내용은 그대로 이어져요
       </p>
-      <div className="mt-2.5 flex flex-wrap gap-2">
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
         {canOpen && (
           <button
             type="button"
             onClick={openExternal}
-            className="h-10 rounded-full bg-burgundy px-4 text-[0.82rem] font-medium text-white"
+            className="h-8 rounded-full bg-burgundy px-3 text-[0.74rem] font-medium text-white"
           >
             외부 브라우저로 열기
           </button>
@@ -143,14 +150,14 @@ export default function InAppBrowserNotice({ orderNumber }: { orderNumber: strin
         <button
           type="button"
           onClick={copyLink}
-          className="h-10 rounded-full border border-burgundy/50 px-4 text-[0.82rem] text-burgundy"
+          className="h-8 rounded-full border border-burgundy/50 px-3 text-[0.74rem] text-burgundy"
         >
           {copied === "ok" ? "복사됨 — 사파리·크롬에 붙여넣기" : "결제 링크 복사"}
         </button>
       </div>
       {copied === "manual" && (
         <p className="mt-2 select-all break-all rounded-lg bg-white/70 px-3 py-2 text-[0.72rem] text-ivory">
-          {typeof location !== "undefined" ? location.href : ""}
+          {typeof location !== "undefined" ? payHref() : ""}
         </p>
       )}
     </div>

@@ -183,6 +183,7 @@ export default function TossCheckout(props: {
 }
 
 /** 결제창 닫기·취소는 '결제 미완료'로 안내 (주문·선택 상품은 DB에 그대로 남아 있음 — 다시 누르면 같은 금액으로 열림) */
+const CANCEL_HINT = /완료되지 않았습니다/;
 const CANCEL_CODES = new Set(["USER_CANCEL", "PAY_PROCESS_CANCELED", "PAY_PROCESS_ABORTED"]);
 function payErrorMessage(e: unknown): string {
   const code = errorCode(e);
@@ -338,6 +339,12 @@ function TossWindowCheckout({
      (10/9: 결제 화면 5명 → 결제창 0명). 버튼이 안 보이는 동안 하단에 같은 버튼을 고정한다. */
   const payBtnRef = useRef<HTMLButtonElement>(null);
   const [payBtnVisible, setPayBtnVisible] = useState(true);
+  /* 11/23 지시문 P0-1: 결제 시트 안이면 시트 하단 고정 영역(#pay-sheet-footer)에 결제 버튼을 그린다 */
+  const [footerEl, setFooterEl] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!hideStickyBar) return;
+    setFooterEl(document.getElementById("pay-sheet-footer"));
+  }, [hideStickyBar]);
   useEffect(() => {
     const el = payBtnRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
@@ -350,7 +357,7 @@ function TossWindowCheckout({
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [footerEl]);
 
   const optionCls = (active: boolean) =>
     `flex w-full items-center justify-between rounded-xl border px-4 py-3.5 text-left transition-colors ${
@@ -392,26 +399,54 @@ function TossWindowCheckout({
         </button>
       </div>
 
-      <RefundNotice />
+      {!footerEl && <RefundNotice />}
 
-      <button
-        ref={payBtnRef}
-        type="button"
-        onClick={handlePay}
-        disabled={!ready || paying}
-        className="sticky bottom-3 z-10 mt-6 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-opacity active:opacity-85 disabled:opacity-50"
-      >
-        {paying
-          ? "결제창을 여는 중…"
-          : ready
-            ? `${amount.toLocaleString()}원 결제하기`
-            : "결제 화면 불러오는 중…"}
-      </button>
-      <p className="mt-3 text-center text-[0.68rem] leading-[1.8] text-ivory-dim/60">
-        결제하기를 누르면 토스페이먼츠 결제창에서
-        <br />
-        전자금융거래 약관 동의 후 결제가 진행됩니다.
-      </p>
+      {(() => {
+        const payBlock = (
+          <>
+            <button
+              ref={payBtnRef}
+              type="button"
+              onClick={handlePay}
+              disabled={!ready || paying}
+              className={`${footerEl ? "" : "sticky bottom-3 mt-6"} z-10 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-opacity active:opacity-85 disabled:opacity-50`}
+            >
+              {paying
+                ? "결제창을 여는 중…"
+                : ready
+                  ? `${amount.toLocaleString()}원 결제하기`
+                  : "결제 화면 불러오는 중…"}
+            </button>
+            {errorMsg && footerEl && (
+              <div className="mt-2 text-center text-[0.78rem] leading-[1.6] text-thread">
+                <p>{errorMsg}</p>
+                {!CANCEL_HINT.test(errorMsg) && (
+                  <p className="mt-1 text-[0.72rem] text-ivory-dim">
+                    다시 눌러도 안 열리면 오른쪽 위 ⋯ → 외부 브라우저로 열기를 눌러 주세요.
+                  </p>
+                )}
+              </div>
+            )}
+            {footerEl ? (
+              <p className="mt-2 text-center text-[0.66rem] leading-[1.7] text-ivory-dim/75">
+                결과를 열기 전이면 7일 안 전액 환불 · 열람 후에는 청약철회가 제한될 수 있어요 ·{" "}
+                <Link href="/refund" target="_blank" className="underline underline-offset-2">
+                  환불정책
+                </Link>
+                <br />
+                결제하기를 누르면 토스페이먼츠 결제창에서 약관 동의 후 결제가 진행됩니다.
+              </p>
+            ) : (
+              <p className="mt-3 text-center text-[0.68rem] leading-[1.8] text-ivory-dim/60">
+                결제하기를 누르면 토스페이먼츠 결제창에서
+                <br />
+                전자금융거래 약관 동의 후 결제가 진행됩니다.
+              </p>
+            )}
+          </>
+        );
+        return footerEl ? createPortal(payBlock, footerEl) : payBlock;
+      })()}
 
       {cancelOpen && (
         <PayCancelPopup
@@ -428,7 +463,7 @@ function TossWindowCheckout({
           onClose={() => setCancelOpen(false)}
         />
       )}
-      {errorMsg && (
+      {errorMsg && !footerEl && (
         <p className="mt-4 text-center text-sm leading-relaxed text-thread">
           {errorMsg}
         </p>
