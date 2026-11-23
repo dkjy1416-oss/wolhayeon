@@ -1206,16 +1206,8 @@ export default function PreviewExperience({
               </li>
             ))}
           </ul>
-          <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">결제하면 받는 것</p>
-          <ul className="mt-2 flex flex-col gap-1.5 rounded-xl border border-gold-dim/25 bg-ink px-4 py-3">
-            {RECEIVE[sit].lines.map((l) => (
-              <li key={l} className="flex gap-2 text-[0.9rem] font-semibold leading-[1.55] text-ivory">
-                <span aria-hidden className="text-burgundy">✓</span>
-                <span className="min-w-0">{l}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-[0.78rem] leading-[1.7] text-ivory-dim">
+          {/* 받는 것 3줄은 바로 아래 가격 카드에 있어 여기서는 '함께 드려요'만 (11/23 재구성 후 중복 정리) */}
+          <p className="mt-4 text-[0.78rem] leading-[1.7] text-ivory-dim">
             함께 드려요 · {components.map(([k]) => k).join(" · ")}
           </p>
         </div>
@@ -1266,7 +1258,7 @@ export default function PreviewExperience({
                 <p className="font-display mt-1 text-[1.15rem] font-bold leading-snug text-[#f3ece2]">
                   월화가 {name ? `${name}님의 ` : ""}사연으로
                   <br />
-                  첫 문장과 편지를 써요
+                  {sit === "lover" ? "첫마디와 편지를 써요" : sit === "boundary" ? "회복 계획과 편지를 써요" : "첫 문장과 편지를 써요"}
                 </p>
                 <p className="mt-1.5 text-[0.8rem] text-[#cfc4b2]">{DELIVERY_TIME_TEXT} · 링크는 이메일로도 보내 드려요</p>
               </div>
