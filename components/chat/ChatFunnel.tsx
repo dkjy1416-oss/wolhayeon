@@ -80,6 +80,13 @@ export default function ChatFunnel() {
       setStep("file");
       return;
     }
+    /* 11/23: 결과 예시 페이지의 '이 리포트 받기' 버튼 — 바로 대화 파일 올리기부터 */
+    if (sp.get("start") === "file") {
+      setMode("file");
+      setStep("file");
+      sendSiteEvent("chat_start", { step: "file" });
+      return;
+    }
     if (sp.get("start") === "quiz") {
       setMode("quiz");
       setStep("quiz");
