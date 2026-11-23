@@ -1031,7 +1031,18 @@ export default function PreviewExperience({
   return (
     <div className="paper fade-in min-h-[100svh] pb-28">
       {/* ---------- 01. 결과 헤더 — 11/20 지시문 v3: 캐릭터는 작게, 바로 질문과 답 ---------- */}
-      <header className="px-6 pb-1 pt-8">
+      {/* 11/23 운영자 요청: 맨 위에 월하연 홈으로 돌아가는 줄 */}
+      <nav className="border-b border-gold-dim/20 px-6" aria-label="월하연 홈">
+        <div className="mx-auto flex h-12 max-w-[640px] items-center justify-between">
+          <Link href="/" className="font-display text-[1rem] tracking-wide text-ivory">
+            월하연 <span className="text-gold">月下緣</span>
+          </Link>
+          <Link href="/" className="rounded-full border border-gold-dim/40 px-3.5 py-1.5 text-[0.78rem] text-ivory-dim">
+            홈으로
+          </Link>
+        </div>
+      </nav>
+      <header className="px-6 pb-1 pt-5">
         <div className="mx-auto flex max-w-[640px] items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/wolhwa/v4/avatar.webp" alt="" aria-hidden className="h-12 w-12 shrink-0 rounded-full border-2 border-gold-dim object-cover object-[50%_18%]" />
