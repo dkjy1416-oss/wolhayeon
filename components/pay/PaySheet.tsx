@@ -13,8 +13,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { logPayEvent } from "@/lib/pay-events";
 import HoldCard from "./HoldCard";
 
+export type SheetProduct = "message" | "bundle" | "combo";
 type Option = {
-  key: "message" | "bundle";
+  key: SheetProduct;
   name: string;
   desc: string;
   price: number;
@@ -47,7 +48,7 @@ export default function PaySheet({
 }: {
   orderNumber: string;
   title: string;
-  current: "message" | "bundle";
+  current: SheetProduct;
   amount: number;
   regular: number;
   options: Option[];
@@ -62,7 +63,7 @@ export default function PaySheet({
   /** 화면 하단 고정 [결제하기] 버튼 (미리보기에서는 미리보기 자체 버튼을 씀) */
   showBar?: boolean;
   /** 상품 바꾸기 — 주면 링크 대신 이 함수를 부름(화면 이동 없이) */
-  onSelect?: (key: "message" | "bundle") => void;
+  onSelect?: (key: SheetProduct) => void;
   /** 상품을 바꾸는 중 */
   busy?: boolean;
   /** 11/20: 이 결제로 받는 핵심 결과 3개 (유형별, 실제 결과에 있는 것만) */
@@ -162,18 +163,27 @@ export default function PaySheet({
           }`}
           style={{ paddingBottom: 0 }}
         >
+          {/* 11/23: 묘수사주처럼 월화 얼굴 + 제목 */}
           <div className="flex items-start justify-between gap-3">
-            <h2 id="pay-sheet-title" className="text-[1.3rem] font-bold leading-snug text-ivory">
-              {title} 결제하기
-            </h2>
+            <div className="flex min-w-0 items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/wolhwa/v3/listen.webp" alt="" aria-hidden className="h-12 w-12 shrink-0 rounded-full border-2 border-burgundy/40 object-cover object-[50%_18%]" />
+              <div className="min-w-0">
+                <p className="text-[0.72rem] font-semibold text-burgundy">월화가 읽은 내 사연</p>
+                <h2 id="pay-sheet-title" className="text-[1.18rem] font-bold leading-snug text-ivory">
+                  {title}
+                </h2>
+              </div>
+            </div>
             <button type="button" onClick={pressX} aria-label="닫기" className="-mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center text-[1.35rem] text-ivory-dim">
               ✕
             </button>
           </div>
-          {saved > 0 && offerOn && (
-            <p className="mt-2 inline-block rounded-full bg-thread/10 px-3 py-1.5 text-[0.84rem] font-semibold text-ivory">
-              총 <b className="text-thread">{saved.toLocaleString()}원</b> 할인받았어요!
-              <span className="ml-1.5 font-normal tabular-nums text-ivory-dim">· {clock(remain)} 남음</span>
+          {saved > 0 && (
+            <p className="mt-3 inline-block rounded-full bg-thread/10 px-3 py-1.5 text-[0.84rem] font-semibold text-ivory">
+              {current === "combo" ? "묶음 할인으로 " : "첫 구매 할인으로 "}
+              <b className="text-thread">{saved.toLocaleString()}원</b> 아꼈어요
+              {offerOn && current !== "combo" && <span className="ml-1.5 font-normal tabular-nums text-ivory-dim">· {clock(remain)} 남음</span>}
             </p>
           )}
           {highlights.length > 0 && (
@@ -189,7 +199,7 @@ export default function PaySheet({
 
           {options.length > 1 && (
             <>
-              <p className="mt-6 text-[0.86rem] font-semibold text-ivory-dim">패키지 할인 혜택 🎁</p>
+              <p className="mt-5 text-[0.86rem] font-semibold text-ivory-dim">함께 보면 좋은 묶음</p>
               <div className="mt-2.5 flex flex-col gap-2.5">
                 {options.map((o) => {
                   const on = o.key === current;

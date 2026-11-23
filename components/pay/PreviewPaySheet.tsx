@@ -8,13 +8,14 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import PaySheet from "@/components/pay/PaySheet";
+import PaySheet, { type SheetProduct } from "@/components/pay/PaySheet";
 import TossCheckout from "@/components/pay/TossCheckout";
 import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
 import { preconnect } from "react-dom";
 import InAppBrowserNotice from "@/components/pay/InAppBrowserNotice";
 import { logPayEvent } from "@/lib/pay-events";
 import { RITUAL_REGULAR_PRICE_KRW, BUNDLE_REGULAR_PRICE_KRW } from "@/lib/ritual-types";
+import { CHAT_PRICE_KRW, CHAT_BUNDLE_PRICE_KRW } from "@/lib/chat/types";
 
 type Ready = {
   ok: true;
@@ -51,13 +52,43 @@ export default function PreviewPaySheet({
 }) {
   const clientKey = (process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY ?? "").trim();
   const [data, setData] = useState<Ready | null>(null);
-  const [want, setWant] = useState<"message" | "bundle">(product);
+  /* 11/23: 재회 분석 + 카톡 분석 묶음(29,900원) — 결제는 카톡 패키지 주문(WC-)으로 받는다 */
+  const [want, setWant] = useState<SheetProduct>(() => {
+    try {
+      return typeof window !== "undefined" && new URL(window.location.href).searchParams.get("pay") === "combo" ? "combo" : product;
+    } catch {
+      return product;
+    }
+  });
+  const [combo, setCombo] = useState<{ orderNumber: string; amount: number; regular: number; orderName: string } | null>(null);
+  const loadCombo = useCallback(async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch("/api/chat/combo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: orderNumber }),
+      });
+      const j = await r.json().catch(() => null);
+      if (!j?.ok) throw new Error(j?.message ?? "");
+      setCombo({ orderNumber: j.orderNumber, amount: j.amount, regular: j.regular, orderName: j.orderName });
+      logPayEvent(orderNumber, "pay_sheet_ready", "combo");
+    } catch (e) {
+      setErr((e instanceof Error && e.message) || "묶음 결제 정보를 불러오지 못했어요. 다시 시도해 주세요.");
+      logPayEvent(orderNumber, "pay_sheet_ready", "error");
+    } finally {
+      setBusy(false);
+    }
+  }, [orderNumber]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [freeBusy, setFreeBusy] = useState(false);
   const viewed = useRef(false);
 
-  useEffect(() => setWant(product), [product, open]);
+  useEffect(() => {
+    setWant((w) => (w === "combo" ? w : product));
+  }, [product, open]);
 
   /* 11/21: 결제 시트가 늦게 뜬다 → 미리보기를 보는 동안 결제 정보와 토스 결제 모듈을 미리 준비해 둔다.
      (미리 불러온 것은 관리자 퍼널에 기록하지 않음 — 시트를 열 때만 pay_sheet_ready 기록) */
@@ -115,7 +146,10 @@ export default function PreviewPaySheet({
 
   useEffect(() => {
     if (!open) return;
-    if (!data || data.product !== want) void load(want);
+    if (want === "combo") {
+      if (!data) void load("message");
+      if (!combo) void loadCombo();
+    } else if (!data || data.product !== want) void load(want);
     else {
       /* 미리 받아 둔 정보로 바로 그리고, 오래됐으면 조용히 새로 받기 */
       logPayEvent(orderNumber, "pay_sheet_ready", want);
@@ -138,7 +172,7 @@ export default function PreviewPaySheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, want]);
 
-  const select = (k: "message" | "bundle") => {
+  const select = (k: SheetProduct) => {
     if (k === want) return;
     setWant(k);
   };
@@ -163,9 +197,11 @@ export default function PreviewPaySheet({
   const ready = data && data.product !== "book" ? data : null;
   /* 취소 복귀 팝업은 처음 그린 결제 영역에서 한 번만 (상품을 바꿔 다시 그릴 때 또 뜨지 않게) */
   const firstKey = useRef<string | null>(null);
-  const tossKey = ready ? `${ready.product}-${ready.amount}` : "";
-  if (ready && firstKey.current === null) firstKey.current = tossKey;
-  const cur = (ready?.product ?? want) as "message" | "bundle";
+  const isCombo = want === "combo";
+  const tossKey = isCombo ? (combo ? `combo-${combo.orderNumber}` : "") : ready ? `${ready.product}-${ready.amount}` : "";
+  if (tossKey && firstKey.current === null) firstKey.current = tossKey;
+  const cur: SheetProduct = isCombo ? "combo" : ((ready?.product ?? want) as SheetProduct);
+  const messagePrice = ready?.messagePrice ?? 0;
 
   /* 미리보기 화면의 fade-in(transform) 안에서는 fixed 가 화면이 아니라 페이지 맨 아래에 붙는다
      → 시트는 body 바로 아래에 그린다 */
@@ -177,10 +213,10 @@ export default function PreviewPaySheet({
     <div className="paper">
     <PaySheet
       orderNumber={orderNumber}
-      title={ready?.title ?? (want === "bundle" ? "월화 패키지" : "월화의 관계 리추얼")}
+      title={isCombo ? "재회 분석 + 카톡 대화 분석" : ready?.title ?? (want === "bundle" ? "월화 패키지" : "월화의 관계 리추얼")}
       current={cur}
-      amount={ready?.amount ?? 0}
-      regular={ready?.regular ?? 0}
+      amount={isCombo ? combo?.amount ?? 0 : ready?.amount ?? 0}
+      regular={isCombo ? combo?.regular ?? 0 : ready?.regular ?? 0}
       offerEndsAt={ready?.offerEndsAt ?? null}
       options={
         /* 11/20 지시문 v3: 기본 흐름에서 39,900원 패키지 제외 — 패키지로 들어온 손님에게만 선택지 */
@@ -202,7 +238,25 @@ export default function PreviewPaySheet({
                 badge: "추천",
               },
             ]
-          : []
+          : ready && ready.product !== "book"
+            ? [
+                {
+                  key: "message",
+                  name: "재회 분석",
+                  desc: "내 사연으로 쓴 대응 · 24시간·7일·21일 계획",
+                  price: messagePrice,
+                  regular: RITUAL_REGULAR_PRICE_KRW,
+                },
+                {
+                  key: "combo",
+                  name: "재회 분석 + 카톡 대화 분석",
+                  desc: "카톡 대화 파일로 보는 대화 흐름·다음 메시지까지 (대화는 결제 후 올려요)",
+                  price: CHAT_BUNDLE_PRICE_KRW,
+                  regular: messagePrice + CHAT_PRICE_KRW,
+                  badge: "추천",
+                },
+              ]
+            : []
       }
       open={open}
       onOpenChange={(v) => {
@@ -211,14 +265,14 @@ export default function PreviewPaySheet({
       showBar={false}
       onSelect={select}
       busy={busy}
-      highlights={want === "bundle" && cur === "bundle" ? [] : highlights}
+      highlights={want === "bundle" && cur === "bundle" ? [] : isCombo ? [...highlights.slice(0, 2), "카톡 대화 흐름 분석 + 다음에 보낼 메시지 3개"] : highlights}
     >
       {err && (
         <div className="mb-3 rounded-xl bg-thread/10 px-4 py-3 text-center text-[0.84rem] text-thread">
           <p>{err}</p>
           <button
             type="button"
-            onClick={() => void load(want)}
+            onClick={() => void (want === "combo" ? loadCombo() : load(want))}
             disabled={busy}
             className="mt-2 min-h-11 rounded-full border border-thread/50 px-5 text-[0.84rem] font-semibold disabled:opacity-60"
           >
@@ -245,6 +299,25 @@ export default function PreviewPaySheet({
             </button>
           )}
           <InAppBrowserNotice orderNumber={orderNumber} />
+          {isCombo ? (
+            combo ? (
+              <TossCheckout
+                key={tossKey}
+                clientKey={clientKey}
+                orderNumber={combo.orderNumber}
+                amount={combo.amount}
+                orderName={combo.orderName}
+                successPath="/chat/payment/success"
+                failPath="/chat/payment/fail"
+                offerEndsAt={ready.offerEndsAt}
+                regular={combo.regular}
+                startCancelled={startCancelled && tossKey === firstKey.current}
+                hideStickyBar
+              />
+            ) : (
+              <p className="py-4 text-center text-[0.86rem] text-ivory-dim">{busy ? "묶음 결제를 준비하는 중…" : ""}</p>
+            )
+          ) : (
           <TossCheckout
             key={tossKey}
             clientKey={clientKey}
@@ -256,6 +329,7 @@ export default function PreviewPaySheet({
             startCancelled={startCancelled && tossKey === firstKey.current}
             hideStickyBar
           />
+          )}
         </>
       )}
     </PaySheet>
