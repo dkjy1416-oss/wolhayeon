@@ -216,7 +216,7 @@ export default function PreviewPaySheet({
       title={isCombo ? "재회 분석 + 카톡 대화 분석" : ready?.title ?? (want === "bundle" ? "월화 패키지" : "월화의 관계 리추얼")}
       current={cur}
       amount={isCombo ? combo?.amount ?? 0 : ready?.amount ?? 0}
-      regular={isCombo ? combo?.regular ?? 0 : ready?.regular ?? 0}
+      regular={isCombo ? (combo ? messagePrice + CHAT_PRICE_KRW : 0) : ready?.regular ?? 0}
       offerEndsAt={ready?.offerEndsAt ?? null}
       options={
         /* 11/20 지시문 v3: 기본 흐름에서 39,900원 패키지 제외 — 패키지로 들어온 손님에게만 선택지 */
@@ -310,7 +310,7 @@ export default function PreviewPaySheet({
                 successPath="/chat/payment/success"
                 failPath="/chat/payment/fail"
                 offerEndsAt={ready.offerEndsAt}
-                regular={combo.regular}
+                regular={messagePrice + CHAT_PRICE_KRW}
                 startCancelled={startCancelled && tossKey === firstKey.current}
                 hideStickyBar
               />
