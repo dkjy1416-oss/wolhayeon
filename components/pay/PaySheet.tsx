@@ -167,7 +167,7 @@ export default function PaySheet({
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/wolhwa/v3/listen.webp" alt="" aria-hidden className="h-12 w-12 shrink-0 rounded-full border-2 border-burgundy/40 object-cover object-[50%_18%]" />
+              <img src="/wolhwa/v4/avatar.webp" alt="" aria-hidden className="h-12 w-12 shrink-0 rounded-full border-2 border-burgundy/40 object-cover object-[50%_18%]" />
               <div className="min-w-0">
                 <p className="text-[0.72rem] font-semibold text-burgundy">월화가 읽은 내 사연</p>
                 <h2 id="pay-sheet-title" className="text-[1.18rem] font-bold leading-snug text-ivory">
