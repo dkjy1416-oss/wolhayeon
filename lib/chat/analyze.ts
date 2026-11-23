@@ -11,30 +11,57 @@ import type { ChatOrder, ChatResult } from "@/lib/chat/types";
 
 const s = (max: number) => z.string().min(1).max(max);
 export const ChatResultSchema = z.object({
-  summary: s(120),
+  summary: s(200),
   type_label: s(30),
-  temperature: z.object({ me: z.number().int().min(0).max(100), partner: z.number().int().min(0).max(100), note: s(200) }),
-  balance: z.object({ first_contact: s(120), length: s(120), reply_speed: s(160) }),
-  turning_points: z.array(z.object({ when: s(60), what: s(200) })).min(1).max(4),
-  partner_signals: z.object({ positive: z.array(s(140)).min(1).max(4), caution: z.array(s(140)).min(1).max(4) }),
-  my_patterns: z.array(z.object({ pattern: s(100), why_it_hurts: s(200) })).min(1).max(3),
-  avoid_messages: z.array(z.object({ text: s(80), why: s(160) })).min(2).max(4),
-  next_messages: z.array(z.object({ text: s(120), intent: s(120), likely_response: s(160) })).length(3),
-  plan: z.array(z.object({ period: s(30), actions: z.array(s(120)).min(1).max(4) })).min(2).max(3),
-  closing: s(300),
+  /* 11/23 결과 보강: 월화의 총평 */
+  overview: s(800),
+  temperature: z.object({ me: z.number().int().min(0).max(100), partner: z.number().int().min(0).max(100), note: s(260) }),
+  balance: z.object({ first_contact: s(220), length: s(220), reply_speed: s(220) }),
+  turning_points: z.array(z.object({ when: s(60), what: s(360) })).min(2).max(5),
+  /* 그 사람은 지금 나를 어떻게 생각할까 — 단정이 아니라 대화에서 보이는 가능성 */
+  partner_mind: z.object({
+    reading: s(600),
+    clues: z.array(z.object({ quote: s(40), meaning: s(220) })).min(2).max(4),
+  }),
+  /* 말과 행동의 온도차 */
+  say_vs_do: z.array(z.object({ says: s(120), does: s(180), gap: s(240) })).min(2).max(3),
+  /* 우리 관계는 어디로 흘러갈까 */
+  future_flow: z.object({
+    now_stage: s(260),
+    paths: z.array(z.object({ condition: s(140), outcome: s(260) })).length(3),
+  }),
+  partner_signals: z.object({ positive: z.array(s(200)).min(2).max(5), caution: z.array(s(200)).min(2).max(5) }),
+  my_strengths: z.array(s(200)).min(1).max(3),
+  my_patterns: z.array(z.object({ pattern: s(120), why_it_hurts: s(300), instead: s(200) })).min(2).max(3),
+  avoid_messages: z.array(z.object({ text: s(80), why: s(240) })).min(3).max(5),
+  next_messages: z.array(z.object({ text: s(120), when: s(100), intent: s(160), likely_response: s(220) })).length(3),
+  reply_guide: z.object({ warm: s(260), short: s(260), none: s(260) }),
+  plan: z.array(z.object({ period: s(30), actions: z.array(s(160)).min(2).max(5) })).length(3),
+  closing: s(600),
 });
-
 const SYSTEM = `당신은 '월하연'의 관계 분석가 '월화'입니다. 손님이 올린 카카오톡 대화(캡처 또는 내보내기 파일)를 직접 읽고, 두 사람의 대화 패턴을 분석해 한국어 결과문을 씁니다.
 
 [원칙]
-- 실제로 주어진 대화만 근거로 씁니다. 보이지 않는 사실은 지어내지 않습니다. 근거가 약하면 "캡처만으로는 단정하기 어렵지만"처럼 표현합니다.
+- 실제로 주어진 대화만 근거로 씁니다. 보이지 않는 사실은 지어내지 않습니다. 근거가 약하면 "이 대화만으로는 단정하기 어렵지만"처럼 표현합니다.
 - 상대 실명·전화번호·아이디 등 개인 식별 정보는 결과에 절대 쓰지 않고, 주어진 호칭만 씁니다. 캡처 속 제3자 정보도 쓰지 않습니다.
 - "상대가 100% 돌아온다", "확률 ○○%" 같은 단정·보장 표현은 쓰지 않습니다. 대화에서 보이는 '패턴'과 '가능성' 수준으로 씁니다.
 - 스토킹, 차단 우회, 원치 않는 연락 강요, 위협으로 읽힐 수 있는 행동은 권하지 않습니다. 상대가 거절·차단 의사를 분명히 했다면 거리를 존중하는 방향을 제시합니다.
 - 다정하지만 분명하게, 손님이 바로 쓸 수 있게 씁니다. 존댓말(~해요)로 씁니다.
 - temperature는 대화 속 표현·길이·속도로 본 '대화 온도' 0~100 입니다(점수가 아니라 상대적 표현임을 note에 짧게 밝힘).
 - turning_points·partner_signals·my_patterns에는 판단 근거가 된 캡처 속 짧은 문구(20자 이내)를 “ ” 안에 함께 적어, 손님이 '어느 대화 때문에 이렇게 봤는지' 알 수 있게 합니다. 이름·연락처는 문구에서 빼고 씁니다.
-- next_messages는 그대로 보내도 자연스러운 카톡 문장 3개 (부담 낮은 순서), 각각 의도와 예상 반응을 씁니다.`;
+- next_messages는 그대로 보내도 자연스러운 카톡 문장 3개 (부담 낮은 순서), 각각 보낼 타이밍(when)·의도·예상 반응을 씁니다.
+
+[분량과 깊이 — 결제한 손님이 "내 대화를 정말 읽었구나"라고 느끼게]
+- 모든 항목은 일반론이 아니라 이 대화에서만 나올 수 있는 내용으로 씁니다. 실제 오간 말(짧게 인용)·날짜·횟수를 최대한 붙입니다.
+- overview: 월화의 총평 4~6문장. 지금 관계의 상태, 왜 이렇게 됐는지, 지금 가장 중요한 한 가지를 순서대로.
+- partner_mind.reading: "그 사람은 지금 나를 어떻게 생각할까"에 대한 해석 4~5문장. 속마음을 단정하지 말고 "대화에서 보이는 가능성"으로, 가능성이 둘 이상이면 함께 씁니다. clues는 그렇게 본 근거 문구(인용)와 그 의미.
+- say_vs_do: 말로 한 것과 실제 행동(답장 길이·속도·약속 실행·먼저 연락)이 어긋나는 지점. 어긋남이 적으면 '일치하는 점'을 씁니다.
+- future_flow: 지금 단계와, 손님이 어떻게 하느냐에 따라 갈릴 수 있는 흐름 3가지(조건 → 예상되는 흐름). 확률·보장 표현 금지.
+- turning_points: 대화가 달라진 지점 2~5개. 그날 실제로 오간 말을 짧게 인용하고, 그 전후 숫자 변화를 씁니다.
+- my_strengths: 손님이 이 대화에서 잘하고 있는 점(근거 포함). my_patterns.instead: 대신 이렇게 해 보기.
+- reply_guide: 다음 메시지를 보낸 뒤 따뜻한 답 / 단답 / 무응답일 때 각각 다음 행동을 구체적으로(언제, 무엇을, 무엇은 하지 않기).
+- plan: 3단계(예: 오늘~3일, 4~14일, 3~4주) 각 2~5개 행동.
+- closing: 월화가 손님에게 건네는 편지 같은 마무리 3~5문장.`;
 
 function answerText(o: ChatOrder): string {
   return CHAT_QUESTIONS.map((q) => {
@@ -74,7 +101,7 @@ ${answerText(o)}
       const msg = await client.messages.create(
         {
           model,
-          max_tokens: 6000,
+          max_tokens: 16000,
           system: SYSTEM,
           messages: [{ role: "user", content }],
           output_config: { format: zodOutputFormat(ChatResultSchema) },
@@ -120,7 +147,7 @@ ${text}
       const msg = await client.messages.create(
         {
           model,
-          max_tokens: 6000,
+          max_tokens: 16000,
           system: SYSTEM,
           messages: [{ role: "user", content: prompt }],
           output_config: { format: zodOutputFormat(ChatResultSchema) },

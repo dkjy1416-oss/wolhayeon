@@ -38,11 +38,18 @@ export interface ChatResult {
   balance: { first_contact: string; length: string; reply_speed: string };
   turning_points: { when: string; what: string }[]; // 식은 지점·바뀐 지점
   partner_signals: { positive: string[]; caution: string[] };
-  my_patterns: { pattern: string; why_it_hurts: string }[];
+  my_patterns: { pattern: string; why_it_hurts: string; instead?: string }[];
   avoid_messages: { text: string; why: string }[];
-  next_messages: { text: string; intent: string; likely_response: string }[];
+  next_messages: { text: string; intent: string; likely_response: string; when?: string }[];
   plan: { period: string; actions: string[] }[];
   closing: string;
+  /* 11/23 결과 보강 — 이전 결과에는 없을 수 있음 */
+  overview?: string;
+  partner_mind?: { reading: string; clues: { quote: string; meaning: string }[] };
+  say_vs_do?: { says: string; does: string; gap: string }[];
+  future_flow?: { now_stage: string; paths: { condition: string; outcome: string }[] };
+  my_strengths?: string[];
+  reply_guide?: { warm: string; short: string; none: string };
 }
 
 export interface ChatOrder {
