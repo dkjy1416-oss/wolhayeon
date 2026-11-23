@@ -97,7 +97,12 @@ export async function processChatOrder(orderNumber: string): Promise<ChatProcess
   const o = await getChatOrder(orderNumber);
   if (!o || o.pay_status !== "paid") return { status: "not_paid" };
   const path = () => `/chat/result/${orderNumber}?t=${chatToken("result", orderNumber)}`;
-  if (o.gen_status === "done" && o.result) return { status: "ready", resultPath: path() };
+  /* 11/23: 결과가 이미 있으면 상태와 무관하게 완료 (WC-20261123-6RQAS: 결과·메일까지 나간 뒤
+     겹친 두 번째 실행이 원문이 지워진 상태에서 실패해 'failed'로 덮어썼다) */
+  if (o.result) {
+    if (o.gen_status !== "done") await updateChatOrder(orderNumber, (cur) => (cur.result ? { ...cur, gen_status: "done" } : null));
+    return { status: "ready", resultPath: path() };
+  }
   if (
     o.gen_status === "generating" &&
     o.gen_started_at &&
@@ -106,7 +111,11 @@ export async function processChatOrder(orderNumber: string): Promise<ChatProcess
     return { status: "processing" };
 
   const claimed = await updateChatOrder(orderNumber, (cur) =>
-    cur.gen_status === "done" ? null : { ...cur, gen_status: "generating", gen_started_at: new Date().toISOString() }
+    cur.gen_status === "done" ||
+    cur.result ||
+    (cur.gen_status === "generating" && cur.gen_started_at && Date.now() - new Date(cur.gen_started_at).getTime() < 4 * 60 * 1000)
+      ? null
+      : { ...cur, gen_status: "generating", gen_started_at: new Date().toISOString() }
   );
   if (!claimed || claimed.gen_status !== "generating") return { status: "processing" };
 
@@ -115,9 +124,13 @@ export async function processChatOrder(orderNumber: string): Promise<ChatProcess
   const images = (await Promise.all(paths.slice(0, 10).map(downloadChatImage))).filter(
     (x): x is { data: string; type: string } => !!x
   );
-  const result = text ? await analyzeChatText(claimed, text) : await analyzeChat(claimed, images);
+  /* 11/23 지시문 P0-3: 실패하면 자동으로 2번 더 시도 (원문은 성공한 뒤에만 지움) */
+  let result = null as Awaited<ReturnType<typeof analyzeChat>>;
+  for (let i = 0; i < 3 && !result && (text || images.length); i++) {
+    result = text ? await analyzeChatText(claimed, text) : await analyzeChat(claimed, images);
+  }
   if (!result) {
-    await updateChatOrder(orderNumber, (cur) => ({ ...cur, gen_status: "failed" }));
+    await updateChatOrder(orderNumber, (cur) => (cur.result || cur.gen_status === "done" ? null : { ...cur, gen_status: "failed" }));
     await sendOpsAlert("generation_failed", {
       orderNumber,
       code: images.length || text ? "chat_ai_failed" : "chat_no_images",
