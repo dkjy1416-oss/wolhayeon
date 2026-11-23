@@ -20,7 +20,15 @@ const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 1000) / 1
 /** 미리보기 열람 기록이 없던 기간에는 '미리보기 생성'으로 대신 센다 */
 const viewed = (f: Funnel) => Math.max(f.previewView, 0) || f.preview;
 
-export default function FunnelBoard({ stats }: { stats: MarketingStats }) {
+export type ChatDay = { paid: number; revenue: number };
+export default function FunnelBoard({
+  stats,
+  chat,
+}: {
+  stats: MarketingStats;
+  /** 11/23: 카톡 분석 결제(별도 저장소) — 결제·매출 칸에 합산하고 상품별로 나눠 보여줌 */
+  chat?: { today: ChatDay; yesterday: ChatDay };
+}) {
   const days = stats.byDay; // 최신순
   const today = days[0]?.f ?? sum([]);
   const yesterday = days[1]?.f ?? sum([]);
@@ -35,8 +43,18 @@ export default function FunnelBoard({ stats }: { stats: MarketingStats }) {
     ["무료 신청", `${today.applied}명`, `어제 ${yesterday.applied}명`],
     ["미리보기", `${viewed(today)}명`, `어제 ${viewed(yesterday)}명`],
     ["결제 클릭", `${today.payClick}명`, `어제 ${yesterday.payClick}명`],
-    ["결제 완료", `${today.paid}건`, `어제 ${yesterday.paid}건`, today.paid > 0],
-    ["오늘 매출", won(today.revenue), `어제 ${won(yesterday.revenue)}`, today.revenue > 0],
+    [
+      "결제 완료",
+      `${today.paid + (chat?.today.paid ?? 0)}건`,
+      `재회 ${today.paid} · 카톡 ${chat?.today.paid ?? 0} · 어제 ${yesterday.paid + (chat?.yesterday.paid ?? 0)}건`,
+      today.paid + (chat?.today.paid ?? 0) > 0,
+    ],
+    [
+      "오늘 매출",
+      won(today.revenue + (chat?.today.revenue ?? 0)),
+      `재회 ${won(today.revenue)} · 카톡 ${won(chat?.today.revenue ?? 0)} · 어제 ${won(yesterday.revenue + (chat?.yesterday.revenue ?? 0))}`,
+      today.revenue + (chat?.today.revenue ?? 0) > 0,
+    ],
   ];
 
   const steps: Array<[string, number]> = [
