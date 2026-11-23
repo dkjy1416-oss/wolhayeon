@@ -375,7 +375,8 @@ function TossWindowCheckout({
 
   return (
     <div>
-      <div className="flex flex-col gap-2.5">
+      {/* 11/23 대표 지시: 결제 시트에서는 묘수사주처럼 결제 버튼 4개(2×2)만 — 결제수단 고르기 목록은 숨김 */}
+      <div className={footerEl ? "hidden" : "flex flex-col gap-2.5"}>
         <button
           type="button"
           onClick={() => setMethod("CARD")}
@@ -411,42 +412,38 @@ function TossWindowCheckout({
       {(() => {
         const payBlock = (
           <>
-            {footerEl && (
-              <div className="mb-2 grid grid-cols-3 gap-1.5">
+            {footerEl ? (
+              <div ref={payBtnRef as unknown as React.Ref<HTMLDivElement>} className="grid grid-cols-2 gap-1.5">
                 {(
                   [
-                    ["KAKAOPAY", "카카오페이", "bg-[#fee500] text-[#191919]"],
-                    ["NAVERPAY", "네이버페이", "bg-[#03c75a] text-white"],
-                    ["TOSSPAY", "토스페이", "bg-[#0064ff] text-white"],
+                    ["KAKAOPAY", "카카오페이 결제", "bg-[#fee500] text-[#191919]"],
+                    ["NAVERPAY", "네이버페이 결제", "bg-[#03c75a] text-white"],
+                    ["TOSSPAY", "토스페이 결제", "bg-[#0064ff] text-white"],
+                    ["NORMAL", "일반결제", "bg-burgundy text-white"],
                   ] as const
                 ).map(([k, label, cls]) => (
                   <button
                     key={k}
                     type="button"
-                    onClick={() => void handlePay(k)}
+                    onClick={() => void handlePay(k === "NORMAL" ? undefined : k)}
                     disabled={!ready || paying}
-                    className={`h-12 rounded-xl text-[0.86rem] font-bold transition-opacity active:opacity-85 disabled:opacity-50 ${cls}`}
+                    className={`h-12 rounded-xl text-[0.92rem] font-extrabold transition-opacity active:opacity-85 disabled:opacity-50 ${cls}`}
                   >
-                    {label}
+                    {paying ? "여는 중…" : label}
                   </button>
                 ))}
               </div>
+            ) : (
+              <button
+                ref={payBtnRef}
+                type="button"
+                onClick={() => void handlePay()}
+                disabled={!ready || paying}
+                className="sticky bottom-3 z-10 mt-6 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-opacity active:opacity-85 disabled:opacity-50"
+              >
+                {paying ? "결제창을 여는 중…" : ready ? `${amount.toLocaleString()}원 결제하기` : "결제 화면 불러오는 중…"}
+              </button>
             )}
-            <button
-              ref={payBtnRef}
-              type="button"
-              onClick={() => void handlePay()}
-              disabled={!ready || paying}
-              className={`${footerEl ? "" : "sticky bottom-3 mt-6"} z-10 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-opacity active:opacity-85 disabled:opacity-50`}
-            >
-              {paying
-                ? "결제창을 여는 중…"
-                : ready
-                  ? footerEl
-                    ? `${amount.toLocaleString()}원 · ${method === "CARD" ? "카드·다른 간편결제" : "계좌이체"}로 결제`
-                    : `${amount.toLocaleString()}원 결제하기`
-                  : "결제 화면 불러오는 중…"}
-            </button>
             {errorMsg && footerEl && (
               <div className="mt-2 text-center text-[0.78rem] leading-[1.6] text-thread">
                 <p>{errorMsg}</p>
@@ -459,12 +456,12 @@ function TossWindowCheckout({
             )}
             {footerEl ? (
               <p className="mt-2 text-center text-[0.66rem] leading-[1.7] text-ivory-dim/75">
-                결과를 열기 전이면 7일 안 전액 환불 · 열람 후에는 청약철회가 제한될 수 있어요 ·{" "}
+                결제 정보를 확인했으며 결제 진행에 동의합니다 · 결과를 열기 전이면 7일 안 전액 환불 ·{" "}
                 <Link href="/refund" target="_blank" className="underline underline-offset-2">
                   환불정책
                 </Link>
                 <br />
-                결제하기를 누르면 토스페이먼츠 결제창에서 약관 동의 후 결제가 진행됩니다.
+                일반결제: 카드·삼성페이 등 · 1회 결제, 정기결제 없음
               </p>
             ) : (
               <p className="mt-3 text-center text-[0.68rem] leading-[1.8] text-ivory-dim/60">
