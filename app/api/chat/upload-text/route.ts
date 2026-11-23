@@ -15,7 +15,9 @@ export async function POST(request: Request) {
   const text = typeof b?.text === "string" ? b.text.slice(0, 120_000) : "";
   if (text.split("\n").length < 5) return NextResponse.json({ ok: false, message: "대화가 너무 짧아요." }, { status: 400 });
   const o = await getChatOrder(order);
-  if (!o || o.pay_status !== "pending") return NextResponse.json({ ok: false }, { status: 409 });
+  /* 11/23: 묶음 구매자는 결제 뒤에 올림 (결과가 나오기 전까지) */
+  const comboOk = !!o && o.pay_status === "paid" && !!o.combo_ritual_order && !o.result;
+  if (!o || (o.pay_status !== "pending" && !comboOk)) return NextResponse.json({ ok: false }, { status: 409 });
   if (!(await saveChatText(order, text))) return NextResponse.json({ ok: false, message: "저장에 실패했어요." }, { status: 500 });
   await updateChatOrder(order, (cur) => ({ ...cur, source: "file", image_count: 0 }));
   return NextResponse.json({ ok: true, lines: text.split("\n").length });
