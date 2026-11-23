@@ -33,7 +33,7 @@ export default function ChatResultView({
           <div className="mt-3 rounded-2xl border border-gold/30 bg-gradient-to-b from-[#1d1512] to-ink-soft px-5 py-5">
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/wolhwa/v3/listen.webp" alt="" className="h-11 w-11 shrink-0 rounded-full object-cover ring-1 ring-gold/40" />
+              <img src="/wolhwa/v4/avatar.webp" alt="" className="h-11 w-11 shrink-0 rounded-full object-cover ring-1 ring-gold/40" />
               <p className="text-[0.8rem] text-gold">월화가 대화를 다 읽고</p>
             </div>
             <p className="mt-3 whitespace-pre-line text-[0.95rem] leading-[1.95] text-ivory">{r.overview}</p>
