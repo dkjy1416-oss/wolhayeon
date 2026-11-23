@@ -41,6 +41,7 @@ export default function PreviewPaySheet({
   startCancelled = false,
   onClose,
   highlights = [],
+  sheetTitle,
 }: {
   orderNumber: string;
   open: boolean;
@@ -49,6 +50,8 @@ export default function PreviewPaySheet({
   onClose: () => void;
   /** 11/20: 유형별 핵심 결과 3개 */
   highlights?: string[];
+  /** 11/23 지시문 P1: '리추얼' 대신 받는 것을 제목으로 (재회 분석 단독일 때만) */
+  sheetTitle?: string;
 }) {
   const clientKey = (process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY ?? "").trim();
   const [data, setData] = useState<Ready | null>(null);
@@ -213,7 +216,7 @@ export default function PreviewPaySheet({
     <div className="paper">
     <PaySheet
       orderNumber={orderNumber}
-      title={isCombo ? "재회 분석 + 카톡 대화 분석" : ready?.title ?? (want === "bundle" ? "월화 패키지" : "월화의 관계 리추얼")}
+      title={isCombo ? "재회 분석 + 카톡 대화 분석" : want === "message" && sheetTitle ? sheetTitle : ready?.title ?? (want === "bundle" ? "월화 패키지" : "월화의 관계 리추얼")}
       current={cur}
       amount={isCombo ? combo?.amount ?? 0 : ready?.amount ?? 0}
       regular={isCombo ? (combo ? messagePrice + CHAT_PRICE_KRW : 0) : ready?.regular ?? 0}
