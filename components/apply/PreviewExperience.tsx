@@ -695,11 +695,12 @@ export default function PreviewExperience({
       const pp = payParam === "bundle" || u.searchParams.get("product") === "bundle" ? "bundle" : "message";
       if (u.searchParams.get("cancelled") === "1") {
         setPay({ open: true, product: pp, cancelled: true });
-      } else if (payParam === "message" || payParam === "bundle") {
+      } else if (payParam === "message" || payParam === "bundle" || payParam === "combo") {
         /* 홈 '이어보기'·메일 링크 등으로 결제하러 온 경우 — 바로 결제 시트 */
         setPay({ open: true, product: pp, cancelled: false });
       }
-      if (payParam) {
+      /* combo 는 결제 시트가 주소에서 직접 읽으므로 남겨 둔다 */
+      if (payParam && payParam !== "combo") {
         u.searchParams.delete("pay");
         window.history.replaceState(window.history.state, "", u.toString());
       }
