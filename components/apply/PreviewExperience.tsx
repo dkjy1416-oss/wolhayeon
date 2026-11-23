@@ -1245,10 +1245,12 @@ export default function PreviewExperience({
                         who: "raw" as const,
                         node: (
                           <div className="mt-1">
-                            <p className="mb-2 text-center text-[0.82rem] text-ivory-dim">
-                              {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
-                              <b className="text-burgundy">{priceText}</b> · 1회 결제 · {DELIVERY_TIME_TEXT} 도착
-                            </p>
+                            {!want && (
+                              <p className="mb-2 text-center text-[0.82rem] text-ivory-dim">
+                                {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
+                                <b className="text-burgundy">{priceText}</b> · 1회 결제 · {DELIVERY_TIME_TEXT} 도착
+                              </p>
+                            )}
                             {ctaButton("talk", mainLabel)}
                           </div>
                         ),
@@ -1395,7 +1397,7 @@ export default function PreviewExperience({
           {/* ---------- 11/23 재구성 ⑤ v2: 편지 장면 화면 가득 + 월화가 편지 첫 줄을 읽어 줌 ---------- */}
           <section className="mt-10" aria-label="결제 후 받는 편지">
             <TalkMedia image="/wolhwa/v4/letter.webp" alt="촛불 아래 편지를 읽는 월화" pos="object-[50%_65%]">
-              <div className="absolute inset-x-6 top-[14%] mx-auto max-w-[600px]">
+              <div className="absolute inset-x-6 top-[22%] mx-auto max-w-[600px]">
                 <p className="text-[0.72rem] tracking-[0.2em] text-[#d8b878] [text-shadow:0_1px_8px_rgba(0,0,0,0.7)]">결제하면 바로</p>
                 <p className="font-display mt-1 text-[1.15rem] font-bold leading-snug text-[#f3ece2] [text-shadow:0_2px_12px_rgba(0,0,0,0.8)]">
                   월화가 {name ? `${name}님의 ` : ""}사연으로

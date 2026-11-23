@@ -107,7 +107,7 @@ function Bubble({ line, i, avatar, showAv }: { line: Line; i: number; avatar: st
         <img src={avatar} alt="" aria-hidden className={`h-8 w-8 shrink-0 rounded-full object-cover object-[50%_18%] ring-2 ring-[#d9c9a8] ${showAv ? "" : "invisible"}`} />
       )}
       <div className={`min-w-0 max-w-[84%] ${me ? "text-right" : ""}`}>
-        {line.tag && <p className={`mb-1 text-[0.7rem] font-semibold tracking-wide ${me ? "text-[#69263b]" : "text-[#8a6a33]"}`}>{line.tag}</p>}
+        {line.tag && <p className={`mb-1 text-[0.7rem] font-semibold tracking-wide ${me ? "inline-block rounded-full bg-white/90 px-2 py-0.5 text-[#69263b]" : "text-[#8a6a33]"}`}>{line.tag}</p>}
         <div
           className={`inline-block rounded-2xl px-4 py-2.5 text-left leading-[1.7] shadow-[0_4px_16px_rgba(60,30,40,0.08)] [word-break:keep-all] transition-all duration-300 ${
             me
