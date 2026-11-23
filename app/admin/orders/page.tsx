@@ -11,9 +11,13 @@ const shownAmount = (r: { payment_status: string | null; product?: string | null
     : r.payment_amount;
 import { isOperatorEmail, won } from "@/lib/admin-util";
 import CsvButton from "@/components/admin/CsvButton";
+import { listChatOrders } from "@/lib/chat/store";
 import { getOrderAttributions, touchLabel, type OrderAttribution } from "@/lib/order-attribution";
 
-const PRODUCT_LABEL: Record<string, string> = { message: "메시지", book: "책", bundle: "패키지" };
+/* 11/23: 상품 이름을 판매 상품 기준으로 (메시지 → 재회 분석) */
+const PRODUCT_LABEL: Record<string, string> = { message: "재회 분석", book: "재회의 책", bundle: "재회 분석+책" };
+const rowLabel = (r: { product: string | null; payment_method?: string | null }) =>
+  r.payment_method === "chat_bundle" ? "재회 분석 (카톡 패키지)" : PRODUCT_LABEL[r.product ?? "message"] ?? r.product ?? "";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +72,7 @@ interface Row {
   product: string | null;
   book_status: string | null;
   paid_at: string | null;
+  payment_method?: string | null;
 }
 
 /* 목록 필터 — 대시보드 "지금 처리할 일"에서도 이 값으로 연결 */
@@ -105,7 +110,7 @@ export default async function AdminOrdersPage({
     let query = supabase
       .from("ritual_orders")
       .select(
-        "id, order_number, applicant_name, email, payment_amount, payment_status, generation_status, review_status, delivery_status, created_at, product, book_status, paid_at, remind_sent_at"
+        "id, order_number, applicant_name, email, payment_amount, payment_status, generation_status, review_status, delivery_status, created_at, product, book_status, paid_at, remind_sent_at, payment_method"
       );
     if (q) {
       query = query.or(
@@ -173,6 +178,13 @@ export default async function AdminOrdersPage({
   } catch {
     loadError = true;
   }
+  /* 11/23 운영자 요청: 카톡 분석 결제(WC- 주문, 별도 저장소)도 주문 화면에서 보이게 */
+  const chatList =
+    f === "all" || f === "paid" || f === "refunded"
+      ? (await listChatOrders(300).catch(() => []))
+          .filter((c) => (f === "refunded" ? c.pay_status === "refunded" : c.pay_status === "paid"))
+          .filter((c) => !q || [c.name, c.email, c.order_number].some((v) => (v ?? "").toLowerCase().includes(q.toLowerCase())))
+      : [];
 
   return (
     <main className="mx-auto min-h-[100svh] w-full max-w-5xl px-5 pb-20 pt-8">
@@ -234,7 +246,7 @@ export default async function AdminOrdersPage({
               r.paid_at ? new Date(r.paid_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) : "",
               r.applicant_name,
               r.email,
-              PRODUCT_LABEL[r.product ?? "message"] ?? r.product,
+              rowLabel(r),
               shownAmount(r),
               r.payment_status,
               r.generation_status,
@@ -246,6 +258,32 @@ export default async function AdminOrdersPage({
             ])}
           />
         </div>
+      )}
+
+      {chatList.length > 0 && (
+        <section className="mt-4 rounded-xl border border-[#fee500]/50 bg-ink-soft px-4 py-3">
+          <div className="flex items-baseline justify-between">
+            <p className="text-[0.85rem] font-semibold text-ivory">
+              카톡 분석 {f === "refunded" ? "환불" : "결제"} {chatList.length}건 · {won(chatList.reduce((a, c) => a + c.amount, 0))}
+            </p>
+            <Link href="/admin/chat" className="text-[0.74rem] text-gold underline">카톡 분석 관리 →</Link>
+          </div>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {chatList.slice(0, 30).map((c) => (
+              <li key={c.order_number} className="flex flex-wrap items-center gap-2 text-[0.78rem] text-ivory-dim">
+                <span className="rounded-full bg-[#fee500] px-2 py-0.5 text-[0.64rem] font-semibold text-[#3c1e1e]">
+                  {c.product === "chat_bundle" ? "카톡+재회 패키지" : "카톡 분석"}
+                </span>
+                <span className="text-ivory">{c.name || "(이름 없음)"}</span>
+                <span className="font-mono text-[0.7rem]">{c.order_number}</span>
+                {isOperatorEmail(c.email) && <span className="rounded-full border border-ivory/20 px-2 text-[0.62rem]">테스트</span>}
+                <span className="ml-auto">
+                  {won(c.amount)} · {c.paid_at ? new Date(c.paid_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "-"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {loadError ? (
@@ -302,10 +340,15 @@ export default async function AdminOrdersPage({
                       사과 쿠폰
                     </span>
                   )}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[0.62rem] font-semibold ${r.payment_method === "chat_bundle" ? "bg-[#fee500] text-[#3c1e1e]" : "border border-gold/40 bg-gold/10 text-gold"}`}
+                  >
+                    {rowLabel(r)}
+                  </span>
                   {r.product && r.product !== "message" && (
                     <span className="rounded-full border border-gold/40 bg-gold/10 px-2 py-0.5 text-[0.62rem] text-gold">
-                      {PRODUCT_LABEL[r.product] ?? r.product}
-                      {r.payment_status === "paid" && ` · 책 ${r.book_status === "ready" ? "완성" : r.book_status === "failed" ? "실패" : "제작 중"}`}
+                      책
+                      {r.payment_status === "paid" && ` ${r.book_status === "ready" ? "완성" : r.book_status === "failed" ? "실패" : "제작 중"}`}
                     </span>
                   )}
                   <Badge kind="pay" value={r.payment_status} />
