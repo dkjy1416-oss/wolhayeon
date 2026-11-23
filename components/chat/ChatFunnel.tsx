@@ -16,6 +16,7 @@ import { transcript } from "@/lib/chat/kakao-parse";
 import SplitWords from "@/components/fx/SplitWords";
 import InView from "@/components/fx/InView";
 import ShareTypeButton from "@/components/chat/ShareTypeButton";
+import ChatProcessing from "@/components/chat/ChatProcessing";
 
 type Step = "intro" | "file" | "quiz" | "free" | "form";
 
@@ -64,10 +65,22 @@ export default function ChatFunnel() {
   const [marketingOk, setMarketingOk] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  /* 11/23: 재회 분석과 묶음으로 이미 결제한 손님 (/chat?combo=WC-…&t=…) — 대화만 올리면 바로 리포트 */
+  const [combo, setCombo] = useState<{ order: string; t: string } | null>(null);
+  const [comboRun, setComboRun] = useState(false);
 
   /* 공유 링크(/chat/type/…)에서 "나도 해 보기"로 들어오면 바로 무료 질문부터 */
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("start") === "quiz") {
+    const sp = new URLSearchParams(window.location.search);
+    const co = sp.get("combo");
+    const ct = sp.get("t");
+    if (co && ct && /^WC-\d{8}-[A-Z0-9]{5}$/.test(co)) {
+      setCombo({ order: co, t: ct });
+      setMode("file");
+      setStep("file");
+      return;
+    }
+    if (sp.get("start") === "quiz") {
       setMode("quiz");
       setStep("quiz");
       sendSiteEvent("chat_start", { step: "quiz" });
@@ -130,9 +143,52 @@ export default function ChatFunnel() {
     }
   };
 
+  const comboSubmit = async () => {
+    if (!combo || !fileData) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      const text = transcript(fileData.msgs, fileData.meName, fileData.partnerName, partnerLabel.trim() || "그 사람");
+      const u = await fetch("/api/chat/upload-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: combo.order, t: combo.t, text }),
+      });
+      const uj = (await u.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+      if (!uj.ok) throw new Error(uj.message ?? "대화 저장에 실패했어요. 다시 시도해 주세요.");
+      setComboRun(true);
+      window.scrollTo({ top: 0 });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "잠시 후 다시 시도해 주세요.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const card = "fx-glass rounded-2xl px-5 py-5";
   const btn =
     "fx-sheen inline-flex min-h-14 w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-burgundy to-burgundy-deep px-5 text-[0.97rem] font-semibold text-ivory active:opacity-85 disabled:opacity-50";
+
+  if (combo && comboRun) return <ChatProcessing orderNumber={combo.order} token={combo.t} />;
+
+  if (combo && step === "free" && fileData)
+    return (
+      <div className="mx-auto max-w-[560px] px-5 pb-28 pt-24">
+        <StatsPreview s={fileData.stats} partnerLabel={partnerLabel.trim() || "그 사람"} />
+        <div className={`${card} mt-6 flex flex-col gap-3`}>
+          <p className="text-[0.9rem] font-semibold text-ivory">결제가 끝난 카톡 대화 분석이에요</p>
+          <p className="text-[0.82rem] leading-[1.7] text-ivory-dim">이 대화로 해석 리포트와 다음에 보낼 메시지를 만들어 드려요. 보통 1~2분 걸려요.</p>
+          <label className="text-[0.82rem] text-ivory-dim">
+            상대를 부를 호칭 (실명 대신, 예: 그 사람 · 그 애 · J)
+            <input value={partnerLabel} onChange={(e) => setPartnerLabel(e.target.value)} maxLength={12} placeholder="그 사람" className="mt-1 h-12 w-full rounded-xl border border-gold-dim bg-ink px-3 text-ivory" />
+          </label>
+          {err && <p className="text-[0.84rem] text-thread">{err}</p>}
+          <button type="button" className={btn} onClick={comboSubmit} disabled={busy}>
+            {busy ? "올리는 중…" : "이 대화로 리포트 만들기"}
+          </button>
+        </div>
+      </div>
+    );
 
   if (step === "intro")
     return (
