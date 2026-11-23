@@ -431,7 +431,9 @@ export default function ImmersiveApplyExperience({
       const rawStep = sessionStorage.getItem(STEP_KEY);
       /* 탭이 닫혔다 다시 온 경우 — 기기 임시 사본의 마지막 질문부터 */
       const saved = rawStep !== null ? Number(rawStep) : loadStepBackup() ?? 0;
-      if (Number.isInteger(saved) && saved > 0) {
+      /* 11/23: 신청을 마치면 이야기는 비워지는데 질문 번호만 남아, 다시 신청할 때 빈 채로 마지막 질문에 서는 문제 — 이야기가 없으면 처음부터 */
+      const hasStory = !!(a.applicant_name ?? "").trim();
+      if (Number.isInteger(saved) && saved > 0 && hasStory) {
         setStep(saved);
         setPhase("questions");
       }
