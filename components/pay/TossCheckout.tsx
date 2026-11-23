@@ -285,14 +285,15 @@ function TossWindowCheckout({
   const markStage = useLeaveLog(orderNumber);
   const payTimeout = usePayTimeout(orderNumber);
 
-  const handlePay = async () => {
+  /* 11/23 대표 결정: 카카오페이·네이버페이·토스페이 버튼을 시트에 바로 — 누르면 그 간편결제로 바로 연결 */
+  const handlePay = async (easyPay?: "KAKAOPAY" | "NAVERPAY" | "TOSSPAY") => {
     const payment = paymentRef.current;
     if (!payment || paying) return;
     setPaying(true);
     setErrorMsg(null);
     markStage("clicked");
     payTimeout.start();
-    logPayEvent(orderNumber, "pay_request", method);
+    logPayEvent(orderNumber, "pay_request", easyPay ? `easy_${easyPay}` : method);
     const common = {
       amount: { currency: "KRW" as const, value: amount },
       orderId: orderNumber,
@@ -301,7 +302,13 @@ function TossWindowCheckout({
       failUrl: `${window.location.origin}${failPath}`,
     };
     try {
-      if (method === "CARD") {
+      if (easyPay) {
+        await payment.requestPayment({
+          ...common,
+          method: "CARD",
+          card: { useEscrow: false, flowMode: "DIRECT", easyPay },
+        });
+      } else if (method === "CARD") {
         await payment.requestPayment({
           ...common,
           method: "CARD",
@@ -404,17 +411,40 @@ function TossWindowCheckout({
       {(() => {
         const payBlock = (
           <>
+            {footerEl && (
+              <div className="mb-2 grid grid-cols-3 gap-1.5">
+                {(
+                  [
+                    ["KAKAOPAY", "카카오페이", "bg-[#fee500] text-[#191919]"],
+                    ["NAVERPAY", "네이버페이", "bg-[#03c75a] text-white"],
+                    ["TOSSPAY", "토스페이", "bg-[#0064ff] text-white"],
+                  ] as const
+                ).map(([k, label, cls]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => void handlePay(k)}
+                    disabled={!ready || paying}
+                    className={`h-12 rounded-xl text-[0.86rem] font-bold transition-opacity active:opacity-85 disabled:opacity-50 ${cls}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               ref={payBtnRef}
               type="button"
-              onClick={handlePay}
+              onClick={() => void handlePay()}
               disabled={!ready || paying}
               className={`${footerEl ? "" : "sticky bottom-3 mt-6"} z-10 inline-flex h-14 w-full items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.95rem] font-medium text-ivory shadow-[0_8px_24px_rgba(0,0,0,0.35)] transition-opacity active:opacity-85 disabled:opacity-50`}
             >
               {paying
                 ? "결제창을 여는 중…"
                 : ready
-                  ? `${amount.toLocaleString()}원 결제하기`
+                  ? footerEl
+                    ? `${amount.toLocaleString()}원 · ${method === "CARD" ? "카드·다른 간편결제" : "계좌이체"}로 결제`
+                    : `${amount.toLocaleString()}원 결제하기`
                   : "결제 화면 불러오는 중…"}
             </button>
             {errorMsg && footerEl && (
@@ -483,7 +513,7 @@ function TossWindowCheckout({
             <button
               type="button"
               tabIndex={payBtnVisible ? -1 : 0}
-              onClick={handlePay}
+              onClick={() => void handlePay()}
               disabled={!ready || paying}
               className="mx-auto flex h-12 w-full max-w-md items-center justify-center rounded-full border border-gold/25 bg-gradient-to-b from-burgundy to-burgundy-deep text-[0.92rem] font-semibold text-ivory active:opacity-85 disabled:opacity-50"
             >
