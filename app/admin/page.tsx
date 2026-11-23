@@ -256,6 +256,16 @@ export default async function AdminDashboard() {
     todos.push({ label: "확인 전 고객 후기", count: reviewPending, href: "/admin/reviews", tone: "info" });
   if (genFailed.length)
     todos.push({ label: "결과 생성 실패 (결제 완료 주문)", count: genFailed.length, href: "/admin/orders?f=gen_failed", tone: "warn" });
+  /* 11/23 지시문 P0-3: 카톡 분석 결제했는데 결과가 없는 주문 (생성 실패·10분 넘게 생성 중) */
+  const chatStuck = chatRows.filter(
+    (c) =>
+      c.pay_status === "paid" &&
+      !c.result &&
+      !isOperatorEmail(c.email) &&
+      (c.gen_status === "failed" || (c.paid_at && Date.now() - new Date(c.paid_at).getTime() > 10 * 60 * 1000))
+  );
+  if (chatStuck.length)
+    todos.push({ label: "카톡 분석 결제했는데 결과 없음 (생성 실패)", count: chatStuck.length, href: "/admin/chat", tone: "warn" });
   if (undelivered.length)
     todos.push({ label: "결과 생성됐지만 메일 미발송", count: undelivered.length, href: "/admin/orders?f=undelivered", tone: "warn" });
   if (reviewWaiting.length)
