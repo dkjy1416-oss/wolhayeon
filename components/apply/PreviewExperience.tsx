@@ -1044,6 +1044,24 @@ export default function PreviewExperience({
         </div>
       </header>
 
+      {/* ---------- 11/23 미리보기 전면 재구성 ①: 월화가 내 사연 한 줄을 크게 인용 ---------- */}
+      <section className="mt-3 px-6" aria-label="월화가 읽은 내 사연">
+        <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-2xl bg-black">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/wolhwa/v4/smile.webp" alt="사연을 읽고 미소 짓는 월화" className="block aspect-[4/5] w-full object-cover object-[50%_20%]" />
+          <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-b from-transparent via-black/70 to-black" />
+          <div className="absolute inset-x-4 bottom-4">
+            <div className="rounded-2xl rounded-bl-md bg-white/95 px-4 py-3 shadow-lg">
+              <p className="text-[0.7rem] font-semibold text-[#8a2442]">월화</p>
+              <p className="mt-0.5 text-[1rem] font-semibold leading-[1.6] text-[#1d181b]">
+                {quoteLine && !safety ? qa : name ? `${name}님의 이야기를 끝까지 읽었어요.` : "들려준 이야기를 끝까지 읽었어요."}
+              </p>
+              <p className="mt-1 text-[0.84rem] leading-[1.6] text-[#5a5156]">그 마음에서부터 차근차근 같이 볼게요.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ---------- 1. 내 질문과 핵심 답변 · 근거 · 오늘 할 행동 · 알 수 없는 것 ---------- */}
       {(() => {
         const q = ASKED[wish] ?? ASKED.find_direction;
@@ -1068,8 +1086,15 @@ export default function PreviewExperience({
               <p className="text-[0.74rem] font-semibold tracking-[0.12em] text-burgundy">{name ? `${name}님이 물어본 질문` : "내가 물어본 질문"}</p>
               <p className="font-display mt-1.5 text-[1.3rem] font-bold leading-snug text-ivory">“{q.q}”</p>
 
-              <p className="mt-4 text-[0.76rem] font-semibold text-gold">월화의 현재 판단</p>
-              <p className="mt-1 text-[1rem] font-semibold leading-[1.65] text-ivory">{oneLine}</p>
+              {/* 11/23 재구성 ②: 설명하는 월화 + 말풍선 판단 */}
+              <div className="mt-4 flex items-start gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/wolhwa/v4/explain.webp" alt="" aria-hidden className="h-24 w-[4.5rem] shrink-0 rounded-xl object-cover object-[50%_20%]" />
+                <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md bg-white/85 px-3.5 py-3">
+                  <p className="text-[0.74rem] font-semibold text-gold">월화의 현재 판단</p>
+                  <p className="mt-1 text-[0.98rem] font-semibold leading-[1.6] text-ivory">{oneLine}</p>
+                </div>
+              </div>
 
               <p className="mt-4 text-[0.76rem] font-semibold text-gold">판단에 영향을 준 내용</p>
               <ul className="mt-1 flex flex-col gap-1">
@@ -1102,30 +1127,6 @@ export default function PreviewExperience({
         );
       })()}
       <div ref={stickyStartRef} aria-hidden />
-
-      {/* ---------- 2. 이렇게 판단한 근거 — 입력 사실 → 해석 → 행동 ---------- */}
-      <section className="mt-8 px-6" aria-label="이렇게 판단한 근거">
-        <div className="mx-auto max-w-[640px]">
-          <p className="text-[0.76rem] font-semibold tracking-wider text-gold">이렇게 판단한 근거</p>
-          <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-gold-dim/25 bg-ink-soft px-5 py-5">
-            <div>
-              <p className="text-[0.74rem] font-semibold text-burgundy">입력한 사실</p>
-              {(safety ? [safetyFact, factSentence] : quoteLine ? [qa, factSentence] : [factSentence]).filter(Boolean).map((r, i) => (
-                <p key={i} className="mt-1 text-[0.9rem] leading-[1.85] text-ivory">{r}</p>
-              ))}
-            </div>
-            <div>
-              <p className="text-[0.74rem] font-semibold text-burgundy">해석</p>
-              <p className="mt-1 text-[0.9rem] font-light leading-[1.85] text-ivory">{interpSentence}</p>
-              <p className="mt-1 text-[0.78rem] leading-[1.7] text-ivory-dim">상대의 실제 마음을 확인한 것은 아니고, 입력한 사실로 볼 수 있는 가능성이에요.</p>
-            </div>
-            <div>
-              <p className="text-[0.74rem] font-semibold text-burgundy">그래서 지금</p>
-              <p className="mt-1 text-[0.9rem] leading-[1.85] text-ivory">{firstSentence(preview.now_plan.why)}</p>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ---------- 04. 오늘은 이것만 하지 마세요 (최대 3개) ---------- */}
       <section className="mt-10 px-6">
@@ -1167,6 +1168,12 @@ export default function PreviewExperience({
       {/* ---------- 4. 전체 결과에서 받는 것 (유형별) ---------- */}
       <section className="mt-8 px-6">
         <div ref={offerRef} className="shadow-paper mx-auto max-w-[640px] rounded-2xl border border-gold-dim bg-ink-soft px-5 py-6">
+          {/* 11/23 재구성 ③: 붉은 실을 든 월화 */}
+          <div className="relative -mx-5 -mt-6 mb-4 overflow-hidden rounded-t-2xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/wolhwa/v4/thread.webp" alt="붉은 실을 든 월화" loading="lazy" className="block aspect-[16/10] w-full object-cover object-[50%_25%]" />
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-black/60" />
+          </div>
           <p className="font-display text-[1.2rem] font-bold leading-snug text-ivory">{lock.title}</p>
           <p className="mt-2 text-[0.9rem] leading-[1.75] text-ivory-dim">{lock.desc}</p>
           <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">내 사연으로 이어서 열리는 것</p>
@@ -1214,50 +1221,8 @@ export default function PreviewExperience({
         </div>
       </section>
 
-      {/* ---------- 5. 읽을 수 있는 결과 예시 (확대 · 구매창 자동으로 안 열림) ---------- */}
-      <section className="mt-8 px-6" aria-label="실제 결과 화면 예시">
-        <div className="mx-auto max-w-[640px]">
-          <ResultCaptures
-            orderNumber={orderNumber}
-            name={name || null}
-            stanceLabel={NOW_STANCE_LABELS[stance] ?? ""}
-            period={preview.now_plan.period}
-            kind={sit === "lover" ? "lover" : sit === "boundary" ? "boundary" : "contact"}
-            buyLabel={PAYMENTS_OPEN ? mainLabel : null}
-            onBuy={(k) => {
-              if (!PAYMENTS_OPEN) return;
-              onCtaClick(`example_${k}`);
-              px("InitiateCheckout", { value: price, currency: "KRW", content_ids: [orderNumber] }, { id: `${orderNumber}_InitiateCheckout`, once: `${orderNumber}_InitiateCheckout` });
-              setPay({ open: true, product: want === "bundle" ? "bundle" : "message", cancelled: false });
-            }}
-          />
-          <div className="mt-6">
-            <ResultExampleCard kind={sit === "lover" ? "lover" : sit === "boundary" ? "boundary" : "contact"} orderNumber={orderNumber} />
-          </div>
-        </div>
-      </section>
-
-      {PAYMENTS_OPEN ? (
+      {PAYMENTS_OPEN && (
         <>
-          {/* ---------- 6. 실제 이용 후기 (게시 동의한 실제 후기만 · 없으면 숨김) ---------- */}
-          {proof && proof.reviews.length > 0 && (
-            <section className="mt-8 px-6" aria-label="실제 이용 후기">
-              <div className="mx-auto max-w-[640px]">
-                <p className="text-[0.76rem] font-semibold tracking-wider text-gold">실제 이용 후기</p>
-                <div className="mt-2 flex flex-col gap-2">
-                  {proof.reviews.slice(0, 3).map((r, i) => (
-                    <div key={i} className="rounded-xl border border-gold-dim/25 bg-ink-soft px-4 py-3">
-                      <p className="text-[0.84rem] leading-[1.7] text-ivory">“{r.body}{r.body.length >= 120 ? "…" : ""}”</p>
-                      <p className="mt-1 text-[0.72rem] text-ivory-dim">
-                        <span className="text-gold">{"★".repeat(Math.max(1, Math.min(5, r.rating)))}</span> · {r.name} · {r.month} · 관계 리추얼 구매자{r.incentive ? " · 후기 혜택 제공" : ""}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
-
           {/* ---------- 7. 가격과 구매 버튼 ① ---------- */}
           <section className="mt-8 px-6">
             <div ref={offerCtaRef} className="mx-auto max-w-[640px]">
@@ -1290,6 +1255,95 @@ export default function PreviewExperience({
             </div>
           </section>
 
+          {/* ---------- 11/23 재구성 ⑤: 결제하면 월화가 이 사연으로 편지를 씀 ---------- */}
+          <section className="mt-8 px-6" aria-label="결제 후 받는 편지">
+            <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-2xl bg-black">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/wolhwa/v4/letter.webp" alt="촛불 아래 편지를 읽는 월화" loading="lazy" className="block aspect-[4/5] w-full object-cover object-[50%_65%]" />
+              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/85 to-transparent" />
+              <div className="absolute inset-x-5 top-5">
+                <p className="text-[0.72rem] tracking-[0.2em] text-[#d8b878]">결제하면 바로</p>
+                <p className="font-display mt-1 text-[1.15rem] font-bold leading-snug text-[#f3ece2]">
+                  월화가 {name ? `${name}님의 ` : ""}사연으로
+                  <br />
+                  첫 문장과 편지를 써요
+                </p>
+                <p className="mt-1.5 text-[0.8rem] text-[#cfc4b2]">{DELIVERY_TIME_TEXT} · 링크는 이메일로도 보내 드려요</p>
+              </div>
+            </div>
+          </section>
+
+          {/* ---------- 6. 실제 이용 후기 (게시 동의한 실제 후기만 · 없으면 숨김) ---------- */}
+          {proof && proof.reviews.length > 0 && (
+            <section className="mt-8 px-6" aria-label="실제 이용 후기">
+              <div className="mx-auto max-w-[640px]">
+                <p className="text-[0.76rem] font-semibold tracking-wider text-gold">실제 이용 후기</p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {proof.reviews.slice(0, 3).map((r, i) => (
+                    <div key={i} className="rounded-xl border border-gold-dim/25 bg-ink-soft px-4 py-3">
+                      <p className="text-[0.84rem] leading-[1.7] text-ivory">“{r.body}{r.body.length >= 120 ? "…" : ""}”</p>
+                      <p className="mt-1 text-[0.72rem] text-ivory-dim">
+                        <span className="text-gold">{"★".repeat(Math.max(1, Math.min(5, r.rating)))}</span> · {r.name} · {r.month} · 관계 리추얼 구매자{r.incentive ? " · 후기 혜택 제공" : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+        </>
+      )}
+
+      {/* ---------- 2. 이렇게 판단한 근거 — 입력 사실 → 해석 → 행동 ---------- */}
+      <section className="mt-8 px-6" aria-label="이렇게 판단한 근거">
+        <div className="mx-auto max-w-[640px]">
+          <p className="text-[0.76rem] font-semibold tracking-wider text-gold">이렇게 판단한 근거</p>
+          <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-gold-dim/25 bg-ink-soft px-5 py-5">
+            <div>
+              <p className="text-[0.74rem] font-semibold text-burgundy">입력한 사실</p>
+              {(safety ? [safetyFact, factSentence] : quoteLine ? [qa, factSentence] : [factSentence]).filter(Boolean).map((r, i) => (
+                <p key={i} className="mt-1 text-[0.9rem] leading-[1.85] text-ivory">{r}</p>
+              ))}
+            </div>
+            <div>
+              <p className="text-[0.74rem] font-semibold text-burgundy">해석</p>
+              <p className="mt-1 text-[0.9rem] font-light leading-[1.85] text-ivory">{interpSentence}</p>
+              <p className="mt-1 text-[0.78rem] leading-[1.7] text-ivory-dim">상대의 실제 마음을 확인한 것은 아니고, 입력한 사실로 볼 수 있는 가능성이에요.</p>
+            </div>
+            <div>
+              <p className="text-[0.74rem] font-semibold text-burgundy">그래서 지금</p>
+              <p className="mt-1 text-[0.9rem] leading-[1.85] text-ivory">{firstSentence(preview.now_plan.why)}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- 5. 읽을 수 있는 결과 예시 (확대 · 구매창 자동으로 안 열림) ---------- */}
+      <section className="mt-8 px-6" aria-label="실제 결과 화면 예시">
+        <div className="mx-auto max-w-[640px]">
+          <ResultCaptures
+            orderNumber={orderNumber}
+            name={name || null}
+            stanceLabel={NOW_STANCE_LABELS[stance] ?? ""}
+            period={preview.now_plan.period}
+            kind={sit === "lover" ? "lover" : sit === "boundary" ? "boundary" : "contact"}
+            buyLabel={PAYMENTS_OPEN ? mainLabel : null}
+            onBuy={(k) => {
+              if (!PAYMENTS_OPEN) return;
+              onCtaClick(`example_${k}`);
+              px("InitiateCheckout", { value: price, currency: "KRW", content_ids: [orderNumber] }, { id: `${orderNumber}_InitiateCheckout`, once: `${orderNumber}_InitiateCheckout` });
+              setPay({ open: true, product: want === "bundle" ? "bundle" : "message", cancelled: false });
+            }}
+          />
+          <div className="mt-6">
+            <ResultExampleCard kind={sit === "lover" ? "lover" : sit === "boundary" ? "boundary" : "contact"} orderNumber={orderNumber} />
+          </div>
+        </div>
+      </section>
+
+      {PAYMENTS_OPEN ? (
+        <>
           {totals && (
             <div className="mt-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
               <Totals totals={totals} compact />
