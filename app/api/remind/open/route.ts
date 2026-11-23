@@ -36,5 +36,8 @@ export async function GET(request: Request) {
   const dest = new URL("/apply/preview", url.origin);
   dest.searchParams.set("order", order);
   dest.searchParams.set("ct", ct);
+  /* 11/23 지시문 P0-2: 메일의 '결제 이어하기' — 미리보기에서 결제 시트를 바로 연다 */
+  const pay = url.searchParams.get("pay");
+  if (pay === "message" || pay === "bundle") dest.searchParams.set("pay", pay);
   return NextResponse.redirect(dest, 302);
 }
