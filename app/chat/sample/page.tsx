@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ChatResultView from "@/components/chat/ChatResultView";
+import ChatSampleSticky from "@/components/chat/ChatSampleSticky";
+import Totals from "@/components/home3/Totals";
+import { getSiteTotals } from "@/lib/site-totals";
+import { CHAT_PRICE_KRW, CHAT_BUNDLE_PRICE_KRW } from "@/lib/chat/types";
 import type { ChatOrder, ChatResult } from "@/lib/chat/types";
 
 export const metadata: Metadata = { title: "카톡 분석 결과 예시 | 월하연 月下緣" };
+/* 누적 숫자는 1시간 캐시 */
+export const revalidate = 3600;
 
 /* 가상 대화로 만든 예시 결과 — 실제 손님 결과가 아님 */
 const R: ChatResult = {
@@ -78,18 +84,107 @@ const R: ChatResult = {
 
 const O = { partner_label: "그 사람", name: "", product: "chat" } as unknown as ChatOrder;
 
-export default function ChatSamplePage() {
+/* 11/23 운영자 요청: 결과 예시를 본 손님이 '이걸 받으려면' 바로 결제 흐름으로 — 받는 것 · 다른 점 · 누적 숫자 · 결제로 가는 버튼 */
+const START = "/chat?start=file&utm_source=site&utm_medium=sample&utm_content=chat_sample";
+
+const RECEIVE: Array<[string, string]> = [
+  ["월화의 총평", "지금 관계가 어떤 상태인지, 왜 이렇게 됐는지, 지금 가장 중요한 한 가지"],
+  ["대화 온도 · 균형", "먼저 연락한 횟수, 답장 속도, 메시지 길이를 내 대화의 실제 숫자로"],
+  ["대화가 달라진 날", "그날 실제로 오간 말과, 그 전후로 바뀐 숫자"],
+  ["그 사람의 마음 — 가능성", "근거가 된 그 사람의 말과, 대화에서 보이는 가능성"],
+  ["말과 행동의 온도차", "말로 한 것과 실제 행동이 어긋나는 지점"],
+  ["보내면 안 되는 말", "지금 보내면 대화를 닫게 만드는 문장과 이유"],
+  ["다음에 보낼 메시지 3개", "언제 보낼지 · 의도 · 예상 반응까지"],
+  ["반응별 다음 행동 · 2주 계획", "따뜻한 답 / 단답 / 무응답일 때, 그리고 오늘~4주 계획"],
+];
+
+const COMPARE: Array<[string, string, string]> = [
+  ["무엇을 보나요", "생년월일 · 타로 카드", "두 사람이 실제로 주고받은 카톡"],
+  ["무엇이 반영되나요", "같은 생일이면 비슷한 풀이", "답장 속도 · 먼저 연락 · 말투가 바뀐 날"],
+  ["무엇을 받나요", "시기와 운 중심의 이야기", "보낼 메시지 3개 · 반응별 대응 · 2주 계획"],
+];
+
+export default async function ChatSamplePage() {
+  const totals = await getSiteTotals().catch(() => null);
+  const customers = totals?.visitors ?? 0;
   return (
-    <main className="fx-grain bg-[#0e0b0d] min-h-[100svh] px-5 pb-24 pt-10">
+    <main className="fx-grain bg-[#0e0b0d] min-h-[100svh] px-5 pb-32 pt-10">
       <div className="mx-auto mb-6 max-w-[620px] rounded-xl border border-burgundy/40 bg-[#e46b8a]/10 px-4 py-3 text-[0.82rem] leading-[1.7] text-ivory">
         <b>결과 예시</b> — 가상의 대화로 만든 예시예요. 실제 결과는 올려 주신 대화를 근거로 매번 새로 써요.
       </div>
       <ChatResultView o={O} r={R} orderNumber="예시" bundleHref={null} />
-      <div className="mx-auto mt-10 max-w-[620px]">
-        <Link href="/chat" className="flex min-h-14 w-full items-center justify-center rounded-full bg-gradient-to-b from-burgundy to-burgundy-deep font-semibold text-ivory">
-          내 카톡으로 무료 분석 시작
+
+      {/* ① 이 리포트로 받는 것 */}
+      <section className="mx-auto mt-14 max-w-[620px]">
+        <p className="text-center text-[0.74rem] tracking-[0.2em] text-gold">내 카톡으로 받으면</p>
+        <h2 className="font-display mt-2 text-center text-[1.45rem] font-bold leading-snug text-ivory">
+          이런 내용을 <span className="text-[#e46b8a]">내 대화 그대로</span> 받아요
+        </h2>
+        <ul className="mt-5 flex flex-col gap-2">
+          {RECEIVE.map(([k, v], i) => (
+            <li key={k} className="fx-glass flex gap-3 rounded-2xl px-4 py-3.5">
+              <span className="font-display w-6 shrink-0 text-[1.05rem] font-bold text-[#e46b8a]">{String(i + 1).padStart(2, "0")}</span>
+              <span className="min-w-0">
+                <span className="block text-[0.94rem] font-semibold text-ivory">{k}</span>
+                <span className="mt-0.5 block text-[0.82rem] leading-[1.7] text-ivory-dim">{v}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ② 생년월일·타로 풀이와 무엇이 다를까요 */}
+      <section className="mx-auto mt-14 max-w-[620px]">
+        <h2 className="font-display text-center text-[1.45rem] font-bold leading-snug text-ivory">
+          생년월일 · 타로 풀이와
+          <br />
+          <span className="text-[#e46b8a]">무엇이 다를까요?</span>
+        </h2>
+        <div className="mt-5 overflow-hidden rounded-2xl border border-gold-dim/40">
+          <div className="grid grid-cols-[5.2rem_1fr_1fr] text-[0.8rem]">
+            <div className="bg-[#1d181b] px-3 py-3" />
+            <div className="bg-[#1d181b] px-3 py-3 text-center font-semibold text-ivory-dim">일반 운세 풀이</div>
+            <div className="bg-[#8a2442] px-3 py-3 text-center font-bold text-white">월하연 카톡 분석</div>
+            {COMPARE.map(([k, a, b]) => (
+              <div key={k} className="contents">
+                <div className="border-t border-gold-dim/20 bg-[#151114] px-3 py-3.5 font-semibold leading-[1.5] text-gold">{k}</div>
+                <div className="border-t border-gold-dim/20 bg-[#151114] px-3 py-3.5 leading-[1.6] text-ivory-dim">{a}</div>
+                <div className="border-t border-gold-dim/20 bg-[#e46b8a]/10 px-3 py-3.5 font-semibold leading-[1.6] text-ivory">{b}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <p className="mt-3 text-center text-[0.78rem] leading-[1.8] text-ivory-dim">
+          상대의 속마음이나 재회를 장담하지 않아요. 대신 내 대화에서 보이는 신호와 지금 할 일을 분명하게 정리해요.
+        </p>
+      </section>
+
+      {/* ③ 누적 숫자 (실제 집계 · 테스트 제외) */}
+      {totals && (
+        <div className="mx-auto mt-12 max-w-[620px]">
+          <Totals totals={totals} />
+        </div>
+      )}
+
+      {/* ④ 결제로 이어지는 버튼 */}
+      <div id="sample-final-cta" className="mx-auto mt-12 max-w-[620px] text-center">
+        <p className="font-display text-[1.2rem] font-bold leading-snug text-ivory">이 리포트를 내 카톡으로 받아 보세요</p>
+        <p className="mt-2 text-[0.84rem] leading-[1.8] text-ivory-dim">
+          대화 파일을 올리면 숫자 분석은 무료로 먼저 보여 드려요.
+          <br />
+          마음에 들면 그다음에 리포트를 받으면 돼요.
+        </p>
+        <Link
+          href={START}
+          className="fx-sheen mt-5 flex min-h-14 w-full items-center justify-center rounded-full bg-[#e46b8a] px-5 text-[1rem] font-bold text-white shadow-[0_0_40px_rgba(228,107,138,0.35)] active:opacity-85"
+        >
+          내 카톡으로 이 리포트 받기 · {CHAT_PRICE_KRW.toLocaleString()}원
         </Link>
+        <p className="mt-2.5 text-[0.76rem] leading-[1.8] text-ivory-dim">
+          재회 분석까지 함께 받으면 {CHAT_BUNDLE_PRICE_KRW.toLocaleString()}원 · 1회 결제 · 정기결제 없음 · 결과 열기 전 7일 안 전액 환불
+        </p>
       </div>
+      <ChatSampleSticky href={START} label={`내 카톡으로 이 리포트 받기 · ${CHAT_PRICE_KRW.toLocaleString()}원`} customers={customers} />
     </main>
   );
 }
