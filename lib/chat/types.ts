@@ -8,7 +8,8 @@
  * - 가격: 카톡 분석 24,900원 / 재회 분석 패키지 34,900원 (운영자 결정 10/31)
  */
 export const CHAT_PRICE_KRW = 24900;
-export const CHAT_BUNDLE_PRICE_KRW = 34900;
+/** 11/23 대표 결정: 재회 분석 + 카톡 분석 묶음 29,900원 (카톡 화면·재회 결제 시트 모두 같은 가격) */
+export const CHAT_BUNDLE_PRICE_KRW = 29900;
 export type ChatProduct = "chat" | "chat_bundle";
 export const CHAT_PRODUCTS: Record<ChatProduct, { name: string; orderName: string; price: number }> = {
   chat: { name: "카톡 대화 분석", orderName: "월하연 카톡 대화 분석", price: CHAT_PRICE_KRW },
@@ -70,6 +71,8 @@ export interface ChatOrder {
   images_deleted_at: string | null;
   email_sent_at: string | null;
   bundle_redeemed_order: string | null; // 패키지: 재회 분석에 쓴 WH 주문번호
+  /** 11/23: 재회 분석 결제 시트에서 고른 묶음 — 결제되면 이 WH 주문을 함께 결제 완료로, 카톡 대화는 결제 뒤에 올림 */
+  combo_ritual_order?: string | null;
   utm: Record<string, string> | null;
   /** 10/31: file = 대화 내보내기 파일(숫자 분석 포함), images = 캡처 */
   source?: "file" | "images";

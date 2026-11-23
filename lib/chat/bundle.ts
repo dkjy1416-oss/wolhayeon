@@ -17,6 +17,16 @@ export async function redeemChatBundle(ritualOrder: string, cookieVal: string | 
   if (!cookieVal) return null;
   const [wc, tok] = cookieVal.split(".");
   if (!wc || !verifyChatToken("bundle", wc, tok)) return null;
+  return redeemForRitual(wc, ritualOrder);
+}
+
+/** 재회 분석 결과 생성 화면 주소 (같은 패키지 결제로 이미 처리된 경우에도 같은 주소) */
+export function bundleSuccessPath(wc: string, ritualOrder: string): string {
+  return `/payment/success?paymentKey=${encodeURIComponent(`bundle-${wc}`)}&orderId=${ritualOrder}&amount=${RITUAL_PRICE_KRW}`;
+}
+
+/** 결제된 카톡 패키지(wc)로 재회 주문(ritualOrder)을 결제 완료 처리 */
+export async function redeemForRitual(wc: string, ritualOrder: string): Promise<string | null> {
   const co = await getChatOrder(wc);
   if (!co || co.product !== "chat_bundle" || co.pay_status !== "paid") return null;
   if (co.bundle_redeemed_order && co.bundle_redeemed_order !== ritualOrder) return null;
@@ -39,5 +49,5 @@ export async function redeemChatBundle(ritualOrder: string, cookieVal: string | 
   if (upd.error || !upd.data?.length) return null;
   await updateChatOrder(wc, (cur) => ({ ...cur, bundle_redeemed_order: ritualOrder }));
   await logPayEventServer(ritualOrder, "pay_success", "chat_bundle");
-  return `/payment/success?paymentKey=${encodeURIComponent(key)}&orderId=${ritualOrder}&amount=${RITUAL_PRICE_KRW}`;
+  return bundleSuccessPath(wc, ritualOrder);
 }

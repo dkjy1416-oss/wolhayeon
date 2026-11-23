@@ -17,6 +17,7 @@ import {
   getChatText,
 } from "@/lib/chat/store";
 import { CHAT_ORDER_RE, CHAT_PRODUCTS, type ChatOrder } from "@/lib/chat/types";
+import { redeemForRitual } from "@/lib/chat/bundle";
 
 export type ChatConfirmOutcome =
   | { status: "paid"; orderNumber: string }
@@ -64,6 +65,11 @@ export async function confirmChatPayment(p: {
     });
   }
   await notifyOperator(o, method);
+  /* 11/23: 재회 결제 시트에서 산 묶음 — 재회 주문을 함께 결제 완료로, 카톡 대화 올리기 안내 메일 */
+  if (o.combo_ritual_order) {
+    await redeemForRitual(orderNumber, o.combo_ritual_order).catch(() => null);
+    await sendComboUploadEmail(orderNumber);
+  }
   return { status: "paid", orderNumber };
 }
 
@@ -87,7 +93,37 @@ async function notifyOperator(o: ChatOrder, method: string | null) {
   }
 }
 
+/** 11/23: 묶음 구매자에게 '카톡 대화 올리기' 링크 */
+export function comboUploadPath(orderNumber: string): string {
+  return `/chat?combo=${orderNumber}&t=${encodeURIComponent(chatToken("order", orderNumber) ?? "")}`;
+}
+
+async function sendComboUploadEmail(orderNumber: string) {
+  const o = await getChatOrder(orderNumber);
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.RESEND_FROM_EMAIL?.trim();
+  const site = sanitizeSiteUrl(process.env.SITE_URL);
+  if (!o || !apiKey || !from || !site) return;
+  const url = `${site}${comboUploadPath(orderNumber)}`;
+  const name = (o.name || "손님").replace(/[<>&"]/g, "");
+  try {
+    await new Resend(apiKey).emails.send(
+      {
+        from: `월하연 月下緣 <${from}>`,
+        to: o.email,
+        subject: `[월하연] ${name}님, 카톡 대화 분석은 대화 파일을 올리면 시작돼요`,
+        text: `${name}님,\n\n재회 분석과 함께 결제하신 카톡 대화 분석은, 아래 링크에서 카톡 대화 파일을 올리면 바로 만들어져요.\n\n${url}\n\n재회 분석 결과는 따로 메일로 보내 드려요.\n\n— 월하연 月下緣`,
+        html: `<div style="font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;max-width:520px;margin:0 auto;padding:32px 20px;line-height:1.9;color:#2a2224"><p style="font-size:12px;letter-spacing:.25em;color:#8a6d3b">月下緣 · 월하연</p><p>${name}님,</p><p>재회 분석과 함께 결제하신 <b>카톡 대화 분석</b>은<br/>카톡 대화 파일을 올리면 바로 만들어져요.</p><p style="text-align:center;margin:28px 0"><a href="${url}" style="display:inline-block;background:#6d1f2c;color:#fff;text-decoration:none;border-radius:999px;padding:14px 28px;font-weight:600">카톡 대화 올리기</a></p><p style="font-size:12px;color:#8d8779">재회 분석 결과는 따로 메일로 보내 드려요.</p></div>`,
+      },
+      { idempotencyKey: `chat-combo-upload-${orderNumber}` }
+    );
+  } catch {
+    /* 메일 실패는 무시 — 결과 화면에도 링크가 있음 */
+  }
+}
+
 export type ChatProcessOutcome =
+  | { status: "needs_upload" }
   | { status: "ready"; resultPath: string }
   | { status: "processing" }
   | { status: "not_paid" }
@@ -124,6 +160,11 @@ export async function processChatOrder(orderNumber: string): Promise<ChatProcess
   const images = (await Promise.all(paths.slice(0, 10).map(downloadChatImage))).filter(
     (x): x is { data: string; type: string } => !!x
   );
+  /* 11/23: 묶음 구매자가 아직 대화를 안 올렸으면 기다림 (실패 처리하지 않음) */
+  if (!text && !images.length && claimed.combo_ritual_order) {
+    await updateChatOrder(orderNumber, (cur) => (cur.result ? null : { ...cur, gen_status: "waiting", gen_started_at: null }));
+    return { status: "needs_upload" };
+  }
   /* 11/23 지시문 P0-3: 실패하면 자동으로 2번 더 시도 (원문은 성공한 뒤에만 지움) */
   let result = null as Awaited<ReturnType<typeof analyzeChat>>;
   for (let i = 0; i < 3 && !result && (text || images.length); i++) {
