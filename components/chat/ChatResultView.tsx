@@ -27,6 +27,20 @@ export default function ChatResultView({
       <SplitWords as="h1" className="font-display mt-3 block text-[1.85rem] font-black leading-[1.3]" wordClassName="fx-shine" text={r.type_label} />
       <p className="mt-3 text-[1rem] leading-[1.9] text-ivory">{r.summary}</p>
 
+      {r.overview && (
+        <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
+          <p className={h}>월화의 총평</p>
+          <div className="mt-3 rounded-2xl border border-gold/30 bg-gradient-to-b from-[#1d1512] to-ink-soft px-5 py-5">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/wolhwa/v3/listen.webp" alt="" className="h-11 w-11 shrink-0 rounded-full object-cover ring-1 ring-gold/40" />
+              <p className="text-[0.8rem] text-gold">월화가 대화를 다 읽고</p>
+            </div>
+            <p className="mt-3 whitespace-pre-line text-[0.95rem] leading-[1.95] text-ivory">{r.overview}</p>
+          </div>
+        </InView>
+      )}
+
       <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
         <p className={h}>두 사람의 대화 온도</p>
         <div className={card}>
@@ -67,6 +81,43 @@ export default function ChatResultView({
         ))}
       </InView>
 
+      {r.partner_mind && (
+        <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
+          <p className={h}>지금 {partner}의 마음 — 대화로 읽은 가능성</p>
+          <div className={card}>
+            <p className="whitespace-pre-line text-[0.93rem] leading-[1.9] text-ivory">{r.partner_mind.reading}</p>
+            <p className="mt-2 text-[0.74rem] text-ivory-dim">속마음을 확인한 것이 아니라, 대화에서 보이는 가능성이에요.</p>
+          </div>
+          {r.partner_mind.clues.map((c, i) => (
+            <div key={i} className={card}>
+              <p className="text-[0.9rem] text-[#e46b8a]">“{c.quote}”</p>
+              <p className="mt-1 text-[0.86rem] leading-[1.8] text-ivory">{c.meaning}</p>
+            </div>
+          ))}
+        </InView>
+      )}
+
+      {r.say_vs_do && r.say_vs_do.length > 0 && (
+        <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
+          <p className={h}>말과 행동의 온도차</p>
+          {r.say_vs_do.map((x, i) => (
+            <div key={i} className={card}>
+              <div className="grid grid-cols-2 gap-2 text-[0.84rem] leading-[1.7]">
+                <div className="rounded-xl bg-ink/60 px-3 py-2">
+                  <p className="text-[0.72rem] text-gold">말</p>
+                  <p className="mt-0.5 text-ivory">{x.says}</p>
+                </div>
+                <div className="rounded-xl bg-ink/60 px-3 py-2">
+                  <p className="text-[0.72rem] text-gold">행동</p>
+                  <p className="mt-0.5 text-ivory">{x.does}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-[0.86rem] leading-[1.8] text-ivory-dim">{x.gap}</p>
+            </div>
+          ))}
+        </InView>
+      )}
+
       <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
         <p className={h}>{partner}의 신호</p>
         <div className={`${card} text-[0.9rem] leading-[1.8]`}>
@@ -77,12 +128,39 @@ export default function ChatResultView({
         </div>
       </InView>
 
+      {r.future_flow && (
+        <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
+          <p className={h}>우리 관계는 어디로 흘러갈까</p>
+          <div className={card}>
+            <p className="text-[0.74rem] text-gold">지금 단계</p>
+            <p className="mt-1 text-[0.92rem] leading-[1.85] text-ivory">{r.future_flow.now_stage}</p>
+          </div>
+          {r.future_flow.paths.map((x, i) => (
+            <div key={i} className={card}>
+              <p className="text-[0.84rem] font-semibold text-[#e46b8a]">{i + 1}. {x.condition}</p>
+              <p className="mt-1 text-[0.88rem] leading-[1.85] text-ivory">→ {x.outcome}</p>
+            </div>
+          ))}
+          <p className="mt-2 text-[0.74rem] text-ivory-dim">관계의 결과를 약속하는 예측이 아니라, 지금 대화 흐름에서 갈릴 수 있는 방향이에요.</p>
+        </InView>
+      )}
+
+      {r.my_strengths && r.my_strengths.length > 0 && (
+        <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
+          <p className={h}>내가 잘하고 있는 것</p>
+          <div className={`${card} text-[0.9rem] leading-[1.85] text-ivory`}>
+            <ul>{r.my_strengths.map((x) => <li key={x}>✓ {x}</li>)}</ul>
+          </div>
+        </InView>
+      )}
+
       <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
         <p className={h}>내가 반복하고 있는 말 습관</p>
         {r.my_patterns.map((x) => (
           <div key={x.pattern} className={card}>
             <p className="text-[0.93rem] font-medium text-ivory">{x.pattern}</p>
             <p className="mt-1 text-[0.85rem] leading-[1.8] text-ivory-dim">{x.why_it_hurts}</p>
+            {x.instead && <p className="mt-2 text-[0.85rem] leading-[1.8] text-ivory"><b className="text-gold">대신</b> · {x.instead}</p>}
           </div>
         ))}
       </InView>
@@ -102,11 +180,30 @@ export default function ChatResultView({
         {r.next_messages.map((x, i) => (
           <div key={i} className="mt-3 rounded-2xl border border-[#e46b8a]/40 bg-[#e46b8a]/10 px-5 py-4">
             <p className="w-fit max-w-full rounded-2xl rounded-tr-md bg-[#fee500] px-3.5 py-2 text-[0.93rem] text-[#191919]">{x.text}</p>
-            <p className="mt-2 text-[0.84rem] leading-[1.75] text-ivory"><b>의도</b> · {x.intent}</p>
+            {x.when && <p className="mt-2 text-[0.84rem] leading-[1.75] text-ivory"><b>보낼 때</b> · {x.when}</p>}
+            <p className={`${x.when ? "" : "mt-2 "}text-[0.84rem] leading-[1.75] text-ivory`}><b>의도</b> · {x.intent}</p>
             <p className="text-[0.84rem] leading-[1.75] text-ivory-dim"><b>예상 반응</b> · {x.likely_response}</p>
           </div>
         ))}
       </InView>
+
+      {r.reply_guide && (
+        <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
+          <p className={h}>보낸 뒤 — 반응별 다음 행동</p>
+          {(
+            [
+              ["따뜻한 답이 오면", r.reply_guide.warm],
+              ["단답이 오면", r.reply_guide.short],
+              ["답이 없으면", r.reply_guide.none],
+            ] as const
+          ).map(([k, v]) => (
+            <div key={k} className={card}>
+              <p className="text-[0.84rem] font-semibold text-[#e46b8a]">{k}</p>
+              <p className="mt-1 text-[0.88rem] leading-[1.85] text-ivory">{v}</p>
+            </div>
+          ))}
+        </InView>
+      )}
 
       <InView as="section" className={`reveal ${sec}`} threshold={0.1}>
         <p className={h}>실천 계획</p>
@@ -118,7 +215,7 @@ export default function ChatResultView({
         ))}
       </InView>
 
-      <p className="mt-8 text-[0.98rem] leading-[1.95] text-ivory">{r.closing}</p>
+      <p className="mt-8 whitespace-pre-line text-[0.98rem] leading-[1.95] text-ivory">{r.closing}</p>
 
       {bundleHref && (
         <div className="mt-10 rounded-2xl border-2 border-[#e46b8a]/70 bg-ink-soft px-5 py-5 text-center">
@@ -133,7 +230,7 @@ export default function ChatResultView({
       <p className="mt-10 text-center text-[0.74rem] leading-[1.8] text-ivory-dim">
         이 결과는 올려 주신 대화에서 보이는 패턴을 바탕으로 한 참고 의견이에요. 관계의 결과를 보장하지 않아요.
         <br />
-        올려 주신 캡처는 분석 직후 삭제했어요 · {VIEW_DAYS}일 동안 열람 · 주문번호 {orderNumber}
+        올려 주신 대화는 분석 직후 삭제했어요 · {VIEW_DAYS}일 동안 열람 · 주문번호 {orderNumber}
       </p>
     </article>
   );
