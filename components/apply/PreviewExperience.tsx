@@ -1034,7 +1034,7 @@ export default function PreviewExperience({
       <header className="px-6 pb-1 pt-8">
         <div className="mx-auto flex max-w-[640px] items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/wolhwa/v3/listen.webp" alt="" aria-hidden className="h-12 w-12 shrink-0 rounded-full border-2 border-gold-dim object-cover object-[50%_18%]" />
+          <img src="/wolhwa/v4/avatar.webp" alt="" aria-hidden className="h-12 w-12 shrink-0 rounded-full border-2 border-gold-dim object-cover object-[50%_18%]" />
           <div className="min-w-0">
             <p className="text-[0.7rem] tracking-[0.2em] text-gold">月下緣 · 무료 미리보기</p>
             <h1 className="font-display mt-0.5 text-[1.2rem] font-bold leading-snug text-ivory">
