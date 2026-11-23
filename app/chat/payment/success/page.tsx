@@ -3,6 +3,9 @@ import { after } from "next/server";
 import { confirmChatPayment, processChatOrder } from "@/lib/chat/process";
 import { chatToken } from "@/lib/chat/auth";
 import ChatProcessing from "@/components/chat/ChatProcessing";
+import { redirect } from "next/navigation";
+import { getChatOrder } from "@/lib/chat/store";
+import { bundleSuccessPath } from "@/lib/chat/bundle";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -29,6 +32,9 @@ export default async function ChatPaySuccess({
       </main>
     );
   }
+  /* 11/23: 재회 결제 시트에서 산 묶음 → 재회 분석 결과 생성 화면으로 (카톡 대화는 메일·결과 화면 링크로 올림) */
+  const co = await getChatOrder(r.orderNumber);
+  if (co?.combo_ritual_order) redirect(bundleSuccessPath(co.order_number, co.combo_ritual_order));
   /* 손님이 창을 닫아도 서버에서 분석 시작 */
   after(() => processChatOrder(r.orderNumber).then(() => undefined));
   return (
