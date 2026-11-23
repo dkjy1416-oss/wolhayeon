@@ -1047,8 +1047,10 @@ export default function PreviewExperience({
       {/* ---------- 11/23 미리보기 전면 재구성 ①: 월화가 내 사연 한 줄을 크게 인용 ---------- */}
       <section className="mt-3 px-6" aria-label="월화가 읽은 내 사연">
         <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-2xl bg-black">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/wolhwa/v4/smile.webp" alt="사연을 읽고 미소 짓는 월화" className="block aspect-[4/5] w-full object-cover object-[50%_20%]" />
+          {/* 11/23 운영자 요청: 홈의 말 건네는 월화 루프 영상 */}
+          <div className="aspect-[4/5] w-full">
+            <LoopVideo src="/wolhwa/v3/smile.mp4" poster="/wolhwa/v3/smile.webp" label="말을 건네는 월화" className="h-full w-full object-cover object-top" />
+          </div>
           <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-b from-transparent via-black/70 to-black" />
           <div className="absolute inset-x-4 bottom-4">
             <div className="rounded-2xl rounded-bl-md bg-white/95 px-4 py-3 shadow-lg">
@@ -1338,7 +1340,7 @@ export default function PreviewExperience({
         <>
           {totals && (
             <div className="mt-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
-              <Totals totals={totals} compact />
+              <Totals totals={totals} />
             </div>
           )}
 
