@@ -58,6 +58,8 @@ export async function sendPreviewLinkEmail(params: {
       ``,
       openUrl,
       ``,
+      `결제 이어하기: ${openUrl}&src=mail_pay&pay=message`,
+      ``,
       `화면을 닫았더라도 이 링크 하나면 충분해요. (14일간 유효)`,
       ``,
       `— 월하연 月下緣`,
@@ -80,6 +82,9 @@ export async function sendPreviewLinkEmail(params: {
        style="display:block;text-align:center;background-color:#6d1f2c;background:linear-gradient(#6d1f2c,#521722);color:#efe9dc;text-decoration:none;border:1px solid rgba(201,169,110,.35);border-radius:999px;padding:16px 20px;font-size:15px;">
       ${esc}님의 미리보기 열기
     </a>
+    <p style="text-align:center;margin:14px 0 0;">
+      <a href="${openUrl}&amp;src=mail_pay&amp;pay=message" style="color:#c9a96e;font-size:13.5px;text-decoration:underline;">결제 이어하기 (인스타 앱에서 결제창이 안 열렸다면 여기로)</a>
+    </p>
     <p style="font-size:12.5px;color:#a89f8d;line-height:1.9;margin:20px 0 0;">
       화면을 닫았더라도 이 링크 하나면 충분해요. (14일간 유효)
     </p>
