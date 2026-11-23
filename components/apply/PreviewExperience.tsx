@@ -42,7 +42,7 @@ import ShareStoryCard from "@/components/apply/ShareStoryCard";
 import OfferCountdown from "@/components/pay/OfferCountdown";
 import RollingCount from "@/components/home3/RollingCount";
 import ResultExampleCard from "@/components/apply/ResultExampleCard";
-import LoopVideo from "@/components/book/LoopVideo";
+import { TalkMedia, TalkThread, cutHalf } from "@/components/apply/WolhwaTalk";
 import { DELIVERY_TIME_TEXT, DELIVERY_DELAY_TEXT, HOW_IT_WORKS } from "@/lib/service-facts";
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
@@ -1055,27 +1055,7 @@ export default function PreviewExperience({
         </div>
       </header>
 
-      {/* ---------- 11/23 미리보기 전면 재구성 ①: 월화가 내 사연 한 줄을 크게 인용 ---------- */}
-      <section className="mt-3 px-6" aria-label="월화가 읽은 내 사연">
-        <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-2xl bg-black">
-          {/* 11/23 운영자 요청: 홈의 말 건네는 월화 루프 영상 */}
-          <div className="aspect-[4/5] w-full">
-            <LoopVideo src="/wolhwa/v3/smile.mp4" poster="/wolhwa/v3/smile.webp" label="말을 건네는 월화" className="h-full w-full object-cover object-top" />
-          </div>
-          <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-b from-transparent via-black/70 to-black" />
-          <div className="absolute inset-x-4 bottom-4">
-            <div className="rounded-2xl rounded-bl-md bg-white/95 px-4 py-3 shadow-lg">
-              <p className="text-[0.7rem] font-semibold text-[#8a2442]">월화</p>
-              <p className="mt-0.5 text-[1rem] font-semibold leading-[1.6] text-[#1d181b]">
-                {quoteLine && !safety ? qa : name ? `${name}님의 이야기를 끝까지 읽었어요.` : "들려준 이야기를 끝까지 읽었어요."}
-              </p>
-              <p className="mt-1 text-[0.84rem] leading-[1.6] text-[#5a5156]">그 마음에서부터 차근차근 같이 볼게요.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------- 1. 내 질문과 핵심 답변 · 근거 · 오늘 할 행동 · 알 수 없는 것 ---------- */}
+      {/* ---------- 11/23 운영자 요청 v2: 월화가 대화하듯 풀이 — 화면 가득 찬 영상 + 말풍선 ---------- */}
       {(() => {
         const q = ASKED[wish] ?? ASKED.find_direction;
         /* 11/18 운영자 요청 3-2: 연락하고 싶어 온 손님에게 첫 답이 '멈춰라'가 되지 않게 — 조건부 진행.
@@ -1090,53 +1070,200 @@ export default function PreviewExperience({
                 ? `서두르지 않아도 괜찮아요. 지금 두 사람은 ‘${label}’예요.`
                 : stance === "wait"
                   ? sit === "lover"
-                    ? "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 이야기를 꺼내 볼 수 있는 흐름이에요. 그 조건과 첫마디는 내 사연으로 알려 드려요."
-                    : "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 연락해 볼 수 있는 흐름이에요. 그 조건과 첫 문장은 내 사연으로 알려 드려요."
+                    ? "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 이야기를 꺼내 볼 수 있는 흐름이에요."
+                    : "지금 바로는 아니어도, 조건이 채워지면 한 번 짧게 연락해 볼 수 있는 흐름이에요."
                   : `${CONTACT_VERDICT[stance]}. 지금 두 사람은 ‘${label}’예요.`;
+        const who = name ? `${name}님` : "당신";
+        const intro = (preview.intro_lines ?? []).filter(Boolean).slice(0, 3);
+        const watch = (preview.now_plan.watch ?? []).filter(Boolean);
+        const rule = preview.now_plan.decide_rule ?? "";
+        const modes = (preview.partner_reading.modes ?? []).slice(0, 3);
+        const relText = firstSentence(preview.relationship_state.text);
+        const partnerText = firstSentence(preview.partner_reading.text);
+        /* 답의 모양만 보이는 잠금 칩 (묘수사주 비교 4번) — 실제 답은 화면에 넣지 않음 */
+        const chips: Array<[string, string]> =
+          sit === "boundary"
+            ? [["흔들릴 때 바로 할 행동", "상황 2가지로"], ["7일 회복 순서", "하루 하나씩"], ["다시 연락이 오면", "답할지·말지 기준"]]
+            : sit === "lover"
+              ? [["이야기를 꺼내도 되는 때", "조건과 시점으로"], ["내 사연으로 쓴 첫마디", "두 줄 이내 3개"], ["반응별 다음 말", "받아줄 때·넘길 때·피할 때"]]
+              : [["연락해도 되는 때", "조건과 시점으로"], ["내 사연으로 쓴 첫 문장", "두 줄 이내 3개"], ["답이 왔을 때 다음 행동", "반가움·단답·무응답"]];
+        const lockBtn = (n: number, text: string, sub?: string) => (
+          <button
+            type="button"
+            onClick={() => onLockClick(n)}
+            className="flex w-full items-center justify-between gap-3 rounded-xl border border-dashed border-[#c9a7b1] bg-[#fbf3f5] px-3.5 py-2.5 text-left"
+          >
+            <span className="min-w-0">
+              <span className="block text-[0.86rem] font-semibold text-[#2a2326]">{text}</span>
+              <span className="mt-0.5 flex items-center gap-1.5 text-[0.76rem] text-[#6a5f61]">
+                <span aria-hidden className="select-none rounded bg-[#e9d9de] px-1.5 tracking-[0.2em] text-transparent">▒▒▒▒▒▒</span>
+                {sub}
+              </span>
+            </span>
+            <span aria-hidden className="shrink-0 text-[0.76rem] font-semibold text-[#69263b]">🔒 열기</span>
+          </button>
+        );
         return (
-          <section className="mt-4 px-6" aria-label="내 질문과 월화의 판단">
-            <div className="mx-auto max-w-[640px] rounded-2xl border-2 border-burgundy/50 bg-[#f6e9ec] px-5 py-5">
-              <p className="text-[0.74rem] font-semibold tracking-[0.12em] text-burgundy">{name ? `${name}님이 물어본 질문` : "내가 물어본 질문"}</p>
-              <p className="font-display mt-1.5 text-[1.3rem] font-bold leading-snug text-ivory">“{q.q}”</p>
+          <>
+            {/* 장면 1 — 말을 건네는 월화 */}
+            <section className="mt-1" aria-label="월화가 읽은 내 사연">
+              <TalkMedia video="/wolhwa/v3/smile.mp4" image="/wolhwa/v3/smile.webp" alt="말을 건네는 월화" />
+              <TalkThread
+                className="relative z-10 -mt-[26%]"
+                lines={[
+                  ...(intro.length
+                    ? intro.map((t, i) => ({ who: "w" as const, text: t, strong: i === 0 }))
+                    : [{ who: "w" as const, text: `${who}의 이야기를 끝까지 읽었어요.`, strong: true }]),
+                  ...(quoteLine && !safety ? [{ who: "me" as const, text: qa, tag: "내가 쓴 이야기" }] : []),
+                  { who: "w" as const, text: quoteLine && !safety ? `그 한 줄에서 오래 멈췄어요. ${who}이 물어본 것부터 답할게요.` : `${who}이 물어본 것부터 답할게요.` },
+                ]}
+              />
+            </section>
 
-              {/* 11/23 재구성 ②: 설명하는 월화 + 말풍선 판단 */}
-              <div className="mt-4 flex items-start gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/wolhwa/v4/explain.webp" alt="" aria-hidden className="h-24 w-[4.5rem] shrink-0 rounded-xl object-cover object-[50%_20%]" />
-                <div className="min-w-0 flex-1 rounded-2xl rounded-tl-md bg-white/85 px-3.5 py-3">
-                  <p className="text-[0.74rem] font-semibold text-gold">월화의 현재 판단</p>
-                  <p className="mt-1 text-[0.98rem] font-semibold leading-[1.6] text-ivory">{oneLine}</p>
-                </div>
-              </div>
-
-              <p className="mt-4 text-[0.76rem] font-semibold text-gold">판단에 영향을 준 내용</p>
-              <ul className="mt-1 flex flex-col gap-1">
-                {evidence.map((e, i) => (
-                  <li key={i} className="flex gap-2 text-[0.88rem] leading-[1.7] text-ivory">
-                    <span aria-hidden className="text-burgundy">·</span>
-                    <span className="min-w-0">{e}</span>
-                  </li>
-                ))}
-              </ul>
-              {evidenceGap && <p className="mt-1 text-[0.78rem] leading-[1.6] text-ivory-dim">{evidenceGap}</p>}
-
-              <div className="mt-4 rounded-xl bg-white/80 px-4 py-3">
-                <p className="text-[0.76rem] font-semibold text-burgundy">오늘 할 행동 하나 · 무료</p>
-                <p className="mt-1 text-[0.95rem] font-semibold leading-[1.6] text-ivory">{todayAction.what}</p>
-                <p className="mt-1 text-[0.82rem] leading-[1.7] text-ivory-dim">{todayAction.why}</p>
-              </div>
-
-              <p className="mt-3 text-[0.78rem] leading-[1.65] text-ivory-dim">
-                <b className="font-semibold">지금 알 수 없는 것</b> · {unknownLine}
-              </p>
+            {/* 장면 2 — 설명하는 월화: 질문 → 판단 → 근거 → 가능성 → 기간 → 잠금 */}
+            <section className="mt-8" aria-label="내 질문과 월화의 판단">
+              <TalkMedia video="/wolhwa/v3/explain.mp4" image="/wolhwa/v3/explain.webp" alt="설명하는 월화" ratio="aspect-square" />
+              <TalkThread
+                className="relative z-10 -mt-[18%]"
+                lines={[
+                  { who: "me", text: `“${q.q}”`, tag: name ? `${name}님이 물어본 질문` : "내가 물어본 질문" },
+                  { who: "w", text: oneLine, tag: "월화의 현재 판단", strong: true },
+                  { who: "w", text: `지금 두 사람은 ‘${label}’ 상태로 읽혀요. ${relText}` },
+                  ...(!safety && partnerText
+                    ? [{
+                        who: "w" as const,
+                        tag: "그 사람 쪽 — 가능성으로만",
+                        text: (
+                          <>
+                            {modes.length > 0 && <>사연으로 보면 {modes.map((m) => `‘${m}’`).join(", ")} 쪽 반응이 섞여 보여요. </>}
+                            {partnerText}
+                            <span className="mt-1 block text-[0.76rem] text-[#6a5f61]">확인한 속마음이 아니라, 입력한 사실로 본 가능성이에요.</span>
+                          </>
+                        ),
+                      }]
+                    : []),
+                  {
+                    who: "w",
+                    tag: "이렇게 본 이유",
+                    text: (
+                      <>
+                        {evidence.map((e, i) => (
+                          <span key={i} className="block">· {e}</span>
+                        ))}
+                        {evidenceGap && <span className="mt-1 block text-[0.76rem] text-[#6a5f61]">{evidenceGap}</span>}
+                      </>
+                    ),
+                  },
+                  ...(!safety && preview.now_plan.period
+                    ? [{ who: "w" as const, text: <>그래서 지금은 <b>‘{NOW_STANCE_LABELS[stance] ?? ""}’</b> 흐름이고, 기준이 되는 기간은 <b>{preview.now_plan.period}</b>예요.</> }]
+                    : []),
+                  ...(!safety && watch.length > 0
+                    ? [
+                        { who: "w" as const, text: `이 기간에 살펴볼 신호가 ${watch.length}개 있어요. 첫 번째만 먼저 알려 드릴게요.` },
+                        {
+                          who: "raw" as const,
+                          node: (
+                            <div className="ml-10 flex flex-col gap-2">
+                              <div className="rounded-xl border border-[#ecdfd0] bg-white px-3.5 py-2.5 text-[0.9rem] leading-[1.65] text-[#2a2326]">
+                                <b className="text-[#69263b]">①</b> {watch[0]}
+                              </div>
+                              {watch.slice(1).map((_, i) => (
+                                <div key={i}>{lockBtn(20 + i, i === 0 ? "② 두 번째 신호" : "③ 세 번째 신호", "내 사연 기준으로")}</div>
+                              ))}
+                            </div>
+                          ),
+                        },
+                      ]
+                    : []),
+                  ...(!safety && rule.length > 20
+                    ? [{
+                        who: "w" as const,
+                        tag: "다음 행동을 정하는 기준",
+                        text: (
+                          <>
+                            {cutHalf(rule)}…
+                            <button type="button" onClick={() => onLockClick(30)} className="ml-1 text-[0.8rem] font-semibold text-[#69263b] underline underline-offset-2">
+                              🔒 뒷부분 보기
+                            </button>
+                          </>
+                        ),
+                      }]
+                    : []),
+                  {
+                    who: "w",
+                    tag: "오늘 할 행동 하나 · 무료",
+                    strong: true,
+                    text: (
+                      <>
+                        {todayAction.what}
+                        <span className="mt-1 block text-[0.82rem] font-normal text-[#6a5f61]">{todayAction.why}</span>
+                      </>
+                    ),
+                  },
+                  {
+                    who: "raw",
+                    node: (
+                      <div className="ml-10 rounded-xl border border-[#ecdfd0] bg-white px-3.5 py-3">
+                        <p className="text-[0.74rem] font-semibold text-[#8a6a33]">{sit === "boundary" ? "7일 회복 순서" : "앞으로 7일"}</p>
+                        <div className="mt-2 grid grid-cols-7 gap-1 text-center">
+                          {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                            <button key={d} type="button" onClick={() => d > 1 && onLockClick(40 + d)} className="flex flex-col items-center gap-1">
+                              <span className={`flex h-8 w-8 items-center justify-center rounded-full text-[0.8rem] font-semibold ${d === 1 ? "bg-[#69263b] text-[#fbf7f2]" : "border border-dashed border-[#c9a7b1] text-[#a3243a]"}`}>
+                                {d === 1 ? "✓" : "?"}
+                              </span>
+                              <span className="text-[0.66rem] text-[#6a5f61]">{d === 1 ? "오늘" : `${d}일`}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-[0.76rem] leading-[1.6] text-[#6a5f61]">오늘 할 일은 위에 드렸어요. 2~7일째 할 일은 내 사연으로 정리돼요 🔒</p>
+                      </div>
+                    ),
+                  },
+                  { who: "w", text: "그리고 아마 다음은 이게 궁금할 거예요." },
+                  ...q.next.map((t) => ({ who: "me" as const, text: t })),
+                  { who: "w", text: `그 답은 ${who}의 사연으로만 쓸 수 있어서, 여기까지만 보여 드려요.` },
+                  {
+                    who: "raw",
+                    node: (
+                      <div className="ml-10 flex flex-col gap-2">
+                        {chips.map(([t, s], i) => (
+                          <div key={t}>{lockBtn(50 + i, t, s)}</div>
+                        ))}
+                      </div>
+                    ),
+                  },
+                  {
+                    who: "w",
+                    text: (
+                      <span className="text-[0.84rem] text-[#6a5f61]">
+                        <b className="font-semibold text-[#2a2326]">지금 알 수 없는 것</b> · {unknownLine}
+                      </span>
+                    ),
+                  },
+                  ...(PAYMENTS_OPEN
+                    ? [{
+                        who: "raw" as const,
+                        node: (
+                          <div className="mt-1">
+                            <p className="mb-2 text-center text-[0.82rem] text-ivory-dim">
+                              {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
+                              <b className="text-burgundy">{priceText}</b> · 1회 결제 · {DELIVERY_TIME_TEXT} 도착
+                            </p>
+                            {ctaButton("talk", mainLabel)}
+                          </div>
+                        ),
+                      }]
+                    : []),
+                ]}
+              />
               {facts.length > 0 && (
-                <details className="mt-3 text-[0.8rem] text-ivory-dim">
+                <details className="mx-auto mt-3 max-w-[640px] px-6 text-[0.8rem] text-ivory-dim">
                   <summary className="cursor-pointer select-none">내가 입력한 내용 보기</summary>
                   <p className="mt-1.5 leading-[1.7]">{facts.join(" · ")}</p>
                 </details>
               )}
-            </div>
-          </section>
+            </section>
+          </>
         );
       })()}
       <div ref={stickyStartRef} aria-hidden />
@@ -1179,14 +1306,19 @@ export default function PreviewExperience({
 
 
       {/* ---------- 4. 전체 결과에서 받는 것 (유형별) ---------- */}
-      <section className="mt-8 px-6">
+      {/* 11/23 재구성 ③ v2: 붉은 실을 든 월화 — 화면 가득, 위아래 흐리게 + 말풍선 */}
+      <section className="mt-8" aria-label="이어서 열리는 것">
+        <TalkMedia image="/wolhwa/v4/thread.webp" alt="붉은 실을 든 월화" ratio="aspect-[4/5]" pos="object-[50%_25%]" />
+        <TalkThread
+          className="relative z-10 -mt-[22%]"
+          lines={[
+            { who: "w", text: `여기까지가 무료로 드릴 수 있는 부분이에요.`, strong: true },
+            { who: "w", text: `이 실 끝에 이어지는 건, ${name ? `${name}님` : "당신"}의 사연으로만 쓸 수 있는 것들이에요.` },
+          ]}
+        />
+      </section>
+      <section className="mt-5 px-6">
         <div ref={offerRef} className="shadow-paper mx-auto max-w-[640px] rounded-2xl border border-gold-dim bg-ink-soft px-5 py-6">
-          {/* 11/23 재구성 ③: 붉은 실을 든 월화 */}
-          <div className="relative -mx-5 -mt-6 mb-4 overflow-hidden rounded-t-2xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/wolhwa/v4/thread.webp" alt="붉은 실을 든 월화" loading="lazy" className="block aspect-[16/10] w-full object-cover object-[50%_25%]" />
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-black/60" />
-          </div>
           <p className="font-display text-[1.2rem] font-bold leading-snug text-ivory">{lock.title}</p>
           <p className="mt-2 text-[0.9rem] leading-[1.75] text-ivory-dim">{lock.desc}</p>
           <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">내 사연으로 이어서 열리는 것</p>
@@ -1260,22 +1392,44 @@ export default function PreviewExperience({
             </div>
           </section>
 
-          {/* ---------- 11/23 재구성 ⑤: 결제하면 월화가 이 사연으로 편지를 씀 ---------- */}
-          <section className="mt-8 px-6" aria-label="결제 후 받는 편지">
-            <div className="relative mx-auto max-w-[640px] overflow-hidden rounded-2xl bg-black">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/wolhwa/v4/letter.webp" alt="촛불 아래 편지를 읽는 월화" loading="lazy" className="block aspect-[4/5] w-full object-cover object-[50%_65%]" />
-              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/85 to-transparent" />
-              <div className="absolute inset-x-5 top-5">
-                <p className="text-[0.72rem] tracking-[0.2em] text-[#d8b878]">결제하면 바로</p>
-                <p className="font-display mt-1 text-[1.15rem] font-bold leading-snug text-[#f3ece2]">
+          {/* ---------- 11/23 재구성 ⑤ v2: 편지 장면 화면 가득 + 월화가 편지 첫 줄을 읽어 줌 ---------- */}
+          <section className="mt-10" aria-label="결제 후 받는 편지">
+            <TalkMedia image="/wolhwa/v4/letter.webp" alt="촛불 아래 편지를 읽는 월화" pos="object-[50%_65%]">
+              <div className="absolute inset-x-6 top-[14%] mx-auto max-w-[600px]">
+                <p className="text-[0.72rem] tracking-[0.2em] text-[#d8b878] [text-shadow:0_1px_8px_rgba(0,0,0,0.7)]">결제하면 바로</p>
+                <p className="font-display mt-1 text-[1.15rem] font-bold leading-snug text-[#f3ece2] [text-shadow:0_2px_12px_rgba(0,0,0,0.8)]">
                   월화가 {name ? `${name}님의 ` : ""}사연으로
                   <br />
                   {sit === "lover" ? "첫마디와 편지를 써요" : sit === "boundary" ? "회복 계획과 편지를 써요" : "첫 문장과 편지를 써요"}
                 </p>
-                <p className="mt-1.5 text-[0.8rem] text-[#cfc4b2]">{DELIVERY_TIME_TEXT} · 링크는 이메일로도 보내 드려요</p>
+                <p className="mt-1.5 text-[0.8rem] text-[#e6dccb] [text-shadow:0_1px_8px_rgba(0,0,0,0.8)]">{DELIVERY_TIME_TEXT} · 링크는 이메일로도 보내 드려요</p>
               </div>
-            </div>
+            </TalkMedia>
+            {(() => {
+              const ex = (preview.preview_letter_excerpt ?? []).filter(Boolean);
+              if (!ex.length) return null;
+              return (
+                <TalkThread
+                  className="relative z-10 -mt-[20%]"
+                  lines={[
+                    { who: "w", text: "편지 첫 줄만 먼저 읽어 드릴게요." },
+                    {
+                      who: "raw",
+                      node: (
+                        <div className="ml-10 rounded-2xl border border-[#e3d3bd] bg-[#fffaf1] px-4 py-3.5 font-serif text-[0.94rem] leading-[1.9] text-[#2a2326] shadow-[0_4px_16px_rgba(60,30,40,0.08)]">
+                          <p>{ex[0]}</p>
+                          {ex[1] && <p className="mt-1">{cutHalf(ex[1], 0.4)}…</p>}
+                          <p aria-hidden className="mt-1 select-none blur-[5px]">내 사연에 맞춰 이어지는 월화의 편지 문장이 여기에 이어져요.</p>
+                          <button type="button" onClick={() => onLockClick(60)} className="mt-2 text-[0.8rem] font-semibold text-[#69263b] underline underline-offset-2">
+                            🔒 편지 전체 읽기
+                          </button>
+                        </div>
+                      ),
+                    },
+                  ]}
+                />
+              );
+            })()}
           </section>
 
           {/* ---------- 6. 실제 이용 후기 (게시 동의한 실제 후기만 · 없으면 숨김) ---------- */}
