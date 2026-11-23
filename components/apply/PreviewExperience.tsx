@@ -111,26 +111,30 @@ const ASKED: Record<string, { q: string; next: string[] }> = {
 };
 
 /** 11/18 운영자 요청 4: 가격 바로 위에 '받는 것' 3줄 · 버튼 문구 (전체 결과에 실제 들어 있는 범위만) */
-const RECEIVE: Record<Situation, { lines: [string, string, string]; label: string; short: string }> = {
+const RECEIVE: Record<Situation, { lines: [string, string, string]; label: string; short: string; sheet: string }> = {
   wait: {
     lines: ["연락을 검토할 조건과 접근 방식", "보낼 수 있는 첫 문장 초안 (내 사연 기준)", "답장이 왔을 때 / 단답·무응답일 때 다음 행동"],
-    label: "내 상황별 대응과 7일 행동계획 보기",
-    short: "상황별 대응 + 7일 계획 보기",
+    label: "내 사연으로 쓴 첫 문장 3개 보기",
+    short: "내 첫 문장·연락 시점 보기",
+    sheet: "내 첫 문장과 연락 시점 받기",
   },
   light: {
     lines: ["연락을 검토할 조건과 접근 방식", "보낼 수 있는 첫 문장 초안 (내 사연 기준)", "답장이 왔을 때 / 단답·무응답일 때 다음 행동"],
-    label: "내 상황별 대응과 7일 행동계획 보기",
-    short: "상황별 대응 + 7일 계획 보기",
+    label: "내 사연으로 쓴 첫 문장 3개 보기",
+    short: "내 첫 문장·연락 시점 보기",
+    sheet: "내 첫 문장과 연락 시점 받기",
   },
   lover: {
     lines: ["이야기를 다시 꺼낼 시점과 조건", "비난 없이 꺼내는 첫마디 (내 사연 기준)", "상대가 답할 때 / 피할 때 다음 말"],
-    label: "내 대화 대응과 7일 행동계획 보기",
-    short: "대화 대응 + 7일 계획 보기",
+    label: "내 사연으로 쓴 첫마디 3개 보기",
+    short: "내 첫마디·꺼낼 시점 보기",
+    sheet: "내 첫마디와 꺼낼 시점 받기",
   },
   boundary: {
     lines: ["내가 지킬 거리와 경계의 기준", "연락하고 싶어질 때 바로 할 행동", "24시간·7일·21일 회복 행동계획"],
     label: "내 경계와 회복 행동계획 보기",
     short: "경계·회복 계획 보기",
+    sheet: "내 경계와 회복 행동계획 받기",
   },
 };
 
@@ -1128,7 +1132,7 @@ export default function PreviewExperience({
         <div className="mx-auto max-w-[640px]">
           <p className="font-display text-[1.08rem] font-semibold text-ivory">오늘은 이것만 하지 마세요</p>
           <ul className="mt-3 flex flex-col gap-2">
-            {donts.map((c, i) => (
+            {(safety ? donts : donts.slice(0, 1)).map((c, i) => (
               <li key={i} className="rounded-xl border border-gold-dim/20 bg-ink-soft px-4 py-3">
                 <p className="flex gap-2 text-[0.92rem] font-medium leading-[1.6] text-ivory">
                   <span aria-hidden className="text-thread">✕</span>
@@ -1137,6 +1141,24 @@ export default function PreviewExperience({
                 <p className="mt-1 pl-5 text-[0.8rem] font-light leading-[1.8] text-ivory-dim">{c.why}</p>
               </li>
             ))}
+            {/* 11/23 지시문 P1: 나머지는 잠금 — 실제 문장은 화면(DOM)에 넣지 않는다 */}
+            {!safety &&
+              donts.slice(1).map((_, i) => (
+                <li key={`lock${i}`}>
+                  <button
+                    type="button"
+                    onClick={() => onLockClick(10 + i)}
+                    className="flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-gold-dim/40 bg-ink-soft/60 px-4 py-3 text-left"
+                  >
+                    <span className="flex min-w-0 gap-2 text-[0.9rem] leading-[1.6] text-ivory-dim">
+                      <span aria-hidden className="text-thread">✕</span>
+                      <span aria-hidden className="select-none blur-[4px]">내 사연에서 피해야 할 행동</span>
+                      <span className="sr-only">잠긴 항목</span>
+                    </span>
+                    <span className="shrink-0 text-[0.76rem] text-burgundy">🔒 전체 결과에서</span>
+                  </button>
+                </li>
+              ))}
           </ul>
         </div>
       </section>
@@ -1167,7 +1189,8 @@ export default function PreviewExperience({
                     return (
                       <span className="mt-0.5 block select-none text-[0.84rem] leading-[1.6] text-ivory-dim">
                         <span>{w.slice(0, k).join(" ")} </span>
-                        <span aria-hidden className="blur-[4px]">{w.slice(k).join(" ")}</span>
+                        {/* 11/23 지시문 P1: 흐린 부분에도 실제 문장을 넣지 않는다 */}
+                        <span aria-hidden className="blur-[4px]">{"내 사연에 맞춘 문장".slice(0, Math.max(4, w.slice(k).join(" ").length))}</span>
                         <span aria-hidden className="block blur-[4px]">내 사연의 상황과 시점에 맞춰 이어지는 설명</span>
                       </span>
                     );
@@ -1176,15 +1199,18 @@ export default function PreviewExperience({
               </li>
             ))}
           </ul>
-          <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">전체 결과 구성 — 실제로 받는 내용</p>
-          <dl className="mt-2 divide-y divide-gold-dim/15 rounded-xl border border-gold-dim/25 bg-ink">
-            {components.map(([k, v]) => (
-              <div key={k} className="flex gap-3 px-4 py-2.5">
-                <dt className="w-[5.4rem] shrink-0 text-[0.82rem] font-semibold text-ivory">{k}</dt>
-                <dd className="min-w-0 text-[0.82rem] leading-[1.6] text-ivory-dim">{v}</dd>
-              </div>
+          <p className="mt-5 text-[0.76rem] font-semibold tracking-wider text-gold">결제하면 받는 것</p>
+          <ul className="mt-2 flex flex-col gap-1.5 rounded-xl border border-gold-dim/25 bg-ink px-4 py-3">
+            {RECEIVE[sit].lines.map((l) => (
+              <li key={l} className="flex gap-2 text-[0.9rem] font-semibold leading-[1.55] text-ivory">
+                <span aria-hidden className="text-burgundy">✓</span>
+                <span className="min-w-0">{l}</span>
+              </li>
             ))}
-          </dl>
+          </ul>
+          <p className="mt-2 text-[0.78rem] leading-[1.7] text-ivory-dim">
+            함께 드려요 · {components.map(([k]) => k).join(" · ")}
+          </p>
         </div>
       </section>
 
@@ -1253,8 +1279,13 @@ export default function PreviewExperience({
                 <p className="-mt-1 mb-2 text-center text-[0.74rem] text-ivory-dim">첫 구매 할인(신청 후 24시간)이 끝나 정가로 안내돼요</p>
               )}
               {ctaButton("offer", mainLabel)}
-              <p className="mt-2.5 text-center text-[0.74rem] leading-[1.8] text-ivory-dim">
-                결제 후 결과 생성이 시작돼요 · {DELIVERY_TIME_TEXT} · 링크를 이메일로도 보내 드려요
+              <ul className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[0.74rem] font-semibold text-ivory">
+                <li>✓ 결과 열기 전 {REFUND_WINDOW_DAYS}일 안 전액 환불</li>
+                <li>✓ {DELIVERY_TIME_TEXT} 도착</li>
+                <li>✓ 정기결제 없음</li>
+              </ul>
+              <p className="mt-1.5 text-center text-[0.72rem] leading-[1.8] text-ivory-dim">
+                결제 후 결과 생성이 시작돼요 · 링크를 이메일로도 보내 드려요
               </p>
             </div>
           </section>
@@ -1359,6 +1390,7 @@ export default function PreviewExperience({
             startCancelled={pay.cancelled}
             onClose={() => setPay((x) => ({ ...x, open: false }))}
             highlights={RECEIVE[sit].lines}
+            sheetTitle={RECEIVE[sit].sheet}
           />
         </div>
       )}
