@@ -1,12 +1,23 @@
 import Link from "next/link";
 import { CHAT_ORDER_RE } from "@/lib/chat/types";
+import { redirect } from "next/navigation";
+import { getChatOrder } from "@/lib/chat/store";
+import { createContinueToken } from "@/lib/cs-auth";
 
 export default async function ChatPayFail({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string; t?: string; message?: string; code?: string }>;
+  searchParams: Promise<{ order?: string; orderId?: string; t?: string; message?: string; code?: string }>;
 }) {
   const p = await searchParams;
+  /* 11/23: 재회 결제 시트의 묶음 결제를 취소 → 그 미리보기로 돌아가 결제 시트·월화 팝업 */
+  const oid = (p as { orderId?: string }).orderId ?? p.order;
+  if (oid && CHAT_ORDER_RE.test(oid)) {
+    const co = await getChatOrder(oid);
+    const ct = co?.combo_ritual_order ? createContinueToken(co.combo_ritual_order) : null;
+    if (co?.combo_ritual_order && ct)
+      redirect(`/apply/preview?order=${co.combo_ritual_order}&ct=${encodeURIComponent(ct)}&cancelled=1&pay=combo`);
+  }
   const back = p.order && CHAT_ORDER_RE.test(p.order) && p.t ? `/chat/order/${p.order}?t=${encodeURIComponent(p.t)}` : "/chat";
   const cancel = p.code === "PAY_PROCESS_CANCELED" || p.code === "USER_CANCEL";
   return (
