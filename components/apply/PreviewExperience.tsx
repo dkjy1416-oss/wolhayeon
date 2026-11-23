@@ -869,6 +869,9 @@ export default function PreviewExperience({
       : want === "bundle"
         ? `월화 패키지로 보기 · ${bundleNow.toLocaleString()}원`
         : `${RECEIVE[sit].label} · ${priceText}`;
+  /* 11/23: 책·패키지로 들어온 주문은 가격 줄도 버튼과 같은 금액으로 */
+  const shownPriceText =
+    want === "book" ? `${BOOK_PRICE_KRW.toLocaleString()}원` : want === "bundle" ? `${bundleNow.toLocaleString()}원` : priceText;
   /* 하단 고정 버튼은 폭이 좁아 짧은 문구 */
   const stickyLabel = want ? mainLabel : `${RECEIVE[sit].short} · ${priceText}`;
   /* 첫 구매 할인(신청 후 24시간)이 끝나 정가인 주문 — 왜 16,900원인지 밝힘 (11/18) */
@@ -1375,9 +1378,9 @@ export default function PreviewExperience({
                 ))}
               </ul>
               <p className="mb-2 text-center text-[0.84rem] text-ivory-dim">
-                {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
-                {badge.strike !== null && <span className="mr-1">→ 첫 구매</span>}
-                <b className="text-burgundy">{priceText}</b> · 1회 결제 · 정기결제 없음
+                {!want && badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
+                {!want && badge.strike !== null && <span className="mr-1">→ 첫 구매</span>}
+                <b className="text-burgundy">{shownPriceText}</b> · 1회 결제 · 정기결제 없음
               </p>
               {offerExpired && (
                 <p className="-mt-1 mb-2 text-center text-[0.74rem] text-ivory-dim">첫 구매 할인(신청 후 24시간)이 끝나 정가로 안내돼요</p>
@@ -1538,9 +1541,9 @@ export default function PreviewExperience({
               <div ref={mainCtaRef} />
               <div className="mt-5">
               <p className="mb-2 text-center text-[0.84rem] text-ivory-dim">
-                {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
-                {badge.strike !== null && <span className="mr-1">→ 첫 구매</span>}
-                <b className="text-burgundy">{priceText}</b> · 1회 결제 · 정기결제 없음
+                {!want && badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
+                {!want && badge.strike !== null && <span className="mr-1">→ 첫 구매</span>}
+                <b className="text-burgundy">{shownPriceText}</b> · 1회 결제 · 정기결제 없음
               </p>
               {offerExpired && (
                 <p className="-mt-1 mb-2 text-center text-[0.74rem] text-ivory-dim">첫 구매 할인(신청 후 24시간)이 끝나 정가로 안내돼요</p>
