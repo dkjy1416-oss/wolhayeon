@@ -14,8 +14,18 @@ import {
   won,
 } from "@/lib/admin-util";
 import { kickSweep } from "@/lib/sweep-kick";
+import { listChatOrders } from "@/lib/chat/store";
 import { getMarketingStats } from "@/lib/marketing-stats";
 import FunnelBoard from "@/components/admin/FunnelBoard";
+
+/** 11/23: 판매 상품 이름 (메인 화면에서 구분) */
+function productLabel(r: { kind?: string; product?: string | null; payment_method?: string | null }): string {
+  if (r.kind === "chat") return r.product === "chat_bundle" ? "카톡+재회 패키지" : "카톡 분석";
+  if (r.payment_method === "chat_bundle") return "재회 분석 (카톡 패키지)";
+  if (r.product === "bundle") return "재회 분석+책";
+  if (r.product === "book") return "재회의 책";
+  return "재회 분석";
+}
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +36,9 @@ export const dynamic = "force-dynamic";
 
 interface OrderRow {
   product?: string | null;
+  payment_method?: string | null;
+  /** 11/23: 카톡 분석 주문(WC-)을 같은 목록에 섞을 때 */
+  kind?: "ritual" | "chat";
   order_number: string;
   applicant_name: string | null;
   email: string | null;
@@ -83,7 +96,7 @@ export default async function AdminDashboard() {
       supabase
         .from("ritual_orders")
         .select(
-          "order_number, applicant_name, email, created_at, paid_at, preview_generated_at, payment_status, payment_amount, generation_status, review_status, delivery_status, product"
+          "order_number, applicant_name, email, created_at, paid_at, preview_generated_at, payment_status, payment_amount, generation_status, review_status, delivery_status, product, payment_method"
         )
         .gt("created_at", weekStart)
         .order("created_at", { ascending: false })
@@ -91,7 +104,7 @@ export default async function AdminDashboard() {
       supabase
         .from("ritual_orders")
         .select(
-          "order_number, applicant_name, email, created_at, paid_at, preview_generated_at, payment_status, payment_amount, generation_status, review_status, delivery_status, product, book_status"
+          "order_number, applicant_name, email, created_at, paid_at, preview_generated_at, payment_status, payment_amount, generation_status, review_status, delivery_status, product, book_status, payment_method"
         )
         .eq("payment_status", "paid")
         .order("paid_at", { ascending: false })
@@ -114,6 +127,27 @@ export default async function AdminDashboard() {
         .limit(2000),
       supabase.from("reviews").select("id").eq("status", "pending").limit(500),
     ]);
+  /* 11/23 운영자 요청: 카톡 분석 결제도 메인 화면 결제·매출·최근 결제에 함께 (상품 이름으로 구분) */
+  const chatRows = await listChatOrders(300).catch(() => []);
+  const chatPaid: OrderRow[] = chatRows
+    .filter((c) => c.pay_status === "paid" && !isOperatorEmail(c.email))
+    .map((c) => ({
+      kind: "chat",
+      product: c.product,
+      order_number: c.order_number,
+      applicant_name: c.name,
+      email: c.email,
+      created_at: c.created_at,
+      paid_at: c.paid_at,
+      preview_generated_at: null,
+      payment_status: "paid",
+      payment_amount: c.amount,
+      generation_status: c.gen_status,
+      review_status: "",
+      delivery_status: "",
+    }));
+  /* 카톡+재회 패키지로 받은 재회 분석은 재회 주문에도 12,900원으로 기록됨 → 매출은 카톡 주문 쪽에서만 센다 */
+  const notBundleCopy = (r: OrderRow) => r.payment_method !== "chat_bundle";
 
   const recent = ((recentRes.data ?? []) as OrderRow[]).filter(
     (r) => !isOperatorEmail(r.email)
@@ -127,7 +161,7 @@ export default async function AdminDashboard() {
     const rows = recent.filter(
       (r) => kstDate(r.created_at) === key && !(r.product === "book" && r.payment_amount === BOOK_COUPON_PRICE_KRW)
     );
-    const paid = recent.filter(
+    const paid = [...recent.filter(notBundleCopy), ...chatPaid].filter(
       (r) => r.paid_at && kstDate(r.paid_at) === key
     );
     return {
@@ -141,7 +175,7 @@ export default async function AdminDashboard() {
   const yesterday = dayOf(yesterdayKey);
 
   /* 최근 7일 "결제일" 기준 (예전엔 신청일 기준이라 예전에 신청하고 최근 결제한 주문이 빠졌음) */
-  const weekPaid = paidAll.filter((r) => r.paid_at && r.paid_at > weekStart);
+  const weekPaid = [...paidAll.filter(notBundleCopy), ...chatPaid].filter((r) => r.paid_at && r.paid_at > weekStart);
   const weekRevenue = weekPaid.reduce((s, r) => s + (r.payment_amount ?? 0), 0);
 
   /* 지금 처리할 일 */
@@ -211,7 +245,9 @@ export default async function AdminDashboard() {
   if (openIncidents)
     todos.push({ label: "고객센터 장애 접수 (미해결)", count: openIncidents, href: "/admin/cs", tone: "warn" });
 
-  const recentPaid = paidAll.slice(0, 6);
+  const recentPaid = [...paidAll, ...chatPaid]
+    .sort((a, b) => (b.paid_at ?? "").localeCompare(a.paid_at ?? ""))
+    .slice(0, 8);
   const stats = await statsPromise;
 
   return (
@@ -313,17 +349,20 @@ export default async function AdminDashboard() {
           {recentPaid.map((r) => (
             <li key={r.order_number}>
               <Link
-                href={`/admin/orders/${r.order_number}`}
+                href={r.kind === "chat" ? "/admin/chat" : `/admin/orders/${r.order_number}`}
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gold-dim/20 bg-ink-soft/50 px-4 py-3 text-[0.84rem] hover:border-gold/50"
               >
                 <span>
+                  <span className={`mr-2 rounded-full px-2 py-0.5 text-[0.66rem] font-semibold ${r.kind === "chat" || r.payment_method === "chat_bundle" ? "bg-[#fee500] text-[#3c1e1e]" : "bg-gold/15 text-gold"}`}>
+                    {productLabel(r)}
+                  </span>
                   {(r.applicant_name ?? "").trim() || "(이름 없음)"}님
                   <span className="ml-2 font-mono text-[0.72rem] text-ivory-dim/70">
                     {r.order_number}
                   </span>
                 </span>
                 <span className="text-ivory-dim">
-                  {won(r.payment_amount ?? 0)}
+                  {r.payment_method === "chat_bundle" ? "패키지에 포함" : won(r.payment_amount ?? 0)}
                   {r.payment_amount === APOLOGY_PRICE_KRW && (
                     <span className="ml-1 text-thread">(쿠폰)</span>
                   )}{" "}
