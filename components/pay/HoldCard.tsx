@@ -81,8 +81,8 @@ export default function HoldCard({
     <div className="w-full max-w-[360px] overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#19161a] text-left shadow-[0_24px_70px_rgba(0,0,0,0.65)]">
       <div className="relative aspect-[5/4] w-full overflow-hidden bg-black">
         <video
-          src="/wolhwa/v3/smile.mp4"
-          poster="/wolhwa/v3/smile.webp"
+          src="/wolhwa/v4/wait.mp4"
+          poster="/wolhwa/v4/wait.webp"
           autoPlay
           muted
           loop
