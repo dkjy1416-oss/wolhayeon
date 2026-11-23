@@ -25,6 +25,7 @@ import { confirmTossPayment, getTossPayment, getTossPaymentByOrderId } from "@/l
 import {
   RITUAL_PRICE_KRW,
   RITUAL_REGULAR_PRICE_KRW,
+  LEGACY_REGULAR_PRICE_KRW,
   APOLOGY_PRICE_KRW,
   BOOK_PRICE_KRW,
   BOOK_COUPON_PRICE_KRW,
@@ -196,7 +197,7 @@ export async function confirmOrderPayment(params: {
     const amountOk = isAllowedPrice(row.payment_amount) && amountNumber === row.payment_amount;
     /* 정가(16,900원)는 첫 구매가 기간 중에도 받는다 — 첫 구매가 도입 전에 열어 둔 결제창 대비 */
     const priceStillValid =
-      (product === "message" && row.payment_amount === RITUAL_REGULAR_PRICE_KRW) ||
+      (product === "message" && (row.payment_amount === RITUAL_REGULAR_PRICE_KRW || row.payment_amount === LEGACY_REGULAR_PRICE_KRW)) ||
       (product === "bundle" && row.payment_amount === BUNDLE_REGULAR_PRICE_KRW) ||
       [Date.now(), Date.now() - PROMO_GRACE_MS].some(
       (t) =>

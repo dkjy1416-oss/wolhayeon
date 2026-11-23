@@ -311,7 +311,9 @@ export function isLikelyMinor(
 export const RITUAL_PRICE_KRW = 12900;
 
 /** 정가(원) — 런칭 특가 기간 동안 취소선으로 표시하는 원래 가격 */
-export const RITUAL_REGULAR_PRICE_KRW = 16900;
+export const RITUAL_REGULAR_PRICE_KRW = 19900;
+/** 11/23 대표 결정으로 정가 16,900 → 19,900원. 변경 전에 열어 둔 결제창(16,900원)은 승인해 준다 */
+export const LEGACY_REGULAR_PRICE_KRW = 16900;
 
 /** 결제 오류 사과 쿠폰가(원) — 9/24~9/28 결제 실패 고객 주문에만 DB에서 적용 */
 export const APOLOGY_PRICE_KRW = 9900;
@@ -500,6 +502,7 @@ export function isAllowedPrice(amount: unknown): amount is number {
     amount === RITUAL_PRICE_KRW ||
     amount === APOLOGY_PRICE_KRW ||
     amount === RITUAL_REGULAR_PRICE_KRW ||
+    amount === LEGACY_REGULAR_PRICE_KRW ||
     amount === BOOK_PRICE_KRW ||
     amount === BOOK_COUPON_PRICE_KRW ||
     amount === BUNDLE_PRICE_KRW ||
