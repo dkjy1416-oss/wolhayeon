@@ -177,6 +177,26 @@ export default async function AdminDashboard() {
   /* 최근 7일 "결제일" 기준 (예전엔 신청일 기준이라 예전에 신청하고 최근 결제한 주문이 빠졌음) */
   const weekPaid = [...paidAll.filter(notBundleCopy), ...chatPaid].filter((r) => r.paid_at && r.paid_at > weekStart);
   const weekRevenue = weekPaid.reduce((s, r) => s + (r.payment_amount ?? 0), 0);
+  /* 11/23: 상품별 표 (오늘·어제·7일·30일) — 재회 쪽은 패키지 복사본 제외, 카톡 쪽 포함 */
+  const yKey = kstDate(new Date(Date.now() - 86400000).toISOString());
+  const chatDay = (key: string) => chatPaid.filter((r) => r.paid_at && kstDate(r.paid_at) === key);
+  const allSales = [...paidAll.filter(notBundleCopy), ...chatPaid].filter((r) => !isOperatorEmail(r.email));
+  const ranges: Array<(r: OrderRow) => boolean> = [
+    (r) => !!r.paid_at && kstDate(r.paid_at) === todayKey,
+    (r) => !!r.paid_at && kstDate(r.paid_at) === yKey,
+    (r) => !!r.paid_at && r.paid_at > kstDaysAgoStartIso(6),
+    (r) => !!r.paid_at && r.paid_at > kstDaysAgoStartIso(29),
+  ];
+  const labels = ["재회 분석", "재회 분석+책", "재회의 책", "카톡 분석", "카톡+재회 패키지"];
+  const cellsFor = (rows: OrderRow[]) =>
+    ranges.map((f) => {
+      const hit = rows.filter(f);
+      return { n: hit.length, rev: hit.reduce((s, r) => s + (r.payment_amount ?? 0), 0) };
+    });
+  const productTable = [
+    ...labels.map((label) => ({ label, cells: cellsFor(allSales.filter((r) => productLabel(r) === label)) })),
+    { label: "합계", cells: cellsFor(allSales) },
+  ];
 
   /* 지금 처리할 일 */
   const genFailed = paidAll.filter((r) => r.generation_status === "failed");
@@ -289,7 +309,13 @@ export default async function AdminDashboard() {
       {/* 오늘 — 핵심 6개 + 퍼널 + 전환율 */}
       <h2 className="font-display mt-8 text-[1rem] font-semibold">오늘</h2>
       {stats ? (
-        <FunnelBoard stats={stats} />
+        <FunnelBoard
+          stats={stats}
+          chat={{
+            today: { paid: chatDay(todayKey).length, revenue: chatDay(todayKey).reduce((s, r) => s + (r.payment_amount ?? 0), 0) },
+            yesterday: { paid: chatDay(yKey).length, revenue: chatDay(yKey).reduce((s, r) => s + (r.payment_amount ?? 0), 0) },
+          }}
+        />
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Tile label="신청" value={`${today.applied}명`} sub={`어제 ${yesterday.applied}명`} />
@@ -298,6 +324,32 @@ export default async function AdminDashboard() {
           <Tile label="매출" value={won(today.revenue)} sub={`어제 ${won(yesterday.revenue)}`} accent={today.revenue > 0} />
         </div>
       )}
+      {/* 11/23 운영자 요청: 상품별 결제·매출을 대시보드에서 한 번에 */}
+      <div className="mt-4 overflow-x-auto rounded-xl border border-gold-dim/25 bg-ink-soft/50">
+        <table className="w-full min-w-[520px] text-[0.8rem]">
+          <thead>
+            <tr className="text-left text-[0.7rem] text-ivory-dim">
+              <th className="px-4 py-2 font-normal">상품별</th>
+              <th className="px-3 py-2 text-right font-normal">오늘</th>
+              <th className="px-3 py-2 text-right font-normal">어제</th>
+              <th className="px-3 py-2 text-right font-normal">최근 7일</th>
+              <th className="px-3 py-2 text-right font-normal">최근 30일</th>
+            </tr>
+          </thead>
+          <tbody>
+            {productTable.map((p) => (
+              <tr key={p.label} className={`border-t border-gold-dim/15 ${p.label === "합계" ? "font-semibold text-gold" : ""}`}>
+                <td className="px-4 py-2">{p.label}</td>
+                {p.cells.map((c, i) => (
+                  <td key={i} className="px-3 py-2 text-right tabular-nums">
+                    {c.n}건 <span className="text-ivory-dim">· {won(c.rev)}</span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="mt-2 text-[0.75rem] text-ivory-dim">
         최근 7일 결제 {weekPaid.length}건 · 매출 {won(weekRevenue)}
         {csToday !== null && ` · 오늘 CS 문의 ${csToday}건`}
