@@ -428,7 +428,7 @@ export function buildInstantPreview(order: RitualOrderRow, quoteLine: string | n
       : {
           stance,
           period,
-          why: `지금 먼저 움직이면 ${partner}님은 반가움보다 부담을 먼저 느끼기 쉬워요. 이 기간은 멈춰 있는 시간이 아니라, 다음 연락이 가볍게 도착할 수 있도록 ${name}님의 마음을 먼저 단단하게 만드는 시간이에요.`,
+          why: `지금 먼저 움직이면 답이 없을 때 ${name}님 마음이 더 흔들리기 쉬워요. 이 기간은 멈춰 있는 시간이 아니라, 다음 연락이 가볍게 도착할 수 있도록 ${name}님의 마음을 먼저 단단하게 만드는 시간이에요.`,
           watch: [
             "상대 쪽에서 스토리 반응·안부 같은 작은 신호가 오는지",
             "답이 없어도 하루가 무너지지 않는지",
