@@ -9,12 +9,13 @@ import Link from "next/link";
 import { Point1, Point2, Point3, Point4 } from "@/components/home3/Points";
 import ShortsRow from "@/components/home2/ShortsRow";
 import { SAVED_REVIEWS } from "@/lib/home/reviews-saved";
+import { ReviewCard, Stars5 } from "@/components/home4/ReviewCard";
 import { COLUMNS, colPal } from "@/lib/home/columns";
 import { SHORTS_YT, ytThumb } from "@/lib/home/videos";
 
 const CFG = {
   ritual: {
-    products: ["관계 리추얼", "메시지 + 책"],
+    products: ["관계 리추얼", "리추얼 + 심층 리포트", "심층 재회 리포트"],
     columns: ["short-reply-after-apology", "held-on-too-much", "before-you-send", "first-24-hours"],
   },
   chat: {
@@ -27,7 +28,7 @@ const YT_PICK = ["r7-OOdStniE", "A6ZCzFbe6DI", "F0-Bb9RHJhA", "lMHD1SXc1Ks"];
 
 export default function PreviewExtras({ kind }: { kind: "ritual" | "chat" }) {
   const cfg = CFG[kind];
-  const reviews = SAVED_REVIEWS.filter((r) => (cfg.products as readonly string[]).includes(r.product)).slice(0, 10);
+  const reviews = SAVED_REVIEWS.filter((r) => (cfg.products as readonly string[]).includes(r.product)).slice(0, 12);
   const cols = cfg.columns.map((s) => COLUMNS.find((c) => c.slug === s)).filter(Boolean) as typeof COLUMNS;
   const head = "text-[0.76rem] font-semibold tracking-wider text-gold";
   const h2 = "font-display mt-1 text-[1.15rem] font-semibold leading-[1.5] text-ivory [word-break:keep-all]";
@@ -40,7 +41,9 @@ export default function PreviewExtras({ kind }: { kind: "ritual" | "chat" }) {
           <div className="mx-auto max-w-[640px]">
             <div className="flex items-end justify-between">
               <div>
-                <p className={head}>먼저 받아 본 분들의 이야기</p>
+                <p className={head}>
+                  실시간 이용 후기 · <Stars5 size={11} /> 5.0
+                </p>
                 <h2 className={h2}>{kind === "chat" ? "숫자 다음, 해석을 받아 본 분들" : "미리보기 다음 장을 열어 본 분들"}</h2>
               </div>
               <Link href="/reviews" className="shrink-0 pb-1 text-[0.76rem] text-ivory-dim underline underline-offset-4">
@@ -49,12 +52,8 @@ export default function PreviewExtras({ kind }: { kind: "ritual" | "chat" }) {
             </div>
             <div className="scrollbar-none -mx-6 mt-3 flex snap-x gap-2.5 overflow-x-auto px-6">
               {reviews.map((r) => (
-                <div key={r.id} className="flex w-[82%] max-w-[300px] shrink-0 snap-start flex-col gap-2 rounded-2xl border border-gold-dim/30 bg-ink-soft px-4 py-4">
-                  <span className="flex items-center justify-between text-[0.72rem] text-ivory-dim">
-                    <span>{r.age}</span>
-                    <span className="rounded-full border border-gold-dim/40 px-2 py-0.5 text-gold">{r.product}</span>
-                  </span>
-                  <p className="text-[0.86rem] leading-[1.75] text-ivory [word-break:keep-all]">“{r.body}”</p>
+                <div key={r.id} className="w-[84%] max-w-[310px] shrink-0 snap-start">
+                  <ReviewCard r={{ key: String(r.id), id: r.id, product: r.product, body: r.body, age: r.age, stars: 5 }} clamp={5} light={kind === "ritual"} href="/reviews" />
                 </div>
               ))}
             </div>
