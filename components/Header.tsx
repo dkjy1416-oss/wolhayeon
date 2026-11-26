@@ -30,7 +30,7 @@ export default function Header({
     >
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5">
         <Link
-          href="/"
+          href="/home"
           className="font-display text-base text-ivory tracking-wide"
         >
           월하연 <span className="text-gold">月下緣</span>
