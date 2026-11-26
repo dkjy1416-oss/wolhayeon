@@ -12,6 +12,7 @@
  *   답변은 기존 saveApplication(sessionStorage)에 기존 필드명 그대로 저장 —
  *   confirm/주문 payload는 Production과 100% 동일. DB field/enum 변경 없음.
  */
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -623,7 +624,9 @@ export default function ImmersiveApplyExperience({
       {/* ---------- INTRO (§6~8) ---------- */}
       {phase === "intro" && (
         <div className="imm-viewport relative z-10 flex flex-col justify-end px-7 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
-          <p className="text-xs tracking-[0.35em] text-gold/90">月下緣</p>
+          <Link href="/home" className="w-fit text-xs tracking-[0.35em] text-gold/90">
+            월하연 月下緣
+          </Link>
           <div className="mt-5 min-h-[9.5rem]">
             <p
               key={introIdx}
@@ -662,12 +665,14 @@ export default function ImmersiveApplyExperience({
               ←
             </button>
             {poster && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={poster}
-                alt="월화"
-                className="h-9 w-9 shrink-0 rounded-full border border-gold/30 object-cover object-[50%_22%]"
-              />
+              <Link href="/home" aria-label="월하연 홈으로" className="shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={poster}
+                  alt="월화"
+                  className="h-9 w-9 rounded-full border border-gold/30 object-cover object-[50%_22%]"
+                />
+              </Link>
             )}
             <div className="flex-1">
               <div className="h-[3px] w-full overflow-hidden rounded-full bg-ivory/18">

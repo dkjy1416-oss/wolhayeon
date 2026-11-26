@@ -43,6 +43,7 @@ import OfferCountdown from "@/components/pay/OfferCountdown";
 import RollingCount from "@/components/home3/RollingCount";
 import ResultExampleCard from "@/components/apply/ResultExampleCard";
 import { TalkMedia, TalkThread, cutHalf } from "@/components/apply/WolhwaTalk";
+import PreviewExtras from "@/components/apply/PreviewExtras";
 import { DELIVERY_TIME_TEXT, DELIVERY_DELAY_TEXT, HOW_IT_WORKS } from "@/lib/service-facts";
 import { rememberOrder } from "@/components/book/ResumeOrder";
 import { logPayEvent } from "@/lib/pay-events";
@@ -1037,10 +1038,10 @@ export default function PreviewExperience({
       {/* 11/23 운영자 요청: 맨 위에 월하연 홈으로 돌아가는 줄 */}
       <nav className="border-b border-gold-dim/20 px-6" aria-label="월하연 홈">
         <div className="mx-auto flex h-12 max-w-[640px] items-center justify-between">
-          <Link href="/" className="font-display text-[1rem] tracking-wide text-ivory">
+          <Link href="/home" className="font-display text-[1rem] tracking-wide text-ivory">
             월하연 <span className="text-gold">月下緣</span>
           </Link>
-          <Link href="/" className="rounded-full border border-gold-dim/40 px-3.5 py-1.5 text-[0.78rem] text-ivory-dim">
+          <Link href="/home" className="rounded-full border border-gold-dim/40 px-3.5 py-1.5 text-[0.78rem] text-ivory-dim">
             홈으로
           </Link>
         </div>
@@ -1455,6 +1456,9 @@ export default function PreviewExperience({
               </div>
             </section>
           )}
+
+          {/* 11/27 운영자 요청: 미리보기 풍부하게 — 후기 · 받는 것(POINT 1~4) · SNS·유튜브 · 칼럼 */}
+          <PreviewExtras kind="ritual" />
 
         </>
       )}

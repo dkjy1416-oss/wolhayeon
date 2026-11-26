@@ -655,7 +655,7 @@ export default function ApplyWizard() {
       {/* 진행률 */}
       <div className="fixed inset-x-0 top-0 z-40 bg-ink/90 backdrop-blur-sm">
         <div className="mx-auto flex h-12 max-w-md items-center justify-between px-6">
-          <Link href="/" className="font-display text-sm text-ivory-dim">
+          <Link href="/home" className="font-display text-sm text-ivory-dim">
             월하연 <span className="text-gold/80">月下緣</span>
           </Link>
           <span className="text-xs tabular-nums text-ivory-dim">
