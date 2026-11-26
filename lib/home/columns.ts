@@ -307,3 +307,13 @@ export const COLUMNS: Column[] = [
 ];
 
 export const columnBySlug = (s: string) => COLUMNS.find((c) => c.slug === s);
+
+/** 칼럼마다 파스텔 배경 (낙서 캐릭터는 mix-blend-multiply 로 흰 배경을 지운다) */
+const PAL = [
+  { bg: "#FFE6EC", ink: "#B3263F" },
+  { bg: "#FFF3D1", ink: "#9A6400" },
+  { bg: "#ECE7FF", ink: "#5B45B0" },
+  { bg: "#E3F4EA", ink: "#2F7A4F" },
+  { bg: "#E4F0FF", ink: "#2C5DA8" },
+];
+export const colPal = (no: number) => PAL[no % PAL.length];
