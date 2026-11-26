@@ -78,6 +78,59 @@ function AutoVideo({ src, poster, className = "", label }: { src: string; poster
   return <video ref={ref} className={className} src={src} poster={poster} muted loop playsInline preload="metadata" aria-label={label} />;
 }
 
+/* ⑥ 소개 영상 — 커플 영상으로 다시 편집한 월하연 광고 (11/26). 보이면 소리 없이 재생, 버튼으로 소리 켜기 */
+function AdVideo() {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [sound, setSound] = useState(false);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = true;
+    if (typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) v.play().catch(() => undefined);
+        else v.pause();
+      },
+      { threshold: 0.4 }
+    );
+    io.observe(v);
+    return () => io.disconnect();
+  }, []);
+  const toggle = () => {
+    const v = ref.current;
+    if (!v) return;
+    v.muted = sound;
+    if (!sound) {
+      v.currentTime = 0;
+      v.play().catch(() => undefined);
+    }
+    setSound(!sound);
+  };
+  return (
+    <div className="relative mt-3 aspect-video overflow-hidden rounded-2xl bg-[#1E1E22]">
+      <video
+        ref={ref}
+        src="/wolhwa/v5/ad_couple.mp4"
+        poster="/wolhwa/v5/ad_couple_poster.jpg"
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-label="월하연 소개 영상"
+        className="h-full w-full object-cover"
+      />
+      <button
+        type="button"
+        onClick={toggle}
+        className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/65 px-3 py-1.5 text-[12px] font-bold text-white"
+      >
+        {sound ? "🔇 소리 끄기" : "🔊 소리 켜고 처음부터"}
+      </button>
+    </div>
+  );
+}
+
 function Stars({ n }: { n: number }) {
   const k = Math.max(1, Math.min(5, Math.round(n)));
   return (
@@ -550,9 +603,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
         <section className="px-4 pt-9" aria-label="소개 영상">
           <h2 className="m-0 text-[15px] font-semibold text-[#F5F5F5]">잠 못 드는 밤, 월하연과 함께</h2>
           <p className="m-0 mt-1 text-[13px] text-[#B5B5BA]">보낼까 말까 고민되는 밤, 내 사연을 읽어 줄 사람을 만나 보세요</p>
-          <div className="mt-3 aspect-[16/10] overflow-hidden rounded-2xl bg-[#1E1E22]">
-            <AutoVideo src="/wolhwa/wolhwa-reading-loop.mp4" poster="/wolhwa/reading-poster.webp" label="월하연 소개 영상" className="h-full w-full object-cover" />
-          </div>
+          <AdVideo />
         </section>
 
         {/* ⑦ 후기 + 평점 — 실제 공개 후기만 */}
