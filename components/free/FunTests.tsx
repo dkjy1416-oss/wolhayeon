@@ -12,6 +12,7 @@ import { FREE_TESTS } from "@/lib/home/free-tests";
 const D = "/wolhwa/doodle";
 const CARD = "rounded-[26px] bg-[#FFFBF5] text-[#2B2326]";
 const BTN = "block w-full rounded-2xl bg-[#B3263F] py-[15px] text-center text-[16px] font-extrabold text-white disabled:opacity-40";
+const BTN_V = "block w-full rounded-2xl bg-[#5B45B0] py-[15px] text-center text-[16px] font-extrabold text-white disabled:opacity-40";
 
 /* ---------- 공통 ---------- */
 function useCount(target: number | null) {
@@ -26,7 +27,12 @@ function useCount(target: number | null) {
       if (k < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
+    /* 화면이 백그라운드라 애니메이션이 멈춰도 최종 점수는 꼭 보이게 */
+    const done = window.setTimeout(() => setN(target), 1300);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(done);
+    };
   }, [target]);
   return n;
 }
@@ -407,7 +413,7 @@ export function ZodiacTest() {
               ))}
             </select>
           </label>
-          <button type="button" disabled={!y1 || !y2} onClick={() => setR(zodiacResult(y1, y2))} className={BTN.replace("#B3263F", "#5B45B0")}>
+          <button type="button" disabled={!y1 || !y2} onClick={() => setR(zodiacResult(y1, y2))} className={BTN_V}>
             띠 궁합 보기
           </button>
         </div>
