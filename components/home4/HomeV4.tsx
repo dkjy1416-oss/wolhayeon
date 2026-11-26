@@ -163,11 +163,26 @@ const GROUPS = [
   },
 ];
 
-/* ---------- 대표 배너: 가운데 정렬 넘김 (묘수 구도) ---------- */
+/* ---------- 대표 배너: 가운데 정렬 넘김 (묘수 구도) ----------
+   첫 카드에서도 양옆 카드가 살짝 보이게 3벌을 이어 붙이고 가운데 벌에서 시작, 끝에 닿으면 가운데 벌로 순간 이동 */
+const LOOP = [...BANNERS, ...BANNERS, ...BANNERS];
+const N = BANNERS.length;
+
 function HeroCarousel({ u }: { u: (h: string) => string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [cur, setCur] = useState(0);
+  const [cur, setCur] = useState(N);
   const touching = useRef(false);
+  const settle = useRef(0);
+
+  const leftOf = (el: HTMLDivElement, i: number) => {
+    const n = el.children[i] as HTMLElement | undefined;
+    return n ? n.offsetLeft - (el.clientWidth - n.offsetWidth) / 2 : 0;
+  };
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el) el.scrollLeft = leftOf(el, N);
+  }, []);
 
   const onScroll = () => {
     const el = ref.current;
@@ -184,6 +199,14 @@ function HeroCarousel({ u }: { u: (h: string) => string }) {
       }
     });
     setCur(best);
+    window.clearTimeout(settle.current);
+    settle.current = window.setTimeout(() => {
+      if (best < N || best >= 2 * N) {
+        const j = best < N ? best + N : best - N;
+        el.scrollTo({ left: leftOf(el, j), behavior: "auto" });
+        setCur(j);
+      }
+    }, 180);
   };
 
   /* 4.5초마다 다음 카드 (손으로 넘기는 중엔 멈춤) */
@@ -191,9 +214,7 @@ function HeroCarousel({ u }: { u: (h: string) => string }) {
     const t = window.setInterval(() => {
       const el = ref.current;
       if (!el || touching.current || document.hidden) return;
-      const next = (cur + 1) % BANNERS.length;
-      const n = el.children[next] as HTMLElement | undefined;
-      if (n) el.scrollTo({ left: n.offsetLeft - (el.clientWidth - n.offsetWidth) / 2, behavior: "smooth" });
+      el.scrollTo({ left: leftOf(el, cur + 1), behavior: "smooth" });
     }, 4500);
     return () => window.clearInterval(t);
   }, [cur]);
@@ -205,16 +226,18 @@ function HeroCarousel({ u }: { u: (h: string) => string }) {
         onScroll={onScroll}
         onTouchStart={() => (touching.current = true)}
         onTouchEnd={() => window.setTimeout(() => (touching.current = false), 1500)}
-        className="scrollbar-none flex snap-x snap-mandatory gap-1 overflow-x-auto px-[6.5%]"
+        className="scrollbar-none flex snap-x snap-mandatory gap-1 overflow-x-auto"
       >
-        {BANNERS.map((b, i) => (
+        {LOOP.map((b, i) => (
           <Link
-            key={b.href}
+            key={i}
             href={u(b.href)}
             aria-label={`${b.title} — ${b.line}`}
+            aria-hidden={i < N || i >= 2 * N ? true : undefined}
+            tabIndex={i < N || i >= 2 * N ? -1 : undefined}
             className={`relative flex aspect-[340/490] w-[87%] max-w-[340px] shrink-0 snap-center flex-col justify-end overflow-hidden rounded-2xl bg-[#18181B] p-5 transition-transform duration-300 ${cur === i ? "scale-y-100" : "scale-y-[0.9]"}`}
           >
-            {b.video ? (
+            {b.video && i >= N && i < 2 * N ? (
               <AutoVideo src={b.video} poster={b.img} label={`${b.title} 소개 영상`} className="absolute inset-0 h-full w-full object-cover object-top" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
@@ -223,7 +246,7 @@ function HeroCarousel({ u }: { u: (h: string) => string }) {
             <span aria-hidden className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-b from-transparent via-[#0B0B0C]/60 to-[#0B0B0C]/95" />
             <span className="absolute left-3 top-3 rounded-full bg-[#B3263F] px-2.5 py-1 text-[11px] font-bold text-white">{b.tag}</span>
             <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-[12px] font-bold text-white">
-              {i + 1} / {BANNERS.length}
+              {(i % N) + 1} / {N}
             </span>
             <span className="relative text-[13px] font-semibold text-[#F3B6C2]">{b.who}</span>
             <span className="font-display relative mt-0.5 text-[30px] leading-[1.25] text-white [word-break:keep-all]">{b.title}</span>
