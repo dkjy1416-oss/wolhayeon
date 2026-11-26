@@ -530,7 +530,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
               key={id}
               type="button"
               onClick={() => goCat(id)}
-              className={`h-[36px] flex-1 rounded-full text-[16px] ${cat === id ? "bg-[#2A0D15] font-extrabold text-[#F5F5F5] ring-1 ring-[#8E2338]" : "font-medium text-[#B5B5BA]"}`}
+              className={`h-[36px] flex-auto whitespace-nowrap rounded-full px-2 text-[15px] ${cat === id ? "bg-[#2A0D15] font-extrabold text-[#F5F5F5] ring-1 ring-[#8E2338]" : "font-medium text-[#B5B5BA]"}`}
             >
               {label}
             </button>
