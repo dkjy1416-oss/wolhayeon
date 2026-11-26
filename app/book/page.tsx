@@ -26,6 +26,8 @@ import {
 } from "@/lib/ritual-types";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getPublicReviews } from "@/lib/reviews";
+import { SAVED_REVIEWS } from "@/lib/home/reviews-saved";
+import { ReviewCard, Stars5 } from "@/components/home4/ReviewCard";
 import { upgradeOrderStatus } from "@/lib/book/book-upgrade";
 import type { UpgradeStatus } from "@/lib/book/upgrade-rules";
 import { UpgradeBanner, UpgradeOffer } from "@/components/book/UpgradeOffer";
@@ -792,6 +794,26 @@ export default async function BookPage({
               </div>
             </section>
           )}
+
+          {/* ===== 8-1. 11/27 운영자 요청: 저장 후기(심층 리포트) — 아바타·가린 이름·별 5개 카드 ===== */}
+          <section className="border-t border-gold-dim/10 py-12">
+            <div className="flex items-end justify-between px-6">
+              <div>
+                <p className="flex items-center gap-1.5 text-[0.74rem] font-bold text-gold/90">
+                  실시간 이용 후기 · <Stars5 n={5} size={11} /> 5.0
+                </p>
+                <h2 className="mt-1.5 text-[1.12rem] font-semibold text-ivory">120쪽 리포트를 먼저 받아 본 분들</h2>
+              </div>
+              <Link href="/reviews" className="shrink-0 text-[0.76rem] text-ivory-dim underline underline-offset-4">전체 후기</Link>
+            </div>
+            <div className="mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none]">
+              {SAVED_REVIEWS.filter((r) => r.product === "심층 재회 리포트" || r.product === "리추얼 + 심층 리포트").slice(0, 10).map((r) => (
+                <div key={r.id} className="w-[84%] shrink-0 snap-center">
+                  <ReviewCard r={{ key: String(r.id), id: r.id, product: r.product, body: r.body, age: r.age, stars: 5 }} clamp={5} href="/reviews" />
+                </div>
+              ))}
+            </div>
+          </section>
 
           {/* ===== 9. 월화의 말 ===== */}
           <section className="px-6 pb-12 pt-4">
