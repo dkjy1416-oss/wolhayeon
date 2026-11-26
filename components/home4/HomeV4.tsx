@@ -18,17 +18,18 @@ import { BUSINESS } from "@/components/legal/LegalPage";
 import { FREE_TESTS, type FreeTest } from "@/lib/home/free-tests";
 import { COLUMNS } from "@/lib/home/columns";
 import { SAVED_REVIEWS } from "@/lib/home/reviews-saved";
+import { ReviewCard, Stars5, maskName } from "@/components/home4/ReviewCard";
 import { todayDaily } from "@/lib/home/daily";
 
 /* ⑧ SNS 칸 — 묘수 홈 구도(겹쳐 쌓은 카드 + 세로 영상 2개). 위치는 묘수 실측 비율(358×432) 기준 % */
-const SNS_STAGE: Array<{ kind: "img" | "video"; src: string; poster?: string; alt: string; l: number; t: number; w: number; h?: number; z: number }> = [
-  { kind: "img", src: "/wolhwa/sns/sns_card1.webp?v=2", alt: "내 사연으로 받는 관계 리추얼", l: 30, t: 0, w: 70, z: 1 },
-  { kind: "video", src: "/wolhwa/sns/sns_v1.mp4", poster: "", alt: "월하연 짧은 영상", l: 0, t: 5, w: 38.5, h: 49, z: 3 },
-  { kind: "img", src: "/wolhwa/sns/sns_card2.webp?v=2", alt: "장문 사과에 단답이 왔을 때", l: 22, t: 15, w: 78, z: 4 },
-  { kind: "img", src: "/wolhwa/sns/sns_card3.webp?v=2", alt: "카톡 대화 분석으로 본 연락의 흐름", l: 30, t: 39.5, w: 66, z: 4 },
-  { kind: "video", src: "/wolhwa/sns/sns_v2.mp4", poster: "", alt: "월하연 짧은 영상", l: 62, t: 47, w: 38, h: 48, z: 3 },
-  { kind: "img", src: "/wolhwa/sns/sns_card4.webp?v=2", alt: "헤어진 뒤, 연락하지 말아야 할 때", l: 0, t: 56, w: 72, z: 5 },
-  { kind: "img", src: "/wolhwa/sns/sns_card5.webp?v=2", alt: "월화의 추천 메시지와 맞춤 PDF", l: 14, t: 80, w: 70, z: 6 },
+const SNS_STAGE: Array<{ kind: "img" | "video"; src: string; poster?: string; alt: string; l: number; t: number; w: number; h?: number; z: number; quote?: string; who?: string }> = [
+  { kind: "img", src: "/wolhwa/sns/sns_card1.webp?v=2", alt: "내 사연으로 받는 관계 리추얼", l: 40, t: 0, w: 60, z: 1 },
+  { kind: "video", src: "/wolhwa/sns/sns_v1.mp4", poster: "", alt: "월하연 후기 영상", l: 0, t: 3, w: 34, h: 50, z: 3, who: "관계 리추얼", quote: "그날은 거기서 멈췄어요" },
+  { kind: "img", src: "/wolhwa/sns/sns_card2.webp?v=2", alt: "장문 사과에 단답이 왔을 때", l: 26, t: 14, w: 70, z: 4 },
+  { kind: "img", src: "/wolhwa/sns/sns_card3.webp?v=2", alt: "카톡 대화 분석으로 본 연락의 흐름", l: 38, t: 39.5, w: 58, z: 4 },
+  { kind: "video", src: "/wolhwa/sns/sns_v2.mp4", poster: "", alt: "월하연 후기 영상", l: 64, t: 50, w: 34, h: 50, z: 3, who: "카톡 대화 분석", quote: "제가 놓친 장면이 있더라고요" },
+  { kind: "img", src: "/wolhwa/sns/sns_card4.webp?v=2", alt: "헤어진 뒤, 연락하지 말아야 할 때", l: 0, t: 56, w: 64, z: 5 },
+  { kind: "img", src: "/wolhwa/sns/sns_card5.webp?v=2", alt: "월화의 추천 메시지와 맞춤 PDF", l: 8, t: 80, w: 60, z: 6 },
 ];
 
 /* 상황 카드 — 칼럼으로 (파스텔 + 낙서 캐릭터) */
@@ -37,12 +38,6 @@ import { BottomNav } from "@/components/home4/SubShell";
 
 type Review = { id: number; rating: number; body: string; name: string; product: string; incentive: boolean };
 
-const PRODUCT_LINE: Record<string, string> = {
-  "관계 리추얼": "보낼까 말까 고민되는 밤",
-  책: "보내기 직전의 나를 붙잡아 줄 책",
-  "메시지 + 책": "지금 읽을 메시지와 곁에 둘 책",
-  "카톡 대화 분석": "그 사람 마음, 대화에 남아 있어요",
-};
 
 /* ---------- utm 이어 붙이기 ---------- */
 function useUtm() {
@@ -93,10 +88,9 @@ function AutoVideo({ src, poster, className = "", label }: { src: string; poster
   return <video ref={ref} className={className} src={src} poster={poster} muted loop playsInline preload="metadata" aria-label={label} />;
 }
 
-/* ⑥ 소개 영상 — 커플 영상으로 다시 편집한 월하연 광고 (11/26). 보이면 소리 없이 재생, 버튼으로 소리 켜기 */
+/* ⑥ 소개 영상 — 커플 영상으로 다시 편집한 월하연 광고 (11/26). 11/27: 소리 버튼 없이 꽉 찬 화면으로 소리 없이 계속 재생 */
 function AdVideo() {
   const ref = useRef<HTMLVideoElement>(null);
-  const [sound, setSound] = useState(false);
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
@@ -112,16 +106,6 @@ function AdVideo() {
     io.observe(v);
     return () => io.disconnect();
   }, []);
-  const toggle = () => {
-    const v = ref.current;
-    if (!v) return;
-    v.muted = sound;
-    if (!sound) {
-      v.currentTime = 0;
-      v.play().catch(() => undefined);
-    }
-    setSound(!sound);
-  };
   return (
     <div className="relative mt-3 aspect-video overflow-hidden rounded-2xl bg-[#1E1E22]">
       <video
@@ -135,13 +119,6 @@ function AdVideo() {
         aria-label="월하연 소개 영상"
         className="h-full w-full object-cover"
       />
-      <button
-        type="button"
-        onClick={toggle}
-        className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/65 px-3 py-1.5 text-[12px] font-bold text-white"
-      >
-        {sound ? "🔇 소리 끄기" : "🔊 소리 켜고 처음부터"}
-      </button>
     </div>
   );
 }
@@ -169,7 +146,7 @@ const EB = "m-0 mb-1 text-[13px] text-[#B5B5BA]";
 const BANNERS = [
   { href: "/apply", img: "/wolhwa/v5/p_ritual.webp", video: "/wolhwa/v5/loop_ritual.mp4", logo: "/wolhwa/v5/logo_ritual.webp", title: "월화의 재회 분석", line: "보낼까 말까, 내 사연으로 같이 읽어요", tag: "무료 미리보기" },
   { href: "/chat", img: "/wolhwa/v5/p_kakao.webp", video: "/wolhwa/v5/loop_kakao.mp4", logo: "/wolhwa/v5/logo_kakao.webp", title: "카톡 대화 분석", line: "그 사람 카톡, 숫자로 먼저 읽어 봐요", tag: "숫자 분석 무료" },
-  { href: "/book", img: "/wolhwa/v5/p_book.webp", video: "/wolhwa/v5/loop_book.mp4", logo: "/wolhwa/v5/logo_book.webp", title: "월화의 책", line: "보내기 직전의 나를 붙잡아 줄 한 권", tag: "NEW" },
+  { href: "/book", img: "/wolhwa/v5/p_book.webp", video: "/wolhwa/v5/loop_book.mp4", logo: "/wolhwa/v5/logo_book.webp", title: "심층 재회 리포트", line: "120쪽 · 6만 자 이상, 내 사연으로 쓰는 심층 분석", tag: "NEW" },
 ];
 
 /* 누르면 칼럼 글로 (11/26 운영자 요청) */
@@ -186,7 +163,7 @@ const SEARCH: Array<[string, string]> = [
   ["월화의 관계 리추얼 · 내 사연으로 무료 미리보기", "/apply"],
   ["카톡 대화 분석 · 그 사람 카톡 숫자로 읽기", "/chat"],
   ["캡처로 카톡 분석하기", "/chat?start=quiz"],
-  ["월화의 책 · 메시지 + 책 패키지", "/book"],
+  ["심층 재회 리포트 · 120쪽 고급 분석", "/book"],
   ["보내면 안 되는 메시지 7가지 (무료)", "/free/no-send"],
   ...FREE_TESTS.map((t) => [`${t.title} (무료 테스트)`, t.href] as [string, string]),
   ["월하연 영상 · 유튜브 쇼츠", "/watch"],
@@ -201,7 +178,7 @@ const CAT: Record<string, { title: string; cards: CatCard[] }> = {
     title: "리추얼",
     cards: [
       { img: "/wolhwa/v5/p_ritual.webp", logo: "/wolhwa/v5/logo_ritual.webp", t: "월화의 재회 분석", d: "보낼까 말까, 내 사연으로 같이 읽어요", h: "/apply", tag: "무료 미리보기" },
-      { img: "/wolhwa/v5/p_pack.webp", t: "메시지 + 책 패키지", d: "지금 읽을 메시지와 곁에 둘 책", h: "/book" },
+      { img: "/wolhwa/v5/p_pack.webp", t: "리추얼 + 심층 리포트", d: "지금 읽을 메시지와 120쪽 심층 리포트", h: "/book" },
       { img: "/wolhwa/v5/t_free3.webp", t: "상황을 골라 바로 시작", d: "매달렸을 때 · 단답이 왔을 때 · 또 싸웠을 때", h: "/apply?sit=1" },
     ],
   },
@@ -213,10 +190,10 @@ const CAT: Record<string, { title: string; cards: CatCard[] }> = {
     ],
   },
   book: {
-    title: "책",
+    title: "심층 리포트",
     cards: [
-      { img: "/wolhwa/v5/p_book.webp", logo: "/wolhwa/v5/logo_book.webp", t: "월화의 책", d: "헤어진 뒤, 연락하지 말아야 할 때", h: "/book", tag: "NEW" },
-      { img: "/wolhwa/v5/t_free2.webp", t: "책 속 한 장 미리 보기", d: "보내면 안 되는 메시지 7가지", h: "/free/no-send" },
+      { img: "/wolhwa/v5/p_book.webp", logo: "/wolhwa/v5/logo_book.webp", t: "심층 재회 리포트", d: "120쪽 · 6만 자 이상 — 내 사연으로 쓰는 고급 재회 분석", h: "/book", tag: "NEW" },
+      { img: "/wolhwa/v5/t_free2.webp", t: "리포트 한 장 미리 보기", d: "보내면 안 되는 메시지 7가지", h: "/free/no-send" },
     ],
   },
 };
@@ -290,7 +267,7 @@ const CHIPS: Array<[string, string]> = [
   ["top", "전체"],
   ["ritual", "리추얼"],
   ["talk", "카톡 분석"],
-  ["book", "책"],
+  ["book", "심층 리포트"],
   ["free", "무료"],
 ];
 
@@ -302,7 +279,7 @@ const GROUPS: Array<{ id: string; eb: string; title: string; items: Array<{ img:
     title: "다시 이을 실마리가 궁금하신가요?",
     items: [
       { img: "/wolhwa/v5/p_ritual.webp", logo: "/wolhwa/v5/logo_ritual.webp", who: "월화", t: "월화의 재회 분석", h: "/apply" },
-      { img: "/wolhwa/v5/p_pack.webp", who: "월화의 추천", t: "메시지 + 책 패키지", h: "/book" },
+      { img: "/wolhwa/v5/p_pack.webp", who: "월화의 추천", t: "리추얼 + 심층 리포트", h: "/book" },
     ],
   },
   {
@@ -316,11 +293,11 @@ const GROUPS: Array<{ id: string; eb: string; title: string; items: Array<{ img:
   },
   {
     id: "book",
-    eb: "책 분야",
-    title: "보내기 직전의 당신을, 붙잡아 줄 책",
+    eb: "심층 리포트",
+    title: "120쪽, 6만 자로 다시 읽는 우리 관계",
     items: [
-      { img: "/wolhwa/v5/p_book.webp", logo: "/wolhwa/v5/logo_book.webp", who: "월화의 책", t: "헤어진 뒤, 연락하지 말아야 할 때", h: "/book" },
-      { img: "/wolhwa/v5/t_free2.webp", who: "월화의 책", t: "책 속 한 장 미리 보기", h: "/free/no-send" },
+      { img: "/wolhwa/v5/p_book.webp", logo: "/wolhwa/v5/logo_book.webp", who: "심층 재회 리포트", t: "120쪽 고급 재회 분석", h: "/book" },
+      { img: "/wolhwa/v5/t_free2.webp", who: "심층 재회 리포트", t: "리포트 한 장 미리 보기", h: "/free/no-send" },
     ],
   },
 ];
@@ -426,7 +403,7 @@ const TICKER: Array<{ t: string; h?: string; bg: string }> = [
   { t: "카카오 1초 회원가입 후 쿠폰팩 받기", bg: "#7A1E31" },
   { t: "내 사연으로 무료 미리보기 · 월화가 먼저 읽어 드려요", h: "/apply", bg: "#5A1627" },
   { t: "그 사람 카톡, 숫자 분석은 무료예요", h: "/chat", bg: "#7A1E31" },
-  { t: "NEW! 월화의 책 · 보내기 직전에 펼치는 한 권", h: "/book", bg: "#5A1627" },
+  { t: "NEW! 120쪽 심층 재회 리포트", h: "/book", bg: "#5A1627" },
   { t: "보내면 안 되는 메시지 7가지 · 무료로 보기", h: "/free/no-send", bg: "#7A1E31" },
 ];
 
@@ -602,7 +579,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
 
         {/* ⑦ 후기 — DB 승인 후기 + 운영자가 저장해 둔 후기(11/26 운영자 지시). 이름·별점은 원본에 있는 것만 */}
         <section className="px-4 pt-9" aria-label="후기">
-          <p className="m-0 mb-1 text-[12.5px] font-semibold text-[#E4627B]">후기</p>
+          <p className="m-0 mb-1 text-[12.5px] font-semibold text-[#E4627B]">실시간 이용 후기</p>
           <div className="flex items-end justify-between">
             <h2 className="m-0 text-[21px] font-black leading-[1.35] tracking-[-0.02em]">먼저 열어 본 분들의 이야기</h2>
             <Link href={u("/reviews")} className="shrink-0 pb-1 text-[12.5px] text-[#B5B5BA]">
@@ -611,19 +588,12 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
           </div>
           <div className="scrollbar-none -mx-4 mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4">
             {[
-              ...reviews.map((r) => ({ key: `d${r.id}`, who: r.name, stars: r.rating, body: r.body, product: r.product })),
-              ...SAVED_REVIEWS.filter((_, i) => i % 5 === 0 || i % 5 === 2).map((r) => ({ key: `s${r.id}`, who: r.age, stars: 0, body: r.body, product: r.product })),
+              ...reviews.map((r) => ({ key: `d${r.id}`, id: r.id + 100, name: r.name, stars: r.rating, body: r.body, product: r.product })),
+              ...SAVED_REVIEWS.filter((_, i) => i % 5 === 0 || i % 5 === 2).map((r) => ({ key: `s${r.id}`, id: r.id, name: maskName(r.id), stars: 5, body: r.body, product: r.product, age: r.age })),
             ].map((r) => (
-              <Link key={r.key} href={u("/reviews")} className="flex w-[86%] shrink-0 snap-center flex-col gap-2 rounded-2xl border border-[#2A2A2E] bg-[#18181B] p-4">
-                <span className="flex items-center justify-between">
-                  <span className="text-[13px] font-bold text-[#E7E7EA]">
-                    {r.who} {r.stars > 0 && <Stars n={r.stars} />}
-                  </span>
-                  <span className="rounded-full bg-[#2A0D15] px-2.5 py-0.5 text-[11.5px] font-bold text-[#F3B6C2]">{r.product}</span>
-                </span>
-                <span className="line-clamp-4 text-[15px] leading-[1.65] text-[#F5F5F5] [word-break:keep-all]">“{r.body}”</span>
-                <span className="mt-auto text-[12px] text-[#8f8f96]">{PRODUCT_LINE[r.product] ?? "월하연"}</span>
-              </Link>
+              <div key={r.key} className="w-[86%] max-w-[330px] shrink-0 snap-center">
+                <ReviewCard r={r} clamp={4} href={u("/reviews")} />
+              </div>
             ))}
           </div>
           <Link href={u("/reviews")} className="mt-3 block rounded-xl border border-[#2A2A2E] py-3 text-center text-[14px] font-bold text-[#E7E7EA]">
@@ -641,7 +611,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
           <h2 className="m-0 text-center text-[24px] font-extrabold tracking-[-0.02em]">
             SNS에서 화제인 <span className="text-[#E4627B]">월하연</span>
           </h2>
-          <div className="relative mt-5 aspect-[358/500] w-full">
+          <div className="relative mx-auto mt-5 aspect-[358/432] w-full max-w-[358px]">
             {SNS_STAGE.map((c, i) =>
               c.kind === "video" ? (
                 <div
@@ -650,7 +620,17 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
                   style={{ left: `${c.l}%`, top: `${c.t}%`, width: `${c.w}%`, height: `${c.h}%`, zIndex: c.z }}
                 >
                   <AutoVideo src={c.src} poster={c.poster ?? ""} label={c.alt} className="h-full w-full object-cover" />
-                  <span className="absolute bottom-1.5 left-1.5 rounded bg-black/55 px-1 py-px text-[9px] text-white/80">AI 연출</span>
+                  {/* 후기 영상처럼: 위에 별점·상품, 아래 자막 한 줄 */}
+                  <span className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent px-1.5 pb-3 pt-1.5">
+                    <Stars5 size={9} />
+                    <span className="block truncate text-[8.5px] font-bold text-white">{c.who} 후기</span>
+                  </span>
+                  {c.quote && (
+                    <span className="absolute inset-x-1 bottom-5 rounded bg-black/65 px-1 py-0.5 text-center text-[9px] font-bold leading-[1.3] text-white [word-break:keep-all]">
+                      “{c.quote}”
+                    </span>
+                  )}
+                  <span className="absolute bottom-1 right-1 rounded bg-black/55 px-1 py-px text-[7.5px] text-white/70">AI 연출</span>
                 </div>
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -861,7 +841,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
                 autoFocus
                 value={kw}
                 onChange={(e) => setKw(e.target.value)}
-                placeholder="예: 카톡, 단답, 책"
+                placeholder="예: 카톡, 단답, 리포트"
                 className="h-12 flex-1 rounded-xl border border-[#2A2A2E] bg-[#18181B] px-4 text-[16px] text-[#F5F5F5] outline-none placeholder:text-[#8a8a90]"
               />
               <button type="button" onClick={() => { setSearch(false); setKw(""); }} className="h-12 px-3 text-[15px] text-[#B5B5BA]">
