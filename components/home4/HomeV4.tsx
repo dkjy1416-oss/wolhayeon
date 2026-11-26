@@ -18,6 +18,10 @@ import { BUSINESS } from "@/components/legal/LegalPage";
 import { SHORTS } from "@/components/home2/media";
 import { FREE_TESTS, type FreeTest } from "@/lib/home/free-tests";
 import { COLUMNS } from "@/lib/home/columns";
+import { SHORTS_YT, ytThumb } from "@/lib/home/videos";
+
+/* SNS 칸 — 유튜브 쇼츠 중 조회가 많은 순 (11/26) */
+const SNS_PICK = ["r7-OOdStniE", "lMHD1SXc1Ks", "F0-Bb9RHJhA", "ZPvxbwGfYmQ", "ISj1Yz0X7LM", "ZW4usVG3JG8", "A6ZCzFbe6DI", "Lvsshhk3Y74"];
 import { BottomNav } from "@/components/home4/SubShell";
 
 type Review = { id: number; rating: number; body: string; name: string; product: string; incentive: boolean };
@@ -239,22 +243,6 @@ function CategoryView({ id, u }: { id: string; u: (h: string) => string }) {
             <FreeTestCard key={t.id} t={t} u={u} />
           ))}
         </div>
-        <h2 className="m-0 mt-9 text-[18px] font-extrabold">무료로 더 보기</h2>
-        <ul className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
-          {FREE.map(([t, d, h, img]) => (
-            <li key={t}>
-              <Link href={u(h)} className="flex items-center gap-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img} alt="" aria-hidden loading="lazy" className="h-[64px] w-[92px] shrink-0 rounded-xl bg-[#1E1E22] object-cover object-[50%_25%]" />
-                <span className="min-w-0 flex-1">
-                  <span className={TT}>{t}</span>
-                  <span className={`mt-0.5 block truncate ${DS}`}>{d}</span>
-                </span>
-                <span className="text-[#B5B5BA]"><Chev /></span>
-              </Link>
-            </li>
-          ))}
-        </ul>
       </section>
     );
   }
@@ -297,11 +285,6 @@ const CHIPS: Array<[string, string]> = [
   ["free", "무료"],
 ];
 
-const FREE: Array<[string, string, string, string]> = [
-  ["그 사람 카톡, 숫자로 읽기", "대화를 올리면 숫자로 먼저 보여 드려요", "/chat", "/wolhwa/v5/t_free1.webp"],
-  ["보내면 안 되는 메시지 7가지", "연락하기 전에 먼저 읽는 가이드", "/free/no-send", "/wolhwa/v5/t_free2.webp"],
-  ["내 사연으로 무료 미리보기", "사연을 들려주면 월화가 먼저 읽어 드려요", "/apply", "/wolhwa/v5/t_free3.webp"],
-];
 
 const GROUPS: Array<{ id: string; eb: string; title: string; items: Array<{ img: string; logo?: string; who: string; t: string; h: string }> }> = [
   {
@@ -675,6 +658,29 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
               </div>
             ))}
           </div>
+          <div className="mt-6 flex items-baseline justify-between">
+            <p className="m-0 text-[16px] font-extrabold">유튜브에서 많이 본 월하연</p>
+            <Link href={u("/watch")} className="text-[12.5px] text-[#B5B5BA]">
+              영상 더 보기 ›
+            </Link>
+          </div>
+          <div className="scrollbar-none -mx-4 mt-3 flex snap-x gap-2 overflow-x-auto px-4">
+            {SNS_PICK.map((id) => {
+              const v = SHORTS_YT.find((x) => x.id === id);
+              if (!v) return null;
+              return (
+                <Link key={id} href={u("/watch")} className="w-[124px] shrink-0 snap-start">
+                  <span className="relative block aspect-[9/16] overflow-hidden rounded-xl bg-[#18181B]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={ytThumb(id)} alt="" aria-hidden loading="lazy" className="h-full w-full object-cover" />
+                    <span className="absolute left-1.5 top-1.5 rounded bg-[#B3263F] px-1.5 py-px text-[10px] font-bold text-white">▶ 쇼츠</span>
+                    <span className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1 py-px text-[9px] text-white">AI 연출</span>
+                  </span>
+                  <span className="mt-1.5 line-clamp-2 block text-[12.5px] font-semibold leading-[1.4] [word-break:keep-all]">{v.title}</span>
+                </Link>
+              );
+            })}
+          </div>
         </section>
 
         {/* ⑨ 누적 숫자 — 기존 월계수 그대로 */}
@@ -718,24 +724,6 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
               <FreeTestCard key={t.id} t={t} u={u} />
             ))}
           </div>
-          <ol className="m-0 mt-5 flex list-none flex-col gap-3 p-0">
-            {FREE.map(([t, d, h, img], i) => (
-              <li key={t}>
-                <Link href={u(h)} className="flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt="" aria-hidden loading="lazy" className="h-[72px] w-[104px] shrink-0 rounded-xl bg-[#1E1E22] object-cover object-[50%_25%]" />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#2A2A2E] text-[11px] font-bold text-[#E4627B]">{i + 1}</span>
-                      <span className={TT}>{t}</span>
-                    </span>
-                    <span className={`mt-0.5 block truncate ${DS}`}>{d}</span>
-                  </span>
-                  <span className="text-[#B5B5BA]"><Chev /></span>
-                </Link>
-              </li>
-            ))}
-          </ol>
         </section>
 
         {/* ⑬ 분야별 카드 — 222px 가로 넘김 */}
