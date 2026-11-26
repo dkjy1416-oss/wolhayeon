@@ -290,7 +290,7 @@ export default function HomeV4({ reviews, rating, totals }: { reviews: Review[];
             <h2 className={H2}>{saved.n ? `${saved.n}님 ` : ""}미리보기가 완료됐어요</h2>
             <div className="mt-3 flex flex-col gap-2 rounded-[14px] bg-[#18181B] p-4">
               <span className={NM}>월화의 관계 리추얼</span>
-              <span className={DS}>{paid ? "결과 안내" : "내 미리보기 한 줄"}</span>
+              {(paid || saved.l) && <span className={DS}>{paid ? "결과 안내" : "내 미리보기 한 줄"}</span>}
               <span className="text-[15px] leading-[1.5] text-[#F5F5F5] [word-break:keep-all]">
                 {paid ? "결과는 결제할 때 입력한 메일의 ‘결과 열기’ 링크로 다시 열 수 있어요." : saved.l || "다시 쓰지 않고, 읽어 둔 미리보기를 그대로 이어볼 수 있어요."}
               </span>
@@ -343,17 +343,30 @@ export default function HomeV4({ reviews, rating, totals }: { reviews: Review[];
               )}
             </>
           ) : (
-            /* 아직 공개 동의된 후기가 없을 때 — 지어낸 후기·평점 대신 안내 카드 (같은 카드 모양) */
-            <div className="mr-4 mt-[14px] flex flex-col gap-2 rounded-[14px] bg-[#18181B] p-4">
-              <span className={DS}>실제 이용 후기</span>
-              <span className="text-[14px] leading-[1.6] text-[#F5F5F5] [word-break:keep-all]">
-                결과를 받은 분들의 후기 중, 공개에 동의해 주신 것만 이 자리에 올려요. 지금 첫 후기를 정리하고 있어요.
-              </span>
-              <span className="border-t border-[#2E2E33] pt-2.5">
-                <span className="block text-[14px] font-bold text-[#F5F5F5]">월화의 관계 리추얼</span>
-                <span className={`block ${DS}`}>보낼까 말까 고민되는 밤</span>
-              </span>
-            </div>
+            /* 아직 공개 동의된 후기가 없을 때 — 지어낸 후기·평점 대신, 시안과 같은 카드 모양의 안내 2장 */
+            <>
+              <div className="scrollbar-none mt-[14px] flex snap-x gap-[10px] overflow-x-auto pr-4">
+                {(
+                  [
+                    ["실제 이용 후기", "결과를 받은 분의 후기 중, 공개에 동의해 주신 것만 이 자리에 그대로 올려요. 별점도 실제 후기로만 계산해요.", "월화의 관계 리추얼", "보낼까 말까 고민되는 밤"],
+                    ["후기 남기기", "결과를 받으셨다면 안내 메일의 ‘후기 남기기’ 링크로 한 줄 남겨 주세요. 다음 분께 큰 도움이 돼요.", "관계 리추얼 · 월화의 책", "결과를 받은 분께 메일로 안내해요"],
+                  ] as Array<[string, string, string, string]>
+                ).map(([k, body, t, d]) => (
+                  <div key={k} className="box-border flex w-[270px] shrink-0 snap-start flex-col gap-2 rounded-[14px] bg-[#18181B] p-4">
+                    <span className={DS}>{k}</span>
+                    <span className="min-h-[90px] text-[14px] leading-[1.6] text-[#F5F5F5] [word-break:keep-all]">{body}</span>
+                    <span className="border-t border-[#2E2E33] pt-2.5">
+                      <span className="block text-[14px] font-bold text-[#F5F5F5]">{t}</span>
+                      <span className={`block ${DS}`}>{d}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between pr-4 pt-4">
+                <span className="text-[15px] font-bold">후기 평점</span>
+                <span className="text-[13px] text-[#B5B5BA]">공개 후기가 모이면 표시돼요</span>
+              </div>
+            </>
           )}
         </section>
 
@@ -382,7 +395,7 @@ export default function HomeV4({ reviews, rating, totals }: { reviews: Review[];
               {TOTALS.map(([k, v, unit]) => (
                 <div key={k} className="rounded-[14px] bg-[#18181B] px-1.5 py-4">
                   <div className={DS}>{k}</div>
-                  <div className="font-display mt-1.5 whitespace-nowrap text-[22px] font-bold text-[#E4627B]">
+                  <div className="mt-1.5 whitespace-nowrap text-[22px] font-extrabold tracking-[-0.02em] text-[#E4627B]">
                     <RollingCount value={v} />
                     {unit}
                   </div>
@@ -396,7 +409,7 @@ export default function HomeV4({ reviews, rating, totals }: { reviews: Review[];
         <section id="kakao" className="px-4 pt-7">
           <div className="flex flex-col gap-1.5 rounded-2xl bg-[#7A1E31] px-5 py-[22px]">
             <span className="text-[13px] font-bold text-[#F3B6C2]">카카오 회원 전용</span>
-            <span className="font-display text-[28px] font-bold leading-[1.3] text-white">첫 방문 쿠폰팩</span>
+            <span className="text-[28px] font-extrabold leading-[1.3] tracking-[-0.02em] text-white">첫 방문 쿠폰팩</span>
             <span className="text-[14px] text-[#F5F5F5]">가입하면 쿠폰함에 바로 들어가요</span>
             <button type="button" onClick={() => soon("카카오 회원가입")} className="mt-2.5 rounded-[10px] bg-[#FEE500] p-[14px] text-center text-[16px] font-bold text-[#191919]">
               카카오 1초 회원가입하고 받기
@@ -429,7 +442,7 @@ export default function HomeV4({ reviews, rating, totals }: { reviews: Review[];
             ).map(([t, d, h], i, arr) => (
               <li key={t} className={i < arr.length - 1 ? "border-b border-[#2A2A2E]" : ""}>
                 <Link href={u(h)} className="flex items-center gap-[14px] py-[14px]">
-                  <span className="font-display w-5 shrink-0 text-[22px] font-bold text-[#E4627B]">{i + 1}</span>
+                  <span className="w-5 shrink-0 text-[22px] font-extrabold text-[#E4627B]">{i + 1}</span>
                   <span>
                     <span className={`block ${TT}`}>{t}</span>
                     <span className={`block ${DS}`}>{d}</span>
