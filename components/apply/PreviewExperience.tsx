@@ -682,8 +682,8 @@ export default function PreviewExperience({
   }, []);
   /* 미리보기까지 마친 주문을 이 기기에 기억 → /book·홈에서 다시 와도 사연 그대로 결제 */
   useEffect(() => {
-    if (phase === "ready") rememberOrder(orderNumber, name);
-  }, [phase, orderNumber, name]);
+    if (phase === "ready") rememberOrder(orderNumber, name, preview ? firstSentence(preview.relationship_state?.text ?? "") : "");
+  }, [phase, orderNumber, name, preview]);
   /* 11/17: [결제하기] → 이 화면 위로 결제 시트 (주문 확인 화면 없음) */
   const [pay, setPay] = useState<{ open: boolean; product: "message" | "bundle"; cancelled: boolean }>({
     open: false,
