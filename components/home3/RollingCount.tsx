@@ -33,7 +33,12 @@ export default function RollingCount({ value, className = "" }: { value: number;
       { threshold: 0.6 }
     );
     io.observe(el);
-    return () => io.disconnect();
+    /* 11/26: 앱 안 브라우저 등에서 관찰이 늦거나 안 되면 0,000 으로 비어 보임 → 1.2초 뒤에는 무조건 실제 숫자로 */
+    const fb = window.setTimeout(() => setGo(true), 1200);
+    return () => {
+      io.disconnect();
+      window.clearTimeout(fb);
+    };
   }, []);
 
   let digitIdx = 0;
