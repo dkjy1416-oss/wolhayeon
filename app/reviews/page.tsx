@@ -11,13 +11,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-const LABEL: Record<string, string> = { "관계 리추얼": "관계 리추얼", 책: "월화의 책", "메시지 + 책": "메시지 + 책", "카톡 대화 분석": "카톡 대화 분석" };
+const LABEL: Record<string, string> = { "관계 리추얼": "관계 리추얼", 책: "심층 재회 리포트", "메시지 + 책": "리추얼 + 심층 리포트", "카톡 대화 분석": "카톡 대화 분석" };
 
 export default async function ReviewsPage() {
   const db = await getPublicReviews(60);
   const items: ReviewItem[] = [
-    ...db.map((r) => ({ key: `d${r.id}`, product: LABEL[r.product] ?? r.product, who: r.name, body: r.body })),
-    ...SAVED_REVIEWS.map((r) => ({ key: `s${r.id}`, product: r.product, who: r.age, body: r.body })),
+    ...db.map((r) => ({ key: `d${r.id}`, id: r.id + 100, product: LABEL[r.product] ?? r.product, name: r.name, stars: r.rating, body: r.body })),
+    ...SAVED_REVIEWS.map((r) => ({ key: `s${r.id}`, id: r.id, product: r.product, age: r.age, stars: 5, body: r.body })),
   ];
   return (
     <SubShell title="후기" active="home">
