@@ -22,13 +22,13 @@ import { todayDaily } from "@/lib/home/daily";
 
 /* ⑧ SNS 칸 — 묘수 홈 구도(겹쳐 쌓은 카드 + 세로 영상 2개). 위치는 묘수 실측 비율(358×432) 기준 % */
 const SNS_STAGE: Array<{ kind: "img" | "video"; src: string; poster?: string; alt: string; l: number; t: number; w: number; h?: number; z: number }> = [
-  { kind: "img", src: "/wolhwa/sns/sns_card1.webp", alt: "내 사연으로 받는 관계 리추얼", l: 30, t: 0, w: 70, z: 1 },
-  { kind: "video", src: "/wolhwa/shorts/01.mp4", poster: "/wolhwa/shorts/01-poster.webp", alt: "월하연 짧은 영상", l: 0, t: 4, w: 38.5, h: 52, z: 3 },
-  { kind: "img", src: "/wolhwa/sns/sns_card2.webp", alt: "장문 사과에 단답이 왔을 때", l: 22, t: 17, w: 78, z: 4 },
-  { kind: "img", src: "/wolhwa/sns/sns_card3.webp", alt: "카톡 대화 분석으로 본 연락의 흐름", l: 30, t: 40, w: 66, z: 2 },
-  { kind: "video", src: "/wolhwa/shorts/03.mp4", poster: "/wolhwa/shorts/03-poster.webp", alt: "월하연 짧은 영상", l: 62, t: 46, w: 38, h: 52, z: 3 },
-  { kind: "img", src: "/wolhwa/sns/sns_card4.webp", alt: "헤어진 뒤, 연락하지 말아야 할 때", l: 0, t: 58, w: 72, z: 5 },
-  { kind: "img", src: "/wolhwa/sns/sns_card5.webp", alt: "월화의 추천 메시지와 맞춤 PDF", l: 14, t: 84, w: 70, z: 6 },
+  { kind: "img", src: "/wolhwa/sns/sns_card1.webp?v=2", alt: "내 사연으로 받는 관계 리추얼", l: 30, t: 0, w: 70, z: 1 },
+  { kind: "video", src: "/wolhwa/shorts/01.mp4", poster: "/wolhwa/shorts/01-poster.webp", alt: "월하연 짧은 영상", l: 0, t: 5, w: 38.5, h: 49, z: 3 },
+  { kind: "img", src: "/wolhwa/sns/sns_card2.webp?v=2", alt: "장문 사과에 단답이 왔을 때", l: 22, t: 15, w: 78, z: 4 },
+  { kind: "img", src: "/wolhwa/sns/sns_card3.webp?v=2", alt: "카톡 대화 분석으로 본 연락의 흐름", l: 30, t: 39.5, w: 66, z: 4 },
+  { kind: "video", src: "/wolhwa/shorts/03.mp4", poster: "/wolhwa/shorts/03-poster.webp", alt: "월하연 짧은 영상", l: 62, t: 47, w: 38, h: 48, z: 3 },
+  { kind: "img", src: "/wolhwa/sns/sns_card4.webp?v=2", alt: "헤어진 뒤, 연락하지 말아야 할 때", l: 0, t: 56, w: 72, z: 5 },
+  { kind: "img", src: "/wolhwa/sns/sns_card5.webp?v=2", alt: "월화의 추천 메시지와 맞춤 PDF", l: 14, t: 80, w: 70, z: 6 },
 ];
 
 /* 상황 카드 — 칼럼으로 (파스텔 + 낙서 캐릭터) */
@@ -641,7 +641,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
           <h2 className="m-0 text-center text-[24px] font-extrabold tracking-[-0.02em]">
             SNS에서 화제인 <span className="text-[#E4627B]">월하연</span>
           </h2>
-          <div className="relative mt-5 aspect-[358/432] w-full">
+          <div className="relative mt-5 aspect-[358/500] w-full">
             {SNS_STAGE.map((c, i) =>
               c.kind === "video" ? (
                 <div
