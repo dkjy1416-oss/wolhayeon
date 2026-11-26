@@ -96,9 +96,9 @@ const TT = "text-[16px] font-bold leading-[1.4] text-[#F5F5F5] [word-break:keep-
 const DS = "text-[13px] leading-[1.5] text-[#B5B5BA] [word-break:keep-all]";
 
 const BANNERS = [
-  { href: "/apply", img: "/wolhwa/v3/greet.webp", video: "/wolhwa/v3/greet.mp4" as string | null, who: "월화", title: "관계 리추얼", line: "보낼까 말까, 내 사연으로 같이 읽어요", tag: "무료 미리보기" },
-  { href: "/chat", img: "/wolhwa/v3/explain.webp", video: null, who: "월화", title: "카톡 대화 분석", line: "그 사람 카톡, 숫자로 먼저 읽어 봐요", tag: "숫자 분석 무료" },
-  { href: "/book", img: "/book/cover-3d.webp", video: null, who: "월화의 책", title: "보내기 전, 한 권", line: "보내기 직전의 나를 붙잡아 줄 책", tag: "책" },
+  { href: "/apply", img: "/wolhwa/v5/p_ritual.webp", video: "/wolhwa/v5/loop_ritual.mp4", logo: "/wolhwa/v5/logo_ritual.webp", title: "월화의 재회 분석", line: "보낼까 말까, 내 사연으로 같이 읽어요", tag: "무료 미리보기" },
+  { href: "/chat", img: "/wolhwa/v5/p_kakao.webp", video: "/wolhwa/v5/loop_kakao.mp4", logo: "/wolhwa/v5/logo_kakao.webp", title: "카톡 대화 분석", line: "그 사람 카톡, 숫자로 먼저 읽어 봐요", tag: "숫자 분석 무료" },
+  { href: "/book", img: "/wolhwa/v5/p_book.webp", video: "/wolhwa/v5/loop_book.mp4", logo: "/wolhwa/v5/logo_book.webp", title: "월화의 책", line: "보내기 직전의 나를 붙잡아 줄 한 권", tag: "NEW" },
 ];
 
 const SITUATIONS: Array<[string, string, string, string]> = [
@@ -128,19 +128,19 @@ const CHIPS: Array<[string, string]> = [
 ];
 
 const FREE: Array<[string, string, string, string]> = [
-  ["그 사람 카톡, 숫자로 읽기", "대화를 올리면 숫자로 먼저 보여 드려요", "/chat", "/wolhwa/v3/explain.webp"],
-  ["보내면 안 되는 메시지 7가지", "연락하기 전에 먼저 읽는 가이드", "/free/no-send", "/book/pages/p01.webp"],
-  ["내 사연으로 무료 미리보기", "사연을 들려주면 월화가 먼저 읽어 드려요", "/apply", "/wolhwa/v3/listen.webp"],
+  ["그 사람 카톡, 숫자로 읽기", "대화를 올리면 숫자로 먼저 보여 드려요", "/chat", "/wolhwa/v5/t_free1.webp"],
+  ["보내면 안 되는 메시지 7가지", "연락하기 전에 먼저 읽는 가이드", "/free/no-send", "/wolhwa/v5/t_free2.webp"],
+  ["내 사연으로 무료 미리보기", "사연을 들려주면 월화가 먼저 읽어 드려요", "/apply", "/wolhwa/v5/t_free3.webp"],
 ];
 
-const GROUPS = [
+const GROUPS: Array<{ id: string; eb: string; title: string; items: Array<{ img: string; logo?: string; who: string; t: string; h: string }> }> = [
   {
     id: "ritual",
     eb: "리추얼 분야",
     title: "다시 이을 실마리가 궁금하신가요?",
     items: [
-      { img: "/wolhwa/v3/write.webp", who: "월화", t: "월화의 관계 리추얼", h: "/apply" },
-      { img: "/book/v2/cover-3d.webp", who: "월화의 추천", t: "메시지 + 책 패키지", h: "/book" },
+      { img: "/wolhwa/v5/p_ritual.webp", logo: "/wolhwa/v5/logo_ritual.webp", who: "월화", t: "월화의 재회 분석", h: "/apply" },
+      { img: "/wolhwa/v5/p_pack.webp", who: "월화의 추천", t: "메시지 + 책 패키지", h: "/book" },
     ],
   },
   {
@@ -148,8 +148,8 @@ const GROUPS = [
     eb: "카톡 분석 분야",
     title: "그 사람 마음, 대화에 이미 남아 있어요",
     items: [
-      { img: "/wolhwa/v3/explain.webp", who: "월화", t: "카톡 대화 분석", h: "/chat" },
-      { img: "/wolhwa/v3/listen.webp", who: "월화", t: "캡처로 분석하기", h: "/chat?start=quiz" },
+      { img: "/wolhwa/v5/p_kakao.webp", logo: "/wolhwa/v5/logo_kakao.webp", who: "월화", t: "카톡 대화 분석", h: "/chat" },
+      { img: "/wolhwa/v5/p_capture.webp", who: "월화", t: "캡처로 분석하기", h: "/chat?start=quiz" },
     ],
   },
   {
@@ -157,8 +157,8 @@ const GROUPS = [
     eb: "책 분야",
     title: "보내기 직전의 당신을, 붙잡아 줄 책",
     items: [
-      { img: "/book/cover-3d.webp", who: "월화의 책", t: "헤어진 뒤, 연락하지 말아야 할 때", h: "/book" },
-      { img: "/book/pages/p01.webp", who: "월화의 책", t: "책 속 한 장 미리 보기", h: "/free/no-send" },
+      { img: "/wolhwa/v5/p_book.webp", logo: "/wolhwa/v5/logo_book.webp", who: "월화의 책", t: "헤어진 뒤, 연락하지 말아야 할 때", h: "/book" },
+      { img: "/wolhwa/v5/t_free2.webp", who: "월화의 책", t: "책 속 한 장 미리 보기", h: "/free/no-send" },
     ],
   },
 ];
@@ -237,24 +237,59 @@ function HeroCarousel({ u }: { u: (h: string) => string }) {
             tabIndex={i < N || i >= 2 * N ? -1 : undefined}
             className={`relative flex aspect-[340/490] w-[87%] max-w-[340px] shrink-0 snap-center flex-col justify-end overflow-hidden rounded-2xl bg-[#18181B] p-5 transition-transform duration-300 ${cur === i ? "scale-y-100" : "scale-y-[0.9]"}`}
           >
-            {b.video && i >= N && i < 2 * N ? (
+            {i >= N && i < 2 * N ? (
               <AutoVideo src={b.video} poster={b.img} label={`${b.title} 소개 영상`} className="absolute inset-0 h-full w-full object-cover object-top" />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={b.img} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover object-top" />
             )}
-            <span aria-hidden className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-b from-transparent via-[#0B0B0C]/60 to-[#0B0B0C]/95" />
+            <span aria-hidden className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-b from-transparent via-[#0B0B0C]/55 to-[#0B0B0C]/90" />
             <span className="absolute left-3 top-3 rounded-full bg-[#B3263F] px-2.5 py-1 text-[11px] font-bold text-white">{b.tag}</span>
             <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2.5 py-1 text-[12px] font-bold text-white">
               {(i % N) + 1} / {N}
             </span>
-            <span className="relative text-[13px] font-semibold text-[#F3B6C2]">{b.who}</span>
-            <span className="font-display relative mt-0.5 text-[30px] leading-[1.25] text-white [word-break:keep-all]">{b.title}</span>
-            <span className="relative mt-1.5 text-[14px] leading-[1.5] text-[#F5F5F5]/90 [word-break:keep-all]">{b.line}</span>
+            <span className="sr-only">{b.title}</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={b.logo} alt="" aria-hidden className="relative mx-auto -mb-1 w-[92%] drop-shadow-[0_4px_14px_rgba(0,0,0,0.7)]" />
+            <span className="relative text-center text-[13px] leading-[1.5] text-[#F5F5F5]/90 [word-break:keep-all]">{b.line}</span>
           </Link>
         ))}
       </div>
     </section>
+  );
+}
+
+/* ---------- ① 상단 띠: 묘수처럼 문구가 위로 올라가며 바뀜 (가격·쿠폰 금액·수상 없음) ---------- */
+const TICKER: Array<{ t: string; h?: string; bg: string }> = [
+  { t: "카카오 1초 회원가입 후 쿠폰팩 받기", bg: "#7A1E31" },
+  { t: "내 사연으로 무료 미리보기 · 월화가 먼저 읽어 드려요", h: "/apply", bg: "#5A1627" },
+  { t: "그 사람 카톡, 숫자 분석은 무료예요", h: "/chat", bg: "#7A1E31" },
+  { t: "NEW! 월화의 책 · 보내기 직전에 펼치는 한 권", h: "/book", bg: "#5A1627" },
+  { t: "보내면 안 되는 메시지 7가지 · 무료로 보기", h: "/free/no-send", bg: "#7A1E31" },
+];
+
+function TopTicker({ u, onSoon }: { u: (h: string) => string; onSoon: (w: string) => void }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setI((x) => (x + 1) % TICKER.length), 2800);
+    return () => window.clearInterval(t);
+  }, []);
+  return (
+    <div className="relative h-[34px] overflow-hidden transition-colors duration-500" style={{ background: TICKER[i].bg }}>
+      <div className="transition-transform duration-500 ease-out" style={{ transform: `translateY(-${i * 34}px)` }}>
+        {TICKER.map((m, k) =>
+          m.h ? (
+            <Link key={k} href={u(m.h)} tabIndex={k === i ? 0 : -1} aria-hidden={k !== i} className="flex h-[34px] items-center justify-center gap-1 px-4 text-[13px] font-semibold text-white">
+              {m.t} <span aria-hidden>›</span>
+            </Link>
+          ) : (
+            <button key={k} type="button" tabIndex={k === i ? 0 : -1} aria-hidden={k !== i} onClick={() => onSoon("카카오 회원가입")} className="flex h-[34px] w-full items-center justify-center gap-1 px-4 text-[13px] font-semibold text-white">
+              {m.t} <span aria-hidden>›</span>
+            </button>
+          )
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -303,9 +338,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
     <div className="min-h-screen bg-[#050505]">
       <div className="relative mx-auto min-h-screen w-full max-w-[480px] overflow-x-hidden bg-[#0B0B0C] text-[#F5F5F5]">
         {/* ① 상단 카카오 가입 쿠폰 바 */}
-        <button type="button" onClick={() => soon("카카오 회원가입")} className="block h-[34px] w-full bg-[#7A1E31] px-4 text-center text-[13px] font-semibold text-white">
-          카카오 1초 회원가입 후 쿠폰팩 받기 ›
-        </button>
+        <TopTicker u={u} onSoon={soon} />
 
         {/* ② 로고 · 검색 · MY */}
         <header className="flex items-center justify-between pl-4 pr-2 pt-2">
@@ -336,13 +369,13 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
         </header>
 
         {/* ③ 카테고리 칩 */}
-        <nav aria-label="카테고리" className="scrollbar-none flex gap-1 overflow-x-auto px-4 pt-1.5">
+        <nav aria-label="카테고리" className="flex justify-between gap-1 px-4 pt-1.5">
           {CHIPS.map(([id, label]) => (
             <button
               key={id}
               type="button"
               onClick={() => goCat(id)}
-              className={`h-[36px] shrink-0 rounded-full px-3 text-[16px] ${cat === id ? "bg-[#2A0D15] font-extrabold text-[#F5F5F5] ring-1 ring-[#8E2338]" : "font-medium text-[#B5B5BA]"}`}
+              className={`h-[36px] flex-1 rounded-full text-[16px] ${cat === id ? "bg-[#2A0D15] font-extrabold text-[#F5F5F5] ring-1 ring-[#8E2338]" : "font-medium text-[#B5B5BA]"}`}
             >
               {label}
             </button>
@@ -360,7 +393,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
             <div className="mt-3 overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#18181B]">
               <div className="relative h-[150px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/wolhwa/v3/smile.webp" alt="" aria-hidden className="h-full w-full object-cover object-[50%_20%]" />
+                <img src="/wolhwa/v5/p_ritual.webp" alt="" aria-hidden className="h-full w-full object-cover object-[50%_22%]" />
                 <span aria-hidden className="absolute inset-0 bg-gradient-to-b from-transparent to-[#18181B]" />
                 <span className="absolute bottom-3 left-4 text-[16px] font-bold text-white">월화의 관계 리추얼</span>
               </div>
@@ -481,7 +514,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
         <section className="px-4 pt-4">
           <button type="button" onClick={() => soon("오늘 밤의 한 문장")} className="flex h-[100px] w-full items-center overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#18181B] text-left">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/wolhwa/v3/write.webp" alt="" aria-hidden className="h-full w-[40%] object-cover object-[50%_30%] [mask-image:linear-gradient(to_right,black_60%,transparent)]" />
+            <img src="/wolhwa/v5/t_daily.webp" alt="" aria-hidden className="h-full w-[40%] object-cover object-[50%_30%] [mask-image:linear-gradient(to_right,black_60%,transparent)]" />
             <span className="flex flex-1 flex-col gap-0.5 pl-1">
               <span className="text-[11px] font-semibold text-[#E4627B]">매일 · 무료</span>
               <span className="text-[20px] font-bold">오늘 밤의 한 문장</span>
@@ -525,11 +558,18 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
               {g.items.map((it) => (
                 <Link key={it.t} href={u(it.h)} className="relative block aspect-[3/4] w-[222px] shrink-0 snap-start overflow-hidden rounded-2xl bg-[#1E1E22]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it.img} alt="" aria-hidden loading="lazy" className="h-full w-full object-cover object-top" />
+                  <img src={it.img} alt="" aria-hidden loading="lazy" className="h-full w-full object-cover object-[50%_18%]" />
                   <span aria-hidden className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-black/85" />
-                  <span className="absolute inset-x-3.5 bottom-3.5">
-                    <span className="block text-[12px] font-semibold text-[#F3B6C2]">{it.who}</span>
-                    <span className="block text-[17px] font-bold leading-[1.35] text-white [word-break:keep-all]">{it.t}</span>
+                  <span className="absolute inset-x-3 bottom-3 text-center">
+                    {it.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={it.logo} alt={it.t} loading="lazy" className="mx-auto w-full drop-shadow-[0_3px_10px_rgba(0,0,0,0.7)]" />
+                    ) : (
+                      <>
+                        <span className="block text-[12px] font-semibold text-[#F3B6C2]">{it.who}</span>
+                        <span className="block text-[17px] font-bold leading-[1.35] text-white [word-break:keep-all]">{it.t}</span>
+                      </>
+                    )}
                   </span>
                 </Link>
               ))}
