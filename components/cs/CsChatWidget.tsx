@@ -610,7 +610,12 @@ export default function CsChatWidget() {
           type="button"
           onClick={openChat}
           aria-label="월화에게 물어보기"
-          className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] right-4 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-gold/35 bg-ink/88 text-gold shadow-[0_4px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm active:opacity-85"
+          className={
+            /* 11/26: 새 홈(/home)은 하단 메뉴·카카오 바 위에 '고객센터' 버튼으로 */
+            pathname === "/home"
+              ? "fixed bottom-[calc(env(safe-area-inset-bottom)+9.5rem)] right-4 z-50 flex h-[60px] w-[60px] flex-col items-center justify-center gap-0.5 rounded-full bg-[#8E2338] text-[0.62rem] font-bold text-white shadow-[0_4px_20px_rgba(0,0,0,0.45)] active:opacity-85 min-[480px]:right-[calc(50%-224px)]"
+              : "fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] right-4 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-gold/35 bg-ink/88 text-gold shadow-[0_4px_20px_rgba(0,0,0,0.45)] backdrop-blur-sm active:opacity-85"
+          }
         >
           <svg aria-hidden width="19" height="19" viewBox="0 0 24 24" fill="none">
             <path
@@ -620,6 +625,7 @@ export default function CsChatWidget() {
               strokeLinejoin="round"
             />
           </svg>
+          {pathname === "/home" && <span>고객센터</span>}
         </button>
       )}
 
