@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PreviewExtras from "@/components/apply/PreviewExtras";
 import { CHAT_QUESTIONS, CHAT_LOCKED_ITEMS, freeChatType } from "@/lib/chat/questions";
 import { CHAT_PRICE_KRW, CHAT_BUNDLE_PRICE_KRW, type ChatProduct } from "@/lib/chat/types";
 import { sendSiteEvent } from "@/lib/site-track";
@@ -393,6 +394,12 @@ export default function ChatFunnel() {
           <button type="button" className={btn} disabled={busy || under14} onClick={submit}>
             {busy ? "준비하는 중…" : mode === "file" ? "다음: 결제하기" : "다음: 캡처 올리기"}
           </button>
+        </div>
+      )}
+      {/* 11/27 운영자 요청: 무료 결과(미리보기) 아래 — 카톡 분석 후기 · SNS·유튜브 · 칼럼 */}
+      {step === "free" && (
+        <div className="-mx-5">
+          <PreviewExtras kind="chat" />
         </div>
       )}
     </div>

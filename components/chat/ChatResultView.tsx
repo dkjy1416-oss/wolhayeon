@@ -23,7 +23,7 @@ export default function ChatResultView({
   const card = "fx-glass mt-3 rounded-2xl px-5 py-4";
   return (
     <article className="mx-auto max-w-[620px]">
-      <p className="text-[0.74rem] tracking-[0.2em] text-gold">月下緣 · 카톡 대화 분석</p>
+      <Link href="/home" className="block text-[0.74rem] tracking-[0.2em] text-gold">월하연 月下緣 · 카톡 대화 분석</Link>
       <SplitWords as="h1" className="font-display mt-3 block text-[1.85rem] font-black leading-[1.3]" wordClassName="fx-shine" text={r.type_label} />
       <p className="mt-3 text-[1rem] leading-[1.9] text-ivory">{r.summary}</p>
 
