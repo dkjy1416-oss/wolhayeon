@@ -7,13 +7,18 @@
  * - 누적 숫자는 기존 월계수(Totals) 그대로.
  * - 가격·쿠폰 금액은 어디에도 표시하지 않는다. 후기·평점·숫자는 실제 데이터만.
  * - 들어올 때 붙은 utm 값은 다른 화면으로 이동할 때 그대로 넘긴다.
- * - 카카오 가입·쿠폰·질문·영상·보관함은 아직 정해지지 않아 1차에서는 '준비 중' 안내.
+ * - 카카오 가입·쿠폰·보관함은 아직 정해지지 않아 '준비 중' 안내.
+ * 11/26 2차: 칩을 누르면 묘수 /category 처럼 큰 카드만 뜨는 화면(무료는 얇고 긴 카드 · 무료 테스트 3종),
+ *   하단 메뉴 '질문' → '칼럼'(/column), '영상' → 유튜브 쇼츠(/watch), '지금 이런 상황이라면' → 칼럼 글.
  */
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { readOrder } from "@/components/book/ResumeOrder";
 import { BUSINESS } from "@/components/legal/LegalPage";
 import { SHORTS } from "@/components/home2/media";
+import { FREE_TESTS, type FreeTest } from "@/lib/home/free-tests";
+import { COLUMNS } from "@/lib/home/columns";
+import { BottomNav } from "@/components/home4/SubShell";
 
 type Review = { id: number; rating: number; body: string; name: string; product: string; incentive: boolean };
 
@@ -101,13 +106,14 @@ const BANNERS = [
   { href: "/book", img: "/wolhwa/v5/p_book.webp", video: "/wolhwa/v5/loop_book.mp4", logo: "/wolhwa/v5/logo_book.webp", title: "월화의 책", line: "보내기 직전의 나를 붙잡아 줄 한 권", tag: "NEW" },
 ];
 
-const SITUATIONS: Array<[string, string, string, string]> = [
-  ["제가 너무 많이 매달렸어요", "연락해도 되는 때", "관계 리추얼", "/apply?sit=1"],
-  ["사과했는데 단답만 왔어요", "다시 건넬 말", "관계 리추얼", "/apply?sit=2"],
-  ["같은 일로 또 싸웠어요", "반복되는 이유", "관계 리추얼", "/apply?sit=3"],
-  ["놓고 싶은데 SNS를 계속 봐요", "잠 못 드는 밤", "관계 리추얼", "/apply?sit=4"],
-  ["답장이 점점 짧아져요", "대화 온도 읽기", "카톡 분석", "/chat"],
-  ["지금 당장 보내고 싶어요", "보내기 전 한 장", "월화의 책", "/book"],
+/* 누르면 칼럼 글로 (11/26 운영자 요청) */
+const SITUATIONS: Array<[string, string, string, string, string]> = [
+  ["제가 너무 많이 매달렸어요", "지금부터 할 수 있는 것", "칼럼", "/column/held-on-too-much", "/wolhwa/doodle/girl_worry.webp"],
+  ["사과했는데 단답만 왔어요", "두 번째 사과 대신", "칼럼", "/column/short-reply-after-apology", "/wolhwa/doodle/girl_think.webp"],
+  ["같은 일로 또 싸웠어요", "반복되는 이유 정리", "칼럼", "/column/same-fight-again", "/wolhwa/doodle/girl_angry.webp"],
+  ["놓고 싶은데 SNS를 계속 봐요", "본 것과 상상한 것", "칼럼", "/column/checking-their-sns", "/wolhwa/doodle/girl_bed.webp"],
+  ["답장이 점점 짧아져요", "대화 온도 읽는 법", "칼럼", "/column/shorter-replies", "/wolhwa/doodle/bunny_laptop.webp"],
+  ["지금 당장 보내고 싶어요", "보내기 전 3단계", "칼럼", "/column/before-you-send", "/wolhwa/doodle/boy_bed.webp"],
 ];
 
 const SEARCH: Array<[string, string]> = [
@@ -116,8 +122,119 @@ const SEARCH: Array<[string, string]> = [
   ["캡처로 카톡 분석하기", "/chat?start=quiz"],
   ["월화의 책 · 메시지 + 책 패키지", "/book"],
   ["보내면 안 되는 메시지 7가지 (무료)", "/free/no-send"],
+  ...FREE_TESTS.map((t) => [`${t.title} (무료 테스트)`, t.href] as [string, string]),
+  ["월하연 영상 · 유튜브 쇼츠", "/watch"],
   ...SITUATIONS.map(([t, , , h]) => [t, h] as [string, string]),
+  ...COLUMNS.map((c) => [`칼럼 · ${c.title}`, `/column/${c.slug}`] as [string, string]),
 ];
+
+/* ---------- 칩을 누르면 뜨는 카테고리 화면 (묘수 /category/love 구도: 큰 카드 + 오른쪽 아래 재생 버튼) ---------- */
+type CatCard = { img: string; logo?: string; t: string; d: string; h: string; tag?: string };
+const CAT: Record<string, { title: string; cards: CatCard[] }> = {
+  ritual: {
+    title: "리추얼",
+    cards: [
+      { img: "/wolhwa/v5/p_ritual.webp", logo: "/wolhwa/v5/logo_ritual.webp", t: "월화의 재회 분석", d: "보낼까 말까, 내 사연으로 같이 읽어요", h: "/apply", tag: "무료 미리보기" },
+      { img: "/wolhwa/v5/p_pack.webp", t: "메시지 + 책 패키지", d: "지금 읽을 메시지와 곁에 둘 책", h: "/book" },
+      { img: "/wolhwa/v5/t_free3.webp", t: "상황을 골라 바로 시작", d: "매달렸을 때 · 단답이 왔을 때 · 또 싸웠을 때", h: "/apply?sit=1" },
+    ],
+  },
+  talk: {
+    title: "카톡 분석",
+    cards: [
+      { img: "/wolhwa/v5/p_kakao.webp", logo: "/wolhwa/v5/logo_kakao.webp", t: "카톡 대화 분석", d: "그 사람 카톡, 숫자로 먼저 읽어 봐요", h: "/chat", tag: "숫자 분석 무료" },
+      { img: "/wolhwa/v5/p_capture.webp", t: "캡처로 분석하기", d: "파일 내보내기가 어렵다면 캡처로", h: "/chat?start=quiz" },
+    ],
+  },
+  book: {
+    title: "책",
+    cards: [
+      { img: "/wolhwa/v5/p_book.webp", logo: "/wolhwa/v5/logo_book.webp", t: "월화의 책", d: "헤어진 뒤, 연락하지 말아야 할 때", h: "/book", tag: "NEW" },
+      { img: "/wolhwa/v5/t_free2.webp", t: "책 속 한 장 미리 보기", d: "보내면 안 되는 메시지 7가지", h: "/free/no-send" },
+    ],
+  },
+};
+
+/* 무료 테스트 카드 — 얇고 긴 카드 (11/26 운영자 요청) */
+function FreeTestCard({ t, u }: { t: FreeTest; u: (h: string) => string }) {
+  return (
+    <Link href={u(t.href)} className="relative flex h-[132px] items-center overflow-hidden rounded-2xl pl-5" style={{ background: t.bg }}>
+      <span className="relative z-[1] flex max-w-[60%] flex-col">
+        <span className="w-fit rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-extrabold" style={{ color: t.ink }}>
+          무료 · 바로 결과
+        </span>
+        <span className="font-display mt-1.5 text-[22px] font-bold leading-[1.25] text-[#2B2326]">{t.title}</span>
+        <span className="mt-1 text-[12.5px] leading-[1.45] text-[#5a4a4e] [word-break:keep-all]">{t.sub}</span>
+      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={t.img} alt="" aria-hidden className="absolute bottom-0 right-2 h-[124px] w-[124px] object-contain mix-blend-multiply" />
+      <span className="absolute bottom-3 right-3 z-[1] flex h-8 w-8 items-center justify-center rounded-full bg-white text-[12px] shadow" style={{ color: t.ink }}>
+        ▶
+      </span>
+    </Link>
+  );
+}
+
+function CategoryView({ id, u }: { id: string; u: (h: string) => string }) {
+  if (id === "free") {
+    return (
+      <section className="px-4 pt-4" aria-label="무료">
+        <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.02em]">무료</h1>
+        <p className="m-0 mt-1 text-[13px] text-[#B5B5BA]">누르면 바로 결과가 나오는 무료 테스트</p>
+        <div className="mt-4 flex flex-col gap-3">
+          {FREE_TESTS.map((t) => (
+            <FreeTestCard key={t.id} t={t} u={u} />
+          ))}
+        </div>
+        <h2 className="m-0 mt-9 text-[18px] font-extrabold">무료로 더 보기</h2>
+        <ul className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
+          {FREE.map(([t, d, h, img]) => (
+            <li key={t}>
+              <Link href={u(h)} className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img} alt="" aria-hidden loading="lazy" className="h-[64px] w-[92px] shrink-0 rounded-xl bg-[#1E1E22] object-cover object-[50%_25%]" />
+                <span className="min-w-0 flex-1">
+                  <span className={TT}>{t}</span>
+                  <span className={`mt-0.5 block truncate ${DS}`}>{d}</span>
+                </span>
+                <span className="text-[#B5B5BA]"><Chev /></span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
+  const c = CAT[id];
+  if (!c) return null;
+  return (
+    <section className="px-4 pt-4" aria-label={c.title}>
+      <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.02em]">{c.title}</h1>
+      <div className="mt-4 flex flex-col gap-4">
+        {c.cards.map((k) => (
+          <Link key={k.t} href={u(k.h)} className="relative block aspect-[398/332] overflow-hidden rounded-2xl bg-[#18181B]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={k.img} alt="" aria-hidden className="absolute inset-0 h-full w-full object-cover object-[50%_20%]" />
+            <span aria-hidden className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-b from-transparent to-black/85" />
+            {k.tag && <span className="absolute left-3 top-3 rounded-full bg-[#B3263F] px-2.5 py-1 text-[11px] font-bold text-white">{k.tag}</span>}
+            <span className="absolute bottom-4 left-4 right-16">
+              {k.logo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={k.logo} alt={k.t} className="-mb-1 -ml-2 w-[78%] drop-shadow-[0_3px_10px_rgba(0,0,0,0.7)]" />
+              ) : (
+                <span className="block text-[22px] font-extrabold leading-[1.3] text-white">{k.t}</span>
+              )}
+              <span className="mt-1 block text-[13.5px] leading-[1.45] text-white/85 [word-break:keep-all]">{k.d}</span>
+            </span>
+            <span className="absolute bottom-4 right-4 flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/90 text-white">
+              <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z" /></svg>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 const CHIPS: Array<[string, string]> = [
   ["top", "전체"],
@@ -322,13 +439,27 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
       .catch(() => {});
   }, []);
 
+  /* 칩 → 카테고리 화면 (주소에 ?cat= 을 남겨 뒤로가기·공유 가능) */
+  useEffect(() => {
+    const read = () => {
+      const c = new URLSearchParams(window.location.search).get("cat");
+      setCat(c && (c === "free" || CAT[c]) ? c : "top");
+    };
+    read();
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
+  }, []);
+
   const goCat = (id: string) => {
-    setCat(id);
-    if (id === "top") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
+    if (id !== cat) {
+      const sp = new URLSearchParams(window.location.search);
+      if (id === "top") sp.delete("cat");
+      else sp.set("cat", id);
+      const q = sp.toString();
+      window.history.pushState(null, "", `${window.location.pathname}${q ? `?${q}` : ""}`);
     }
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setCat(id);
+    window.scrollTo({ top: 0 });
   };
 
   const found = kw.trim() ? SEARCH.filter(([t]) => t.replace(/\s/g, "").includes(kw.replace(/\s/g, ""))) : SEARCH;
@@ -382,6 +513,10 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
           ))}
         </nav>
 
+        {cat !== "top" && <CategoryView id={cat} u={u} />}
+
+        {cat === "top" && (
+        <>
         {/* ④ 대표 배너 */}
         <HeroCarousel u={u} />
 
@@ -527,7 +662,12 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
         {/* ⑫ 무료로 보는 월하연 한 입 */}
         <section id="free" className="scroll-mt-4 px-4 pt-9">
           <h2 className={H2}>무료로 보는 월하연 한 입</h2>
-          <ol className="m-0 mt-3 flex list-none flex-col gap-3 p-0">
+          <div className="mt-3 flex flex-col gap-2.5">
+            {FREE_TESTS.map((t) => (
+              <FreeTestCard key={t.id} t={t} u={u} />
+            ))}
+          </div>
+          <ol className="m-0 mt-5 flex list-none flex-col gap-3 p-0">
             {FREE.map(([t, d, h, img], i) => (
               <li key={t}>
                 <Link href={u(h)} className="flex items-center gap-3">
@@ -581,20 +721,25 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
         <section className="pt-9">
           <div className="flex items-baseline justify-between px-4">
             <h2 className="m-0 text-[16px] font-extrabold">지금 이런 상황이라면</h2>
-            <button type="button" onClick={() => setSearch(true)} className="text-[12px] text-[#B5B5BA]">
-              전체보기 ›
-            </button>
+            <Link href={u("/column")} className="text-[12px] text-[#B5B5BA]">
+              칼럼 전체보기 ›
+            </Link>
           </div>
           <div className="scrollbar-none mt-3 flex snap-x gap-2 overflow-x-auto px-4">
-            {SITUATIONS.map(([t, d, k, h]) => (
-              <Link key={t} href={u(h)} className="flex h-[150px] w-[145px] shrink-0 snap-start flex-col rounded-2xl border border-[#2A2A2E] bg-[#18181B] p-3">
+            {SITUATIONS.map(([t, d, k, h, img]) => (
+              <Link key={t} href={u(h)} className="relative flex h-[190px] w-[145px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#18181B] p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img} alt="" aria-hidden loading="lazy" className="absolute right-2 top-2 h-[70px] w-[70px] rounded-xl bg-white object-cover" />
                 <span className="text-[11px] font-bold text-[#E4627B]">{k}</span>
                 <span className="mt-auto text-[16px] font-extrabold leading-[1.35] [word-break:keep-all]">{t}</span>
-                <span className="mt-1 text-[13px] text-[#B5B5BA]">{d}</span>
+                <span className="mt-1 text-[12.5px] text-[#B5B5BA]">{d} ›</span>
               </Link>
             ))}
           </div>
         </section>
+
+        </>
+        )}
 
         {/* ⑮ 푸터 */}
         <footer className="mt-10 bg-[#050505] px-5 pb-[170px] pt-6 text-[11.5px] leading-[1.8] text-[#8f8f96]">
@@ -631,28 +776,17 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
               <span aria-hidden>›</span>
             </button>
           </div>
-          <nav aria-label="하단 메뉴" className="pointer-events-auto grid h-[60px] grid-cols-5 border-t border-[#2A2A2E] bg-[#0B0B0C] text-[11px]">
-            <button type="button" onClick={() => goCat("top")} className="flex flex-col items-center justify-center gap-1 font-bold text-[#E4627B]">
-              <svg aria-hidden width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" /></svg>
-              홈
-            </button>
-            <button type="button" onClick={() => goCat("free")} className="flex flex-col items-center justify-center gap-1 text-[#B5B5BA]">
-              <svg aria-hidden width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M8 12l3 3 5-6" /></svg>
-              무료
-            </button>
-            {(
-              [
-                ["질문", <path key="q" d="M4 5h16v11H9l-5 4z" />],
-                ["영상", <g key="v"><rect x="3" y="5" width="18" height="14" rx="3" /><path d="M10 9l5 3-5 3z" /></g>],
-                ["보관함", <g key="b"><path d="M4 8l8-4 8 4v8l-8 4-8-4z" /><path d="M4 8l8 4 8-4M12 12v8" /></g>],
-              ] as Array<[string, React.ReactNode]>
-            ).map(([label, icon]) => (
-              <button key={label} type="button" onClick={() => soon(label)} className="flex flex-col items-center justify-center gap-1 text-[#B5B5BA]">
-                <svg aria-hidden width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">{icon}</svg>
-                {label}
-              </button>
-            ))}
-          </nav>
+          <BottomNav
+            active={cat === "free" ? "free" : "home"}
+            onSoon={soon}
+            onTab={(t) => {
+              if (t === "home" || t === "free") {
+                goCat(t === "home" ? "top" : "free");
+                return true;
+              }
+              return false;
+            }}
+          />
         </div>
 
         {toast && (
