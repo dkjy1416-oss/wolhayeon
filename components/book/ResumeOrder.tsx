@@ -12,9 +12,11 @@ const KEY = "wh_last_order_v1";
 const TTL = 14 * 24 * 60 * 60 * 1000;
 const ORDER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 
-export function rememberOrder(orderNumber: string, name?: string | null) {
+export function rememberOrder(orderNumber: string, name?: string | null, line?: string | null) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ o: orderNumber, n: name ?? "", at: Date.now() }));
+    /* 11/26: 새 홈(/home) '이어서 보기'용 — 미리보기 한 줄(l)과 지금 보고 있는 미리보기 주소(u)도 함께 */
+    const u = window.location.pathname === "/apply/preview" ? window.location.pathname + window.location.search : "";
+    localStorage.setItem(KEY, JSON.stringify({ o: orderNumber, n: name ?? "", l: (line ?? "").slice(0, 160), u, at: Date.now() }));
   } catch {
     /* 저장이 막힌 브라우저 — 무시 */
   }
@@ -29,13 +31,14 @@ export function forgetOrder() {
   }
 }
 
-export function readOrder(): { o: string; n: string } | null {
+export function readOrder(): { o: string; n: string; l: string; u: string } | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const v = JSON.parse(raw);
     if (!v || !ORDER_RE.test(v.o) || Date.now() - Number(v.at) > TTL) return null;
-    return { o: v.o, n: typeof v.n === "string" ? v.n : "" };
+    const u = typeof v.u === "string" && v.u.startsWith("/apply/preview?") ? v.u : "";
+    return { o: v.o, n: typeof v.n === "string" ? v.n : "", l: typeof v.l === "string" ? v.l : "", u };
   } catch {
     return null;
   }
