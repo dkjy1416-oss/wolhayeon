@@ -15,13 +15,24 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { readOrder } from "@/components/book/ResumeOrder";
 import { BUSINESS } from "@/components/legal/LegalPage";
-import { SHORTS } from "@/components/home2/media";
 import { FREE_TESTS, type FreeTest } from "@/lib/home/free-tests";
 import { COLUMNS } from "@/lib/home/columns";
-import { SHORTS_YT, ytThumb } from "@/lib/home/videos";
+import { SAVED_REVIEWS } from "@/lib/home/reviews-saved";
+import { todayDaily } from "@/lib/home/daily";
 
-/* SNS 칸 — 유튜브 쇼츠 중 조회가 많은 순 (11/26) */
-const SNS_PICK = ["r7-OOdStniE", "lMHD1SXc1Ks", "F0-Bb9RHJhA", "ZPvxbwGfYmQ", "ISj1Yz0X7LM", "ZW4usVG3JG8", "A6ZCzFbe6DI", "Lvsshhk3Y74"];
+/* ⑧ SNS 칸 — 묘수 홈 구도(겹쳐 쌓은 카드 + 세로 영상 2개). 위치는 묘수 실측 비율(358×432) 기준 % */
+const SNS_STAGE: Array<{ kind: "img" | "video"; src: string; poster?: string; alt: string; l: number; t: number; w: number; h?: number; z: number }> = [
+  { kind: "img", src: "/wolhwa/sns/sns_card1.webp", alt: "내 사연으로 받는 관계 리추얼", l: 30, t: 0, w: 70, z: 1 },
+  { kind: "video", src: "/wolhwa/shorts/01.mp4", poster: "/wolhwa/shorts/01-poster.webp", alt: "월하연 짧은 영상", l: 0, t: 4, w: 38.5, h: 52, z: 3 },
+  { kind: "img", src: "/wolhwa/sns/sns_card2.webp", alt: "장문 사과에 단답이 왔을 때", l: 22, t: 17, w: 78, z: 4 },
+  { kind: "img", src: "/wolhwa/sns/sns_card3.webp", alt: "카톡 대화 분석으로 본 연락의 흐름", l: 30, t: 40, w: 66, z: 2 },
+  { kind: "video", src: "/wolhwa/shorts/03.mp4", poster: "/wolhwa/shorts/03-poster.webp", alt: "월하연 짧은 영상", l: 62, t: 46, w: 38, h: 52, z: 3 },
+  { kind: "img", src: "/wolhwa/sns/sns_card4.webp", alt: "헤어진 뒤, 연락하지 말아야 할 때", l: 0, t: 58, w: 72, z: 5 },
+  { kind: "img", src: "/wolhwa/sns/sns_card5.webp", alt: "월화의 추천 메시지와 맞춤 PDF", l: 14, t: 84, w: 70, z: 6 },
+];
+
+/* 상황 카드 — 칼럼으로 (파스텔 + 낙서 캐릭터) */
+const SIT_BG = ["#FFE6EC", "#FFF3D1", "#ECE7FF", "#E3F4EA", "#E4F0FF", "#FFEBDD"];
 import { BottomNav } from "@/components/home4/SubShell";
 
 type Review = { id: number; rating: number; body: string; name: string; product: string; incentive: boolean };
@@ -154,8 +165,6 @@ const Chev = () => (
 /* 묘수 실측 글씨 */
 const H2 = "m-0 text-[20px] font-extrabold leading-[1.35] tracking-[-0.02em] text-[#F5F5F5] [word-break:keep-all]";
 const EB = "m-0 mb-1 text-[13px] text-[#B5B5BA]";
-const TT = "text-[16px] font-bold leading-[1.4] text-[#F5F5F5] [word-break:keep-all]";
-const DS = "text-[13px] leading-[1.5] text-[#B5B5BA] [word-break:keep-all]";
 
 const BANNERS = [
   { href: "/apply", img: "/wolhwa/v5/p_ritual.webp", video: "/wolhwa/v5/loop_ritual.mp4", logo: "/wolhwa/v5/logo_ritual.webp", title: "월화의 재회 분석", line: "보낼까 말까, 내 사연으로 같이 읽어요", tag: "무료 미리보기" },
@@ -455,6 +464,8 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
   const [search, setSearch] = useState(false);
   const [kw, setKw] = useState("");
   const [cat, setCat] = useState("top");
+  const [daily, setDaily] = useState(false);
+  const today = todayDaily();
 
   const soon = (what: string) => {
     setToast(`${what}은(는) 준비 중이에요. 곧 열려요.`);
@@ -589,97 +600,70 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
           <AdVideo />
         </section>
 
-        {/* ⑦ 후기 + 평점 — 실제 공개 후기만 */}
+        {/* ⑦ 후기 — DB 승인 후기 + 운영자가 저장해 둔 후기(11/26 운영자 지시). 이름·별점은 원본에 있는 것만 */}
         <section className="px-4 pt-9" aria-label="후기">
           <p className="m-0 mb-1 text-[12.5px] font-semibold text-[#E4627B]">후기</p>
-          <h2 className="m-0 text-[21px] font-black leading-[1.35] tracking-[-0.02em]">먼저 열어 본 분들의 이야기</h2>
-          {reviews.length > 0 ? (
-            <>
-              <div className="scrollbar-none -mx-4 mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4">
-                {reviews.map((r) => (
-                  <div key={r.id} className="flex w-full shrink-0 snap-center flex-col gap-2 rounded-2xl border border-[#2A2A2E] bg-[#18181B] p-4">
-                    <span className="text-[14px] font-bold">
-                      {r.name} <Stars n={r.rating} />
-                    </span>
-                    <span className="line-clamp-3 text-[15px] leading-[1.65] text-[#F5F5F5] [word-break:keep-all]">{r.body}</span>
-                    <span className="mt-1 flex items-center justify-between rounded-xl bg-[#232327] px-3 py-2.5">
-                      <span>
-                        <span className="block text-[14px] font-bold">{r.product}</span>
-                        <span className={`block ${DS}`}>{PRODUCT_LINE[r.product] ?? "월하연"}</span>
-                      </span>
-                      <span className="text-[#B5B5BA]"><Chev /></span>
-                    </span>
-                    {r.incentive && <span className="text-[11px] text-[#8a8a90]">후기 작성 혜택을 받고 쓴 후기예요</span>}
-                  </div>
-                ))}
-              </div>
-              {rating !== null && (
-                <div className="mt-4 text-center">
-                  <p className="m-0 text-[16px] font-bold">
-                    후기 평점 <span className="text-[#E4627B]">{rating.toFixed(1)}</span>
-                  </p>
-                  <p className="m-0 mt-1 text-[20px]"><Stars n={rating} /></p>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="relative mt-3 pb-2">
-                <span aria-hidden className="absolute inset-x-3 bottom-0 top-3 rounded-2xl border border-[#2A2A2E] bg-[#141417]" />
-                <div className="relative flex flex-col gap-2 rounded-2xl border border-[#2A2A2E] bg-[#18181B] p-4">
-                  <span className="text-[14px] font-bold">실제 이용 후기</span>
-                  <span className="text-[15px] leading-[1.65] text-[#F5F5F5] [word-break:keep-all]">
-                    결과를 받은 분의 후기 중, 공개에 동의해 주신 것만 이 자리에 그대로 올려요. 지금 첫 후기를 모으고 있어요.
+          <div className="flex items-end justify-between">
+            <h2 className="m-0 text-[21px] font-black leading-[1.35] tracking-[-0.02em]">먼저 열어 본 분들의 이야기</h2>
+            <Link href={u("/reviews")} className="shrink-0 pb-1 text-[12.5px] text-[#B5B5BA]">
+              전체보기 ›
+            </Link>
+          </div>
+          <div className="scrollbar-none -mx-4 mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4">
+            {[
+              ...reviews.map((r) => ({ key: `d${r.id}`, who: r.name, stars: r.rating, body: r.body, product: r.product })),
+              ...SAVED_REVIEWS.filter((_, i) => i % 5 === 0 || i % 5 === 2).map((r) => ({ key: `s${r.id}`, who: r.age, stars: 0, body: r.body, product: r.product })),
+            ].map((r) => (
+              <Link key={r.key} href={u("/reviews")} className="flex w-[86%] shrink-0 snap-center flex-col gap-2 rounded-2xl border border-[#2A2A2E] bg-[#18181B] p-4">
+                <span className="flex items-center justify-between">
+                  <span className="text-[13px] font-bold text-[#E7E7EA]">
+                    {r.who} {r.stars > 0 && <Stars n={r.stars} />}
                   </span>
-                  <span className="mt-1 flex items-center justify-between rounded-xl bg-[#232327] px-3 py-2.5">
-                    <span>
-                      <span className="block text-[14px] font-bold">월화의 관계 리추얼</span>
-                      <span className={`block ${DS}`}>보낼까 말까 고민되는 밤</span>
-                    </span>
-                    <span className="text-[#B5B5BA]"><Chev /></span>
-                  </span>
-                </div>
-              </div>
-              <p className="m-0 mt-4 text-center text-[13px] text-[#B5B5BA]">후기 평점은 공개 후기가 모이면 표시돼요</p>
-            </>
+                  <span className="rounded-full bg-[#2A0D15] px-2.5 py-0.5 text-[11.5px] font-bold text-[#F3B6C2]">{r.product}</span>
+                </span>
+                <span className="line-clamp-4 text-[15px] leading-[1.65] text-[#F5F5F5] [word-break:keep-all]">“{r.body}”</span>
+                <span className="mt-auto text-[12px] text-[#8f8f96]">{PRODUCT_LINE[r.product] ?? "월하연"}</span>
+              </Link>
+            ))}
+          </div>
+          <Link href={u("/reviews")} className="mt-3 block rounded-xl border border-[#2A2A2E] py-3 text-center text-[14px] font-bold text-[#E7E7EA]">
+            후기 {reviews.length + SAVED_REVIEWS.length}개 모두 보기 ›
+          </Link>
+          {rating !== null && (
+            <p className="m-0 mt-3 text-center text-[14px] font-bold">
+              결제 고객 후기 평점 <span className="text-[#E4627B]">{rating.toFixed(1)}</span> <Stars n={rating} />
+            </p>
           )}
         </section>
 
-        {/* ⑧ SNS에서 화제인 월하연 */}
-        <section className="px-4 pt-11" aria-label="SNS 영상">
+        {/* ⑧ SNS에서 화제인 월하연 — 묘수 구도 */}
+        <section className="px-4 pt-11" aria-label="SNS에서 화제인 월하연">
           <h2 className="m-0 text-center text-[24px] font-extrabold tracking-[-0.02em]">
             SNS에서 화제인 <span className="text-[#E4627B]">월하연</span>
           </h2>
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            {SHORTS.slice(0, 3).map((s) => (
-              <div key={s.id} className="relative aspect-[9/16] overflow-hidden rounded-xl bg-[#1E1E22]">
-                <AutoVideo src={s.src} poster={s.poster} label={s.title.replace(/\n/g, " ")} className="h-full w-full object-cover" />
-                <span className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1 py-px text-[9px] text-white">AI 연출</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 flex items-baseline justify-between">
-            <p className="m-0 text-[16px] font-extrabold">유튜브에서 많이 본 월하연</p>
-            <Link href={u("/watch")} className="text-[12.5px] text-[#B5B5BA]">
-              영상 더 보기 ›
-            </Link>
-          </div>
-          <div className="scrollbar-none -mx-4 mt-3 flex snap-x gap-2 overflow-x-auto px-4">
-            {SNS_PICK.map((id) => {
-              const v = SHORTS_YT.find((x) => x.id === id);
-              if (!v) return null;
-              return (
-                <Link key={id} href={u("/watch")} className="w-[124px] shrink-0 snap-start">
-                  <span className="relative block aspect-[9/16] overflow-hidden rounded-xl bg-[#18181B]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={ytThumb(id)} alt="" aria-hidden loading="lazy" className="h-full w-full object-cover" />
-                    <span className="absolute left-1.5 top-1.5 rounded bg-[#B3263F] px-1.5 py-px text-[10px] font-bold text-white">▶ 쇼츠</span>
-                    <span className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1 py-px text-[9px] text-white">AI 연출</span>
-                  </span>
-                  <span className="mt-1.5 line-clamp-2 block text-[12.5px] font-semibold leading-[1.4] [word-break:keep-all]">{v.title}</span>
-                </Link>
-              );
-            })}
+          <div className="relative mt-5 aspect-[358/432] w-full">
+            {SNS_STAGE.map((c, i) =>
+              c.kind === "video" ? (
+                <div
+                  key={i}
+                  className="absolute overflow-hidden rounded-2xl bg-[#1E1E22] shadow-[0_10px_28px_rgba(25,25,25,0.45)]"
+                  style={{ left: `${c.l}%`, top: `${c.t}%`, width: `${c.w}%`, height: `${c.h}%`, zIndex: c.z }}
+                >
+                  <AutoVideo src={c.src} poster={c.poster ?? ""} label={c.alt} className="h-full w-full object-cover" />
+                  <span className="absolute bottom-1.5 left-1.5 rounded bg-black/55 px-1 py-px text-[9px] text-white/80">AI 연출</span>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={i}
+                  src={c.src}
+                  alt={c.alt}
+                  loading="lazy"
+                  className="absolute h-auto rounded-xl drop-shadow-[0_10px_20px_rgba(0,0,0,0.45)]"
+                  style={{ left: `${c.l}%`, top: `${c.t}%`, width: `${c.w}%`, zIndex: c.z }}
+                />
+              )
+            )}
           </div>
         </section>
 
@@ -704,7 +688,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
 
         {/* ⑪ 매일 무료 */}
         <section className="px-4 pt-4">
-          <button type="button" onClick={() => soon("오늘 밤의 한 문장")} className="flex h-[100px] w-full items-center overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#18181B] text-left">
+          <button type="button" onClick={() => setDaily(true)} className="flex h-[100px] w-full items-center overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#18181B] text-left">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/wolhwa/v5/t_daily.webp" alt="" aria-hidden className="h-full w-[40%] object-cover object-[50%_30%] [mask-image:linear-gradient(to_right,black_60%,transparent)]" />
             <span className="flex flex-1 flex-col gap-0.5 pl-1">
@@ -756,22 +740,28 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
           </section>
         ))}
 
-        {/* ⑭ 지금 이런 상황이라면 — 145px 가로 넘김 */}
+        {/* ⑭ 지금 이런 상황이라면 — 누르면 칼럼 (파스텔 카드 재디자인) */}
         <section className="pt-9">
           <div className="flex items-baseline justify-between px-4">
-            <h2 className="m-0 text-[16px] font-extrabold">지금 이런 상황이라면</h2>
-            <Link href={u("/column")} className="text-[12px] text-[#B5B5BA]">
+            <h2 className={H2}>지금 이런 상황이라면</h2>
+            <Link href={u("/column")} className="text-[12.5px] text-[#B5B5BA]">
               칼럼 전체보기 ›
             </Link>
           </div>
-          <div className="scrollbar-none mt-3 flex snap-x gap-2 overflow-x-auto px-4">
-            {SITUATIONS.map(([t, d, k, h, img]) => (
-              <Link key={t} href={u(h)} className="relative flex h-[190px] w-[145px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[#2A2A2E] bg-[#18181B] p-3">
+          <p className="m-0 mt-1 px-4 text-[13px] text-[#B5B5BA]">월화가 미리 적어 둔 3분 칼럼</p>
+          <div className="scrollbar-none mt-3 flex snap-x gap-2.5 overflow-x-auto px-4">
+            {SITUATIONS.map(([t, d, , h, img], i) => (
+              <Link
+                key={t}
+                href={u(h)}
+                className="relative flex h-[214px] w-[158px] shrink-0 snap-start flex-col overflow-hidden rounded-[22px] p-3.5"
+                style={{ background: SIT_BG[i % SIT_BG.length] }}
+              >
+                <span className="w-fit rounded-full bg-white/85 px-2 py-0.5 text-[10.5px] font-extrabold text-[#B3263F]">월화의 칼럼</span>
+                <span className="mt-2 text-[16px] font-extrabold leading-[1.35] text-[#2B2326] [word-break:keep-all]">{t}</span>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img} alt="" aria-hidden loading="lazy" className="absolute right-2 top-2 h-[70px] w-[70px] rounded-xl bg-white object-cover" />
-                <span className="text-[11px] font-bold text-[#E4627B]">{k}</span>
-                <span className="mt-auto text-[16px] font-extrabold leading-[1.35] [word-break:keep-all]">{t}</span>
-                <span className="mt-1 text-[12.5px] text-[#B5B5BA]">{d} ›</span>
+                <img src={img} alt="" aria-hidden loading="lazy" className="absolute -bottom-1 -right-2 h-[112px] w-[112px] object-contain mix-blend-multiply" />
+                <span className="relative mt-auto w-fit rounded-full bg-[#2B2326] px-2.5 py-1 text-[11px] font-bold text-white">{d} →</span>
               </Link>
             ))}
           </div>
@@ -827,6 +817,34 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
             }}
           />
         </div>
+
+        {daily && (
+          <div className="fixed inset-0 z-[65] mx-auto flex max-w-[480px] items-end bg-black/60" role="dialog" aria-label="오늘 밤의 한 문장" onClick={() => setDaily(false)}>
+            <div className="w-full rounded-t-[28px] bg-[#FFFBF5] px-5 pb-8 pt-3 text-[#2B2326]" onClick={(e) => e.stopPropagation()}>
+              <span aria-hidden className="mx-auto block h-1.5 w-10 rounded-full bg-[#E6D9D3]" />
+              <div className="mt-4 flex items-center justify-between">
+                <span className="rounded-full bg-[#FFE6EC] px-2.5 py-1 text-[12px] font-extrabold text-[#B3263F]">{today.date} · 오늘 밤의 한 문장</span>
+                <button type="button" onClick={() => setDaily(false)} className="text-[14px] text-[#8a7a7e]">
+                  닫기
+                </button>
+              </div>
+              <div className="mt-4 flex items-start gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/wolhwa/doodle/girl_book.webp" alt="" aria-hidden className="h-[76px] w-[76px] shrink-0 object-contain mix-blend-multiply" />
+                <p className="font-display m-0 text-[21px] font-bold leading-[1.5] [word-break:keep-all]">“{today.line}”</p>
+              </div>
+              <p className="m-0 mt-4 text-[15px] leading-[1.75] text-[#4a3d41] [word-break:keep-all]">{today.body}</p>
+              <div className="mt-4 rounded-2xl border border-dashed border-[#E4B7C0] px-4 py-3">
+                <span className="block text-[12px] font-bold text-[#B3263F]">오늘 밤 해 볼 한 가지</span>
+                <span className="mt-0.5 block text-[15px] font-bold [word-break:keep-all]">{today.act}</span>
+              </div>
+              <Link href={u(`/column/${today.slug}`)} className="mt-4 block rounded-2xl bg-[#B3263F] py-3.5 text-center text-[15px] font-extrabold text-white">
+                이어지는 칼럼 읽기 ›
+              </Link>
+              <p className="m-0 mt-3 text-center text-[12px] text-[#8a7a7e]">매일 밤 새 문장이 열려요</p>
+            </div>
+          </div>
+        )}
 
         {toast && (
           <div role="status" className="fixed inset-x-0 bottom-[160px] z-50 mx-auto w-fit max-w-[90%] rounded-full bg-black/85 px-4 py-2.5 text-[13px] text-white">
