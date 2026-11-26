@@ -19,7 +19,7 @@ export type Column = {
 const D = "/wolhwa/doodle";
 const CTA_RITUAL = { t: "내 사연으로 무료 미리보기", d: "내 상황을 들려주면 월화가 먼저 읽어 드려요", h: "/apply" };
 const CTA_CHAT = { t: "그 사람 카톡, 숫자로 먼저 읽기", d: "대화를 올리면 숫자 분석은 무료예요", h: "/chat" };
-const CTA_BOOK = { t: "보내기 직전에 펼치는 월화의 책", d: "연락하고 싶은 날마다 다시 여는 한 권", h: "/book" };
+const CTA_BOOK = { t: "120쪽 심층 재회 리포트", d: "6만 자 이상, 내 사연으로 다시 읽는 우리 관계", h: "/book" };
 
 export const COLUMNS: Column[] = [
   {
