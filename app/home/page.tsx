@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getPublicReviews } from "@/lib/reviews";
 import { getSiteTotals } from "@/lib/site-totals";
 import HomeV4 from "@/components/home4/HomeV4";
+import Totals from "@/components/home3/Totals";
 
 /* 11/26 운영자 요청: 새 홈 화면 시안 (/home) — 확인이 끝날 때까지 검색 노출 차단, 기존 페이지에서 링크하지 않음 */
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function HomePage() {
     <HomeV4
       reviews={reviews.map((r) => ({ id: r.id, rating: r.rating, body: r.body, name: r.name, product: r.product, incentive: r.incentive }))}
       rating={rating}
-      totals={totals ? { visitors: totals.visitors, stories: totals.stories, previews: totals.previews } : null}
+      totalsNode={totals ? <Totals totals={totals} /> : null}
     />
   );
 }
