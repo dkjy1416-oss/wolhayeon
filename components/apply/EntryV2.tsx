@@ -65,22 +65,27 @@ const LOOP: Record<string, string> = {
 };
 const V2_STEPS: StepDef[] = ORDER.map((id) => STEPS.find((s) => s.id === id)).filter(Boolean) as StepDef[];
 
-/* 질문마다 월화 표정(기존 이미지) */
-const FACE: Record<string, string> = {
-  applicant_name: IMG.smile,
-  partner_name: IMG.explain,
-  relationship_type: IMG.explain,
-  breakup_elapsed: IMG.hold,
-  contact_status: IMG.hold,
-  breakup_initiator: IMG.hold,
-  last_conversation: IMG.letter,
-  current_emotion: IMG.smile,
-  pain_points: IMG.hold,
-  main_wish: IMG.explain,
-  story: IMG.letter,
-  last_conversation_memory: IMG.letter,
-  email: IMG.smile,
+/* 11/27 운영자 요청: 질문마다 월화 루프 영상 (wolhwa/v3 — 말하는 월화) */
+const V3 = (n: string) => ({ src: `/wolhwa/v3/${n}.mp4`, poster: `/wolhwa/v3/${n}.webp` });
+const FACE: Record<string, { src: string; poster: string }> = {
+  applicant_name: V3("greet"),
+  partner_name: V3("listen"),
+  relationship_type: V3("listen"),
+  breakup_elapsed: V3("explain"),
+  contact_status: V3("explain"),
+  breakup_initiator: V3("listen"),
+  last_conversation: V3("listen"),
+  current_emotion: V3("smile"),
+  pain_points: V3("listen"),
+  main_wish: V3("offer"),
+  story: V3("write"),
+  last_conversation_memory: V3("write"),
+  partner_new_relationship: V3("explain"),
+  safety_concerns: V3("explain"),
+  email: V3("smile"),
 };
+const FACE_DEFAULT = V3("explain");
+const MEET_FACE = V3("greet");
 
 /* 답을 들은 뒤 월화 한마디 (청월당 "지영? 예쁜 이름이네요" 자리) */
 const REACT: Record<string, string> = {
@@ -139,6 +144,34 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
     [name, partner]
   );
 
+  /* ④ 월화 소개 대사 */
+  const MEET = [
+    "방금 보내려던 분, 맞죠?",
+    "저는 월화예요.\n보내기 전에 마음을 먼저 듣는 사람이에요.",
+    "그 한 줄, 보내도 될지\n두 사람 이야기부터 같이 볼까요?",
+  ];
+
+  /* 11/27 운영자 요청: 청월당처럼 월화의 말이 한 글자씩 타이핑되듯 나타남 (눌러서 건너뛰기) */
+  const typedSource =
+    phase === "meet" ? MEET[meetIdx] : phase === "react" ? reactText : phase === "q" && cur ? fill(cur.question).replace(/\n/g, " ") : "";
+  const [typedN, setTypedN] = useState(0);
+  useEffect(() => {
+    setTypedN(0);
+    if (!typedSource) return;
+    const iv = window.setInterval(() => {
+      setTypedN((x) => {
+        if (x >= typedSource.length) {
+          window.clearInterval(iv);
+          return x;
+        }
+        return x + 1;
+      });
+    }, 45);
+    return () => window.clearInterval(iv);
+  }, [typedSource]);
+  const typed = typedSource.slice(0, typedN);
+  const typedDone = typedN >= typedSource.length;
+
   /* ③ 전송 → 흔들림 → "잠깐." */
   const send = () => {
     const l = line.trim() || "자니..? 그냥 갑자기 생각나서";
@@ -161,12 +194,6 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
     }, 700);
   };
 
-  /* ④ 월화 소개 말풍선 */
-  const MEET = [
-    "방금 보내려던 분, 맞죠?",
-    "저는 월화예요.\n보내기 전에 마음을 먼저 듣는 사람이에요.",
-    "그 한 줄, 보내도 될지\n두 사람 이야기부터 같이 볼까요?",
-  ];
 
   const next = () => {
     if (!cur) return;
@@ -191,7 +218,7 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
     if (r) {
       setReactText(fill(r));
       setPhase("react");
-      timer.current = window.setTimeout(go, 1700);
+      timer.current = window.setTimeout(go, 1200 + r.length * 45);
     } else go();
   };
   const advanceRef = useRef(advance);
@@ -248,9 +275,7 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
           ? IMG.wait
           : phase === "travel"
             ? IMG.thread
-            : phase === "meet"
-              ? IMG.explain
-              : phase === "load" || phase === "card"
+            : phase === "load" || phase === "card"
                 ? IMG.reading
                 : phase === "ritual"
                   ? IMG.thread
@@ -282,6 +307,8 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
         @keyframes v2dot{0%,60%,100%{transform:translateY(0);opacity:.55}30%{transform:translateY(-4px);opacity:1}}
         .v2-typing{animation:v2ty 5s ease-in-out infinite}
         @keyframes v2ty{0%,8%{opacity:0;transform:translateY(4px)}14%,70%{opacity:1;transform:none}78%,100%{opacity:0;transform:translateY(4px)}}
+        .v2-caret{display:inline-block;margin-left:1px;animation:v2c .8s steps(1) infinite;color:#ffb3c0}
+        @keyframes v2c{50%{opacity:0}}
         .v2-glow{animation:v2g 1.6s ease-in-out infinite}
         @keyframes v2g{0%,100%{filter:drop-shadow(0 0 4px #c8324a)}50%{filter:drop-shadow(0 0 14px #ff5a72)}}
       `}</style>
@@ -479,86 +506,90 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
         </button>
       )}
 
-      {/* ④ 월화 등장 */}
+      {/* ④ 월화 등장 — 청월당 정보 입력 첫 화면 구성, 흰 블러 대신 검은 블러 */}
       {phase === "meet" && (
-        <div className="relative z-10 flex min-h-[100svh] flex-col justify-end px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
-          <div key={meetIdx} className="v2-fade relative mb-6 rounded-[28px] bg-[#fbf6ee] px-6 py-5 text-center text-[#2a1d1f] shadow-xl">
-            <p className="whitespace-pre-line text-[1.08rem] font-medium leading-[1.75]">{MEET[meetIdx]}</p>
-            <span className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#fbf6ee]" />
-          </div>
-          {meetIdx < MEET.length - 1 ? (
-            <button type="button" onClick={() => setMeetIdx((i) => i + 1)} className={btn}>
-              다음
+        <div className="absolute inset-0 z-10 flex flex-col justify-end">
+          <video key="meet" src={MEET_FACE.src} poster={MEET_FACE.poster} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover object-[50%_20%]" />
+          <DarkVeil />
+          <div className="relative px-6 pb-[calc(env(safe-area-inset-bottom)+1.2rem)]">
+            <button type="button" onClick={() => setTypedN(typedSource.length)} className="block min-h-[96px] w-full text-center">
+              <p className="font-display whitespace-pre-line text-[1.22rem] leading-[1.85] text-ivory drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+                “{typed}
+                {!typedDone && <span className="v2-caret">|</span>}
+                {typedDone && "”"}
+              </p>
             </button>
-          ) : (
-            <button type="button" onClick={() => { setStep(0); setPhase("q"); }} className={btn}>
-              월화에게 이야기하기
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* ⑤ 월화가 한 질문씩 */}
-      {(phase === "q" || phase === "react") && cur && (
-        <div className="relative z-10 flex min-h-[100svh] flex-col bg-[#f6efe6] text-[#2a1d1f]">
-          <div className="relative h-[42svh] min-h-[260px] overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img key={FACE[cur.id] ?? IMG.explain} src={FACE[cur.id] ?? IMG.explain} alt="월화" className="v2-fade h-full w-full object-cover object-[50%_20%]" />
-            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#f6efe6] to-transparent" />
-            <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+3rem)] flex items-center gap-3 px-5">
-              <button type="button" onClick={back} aria-label="이전" className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white">←</button>
-              <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/40">
-                <div className="h-full rounded-full bg-[#c8324a] transition-all" style={{ width: `${((idx + 1) / total) * 100}%` }} />
-              </div>
-              {cur.optional && idx < total - 1 && (
-                <button type="button" onClick={() => { setStep(idx + 1); }} className="text-[0.78rem] text-white underline">건너뛰기</button>
+            <div className={`mt-6 transition-opacity duration-300 ${typedDone ? "opacity-100" : "pointer-events-none opacity-0"}`}>
+              {meetIdx < MEET.length - 1 ? (
+                <button type="button" onClick={() => setMeetIdx((i) => i + 1)} className={btn}>다음으로</button>
+              ) : (
+                <button type="button" onClick={() => { setStep(0); setPhase("q"); }} className={btn}>월화에게 이야기하기</button>
               )}
             </div>
           </div>
+        </div>
+      )}
 
-          {phase === "react" ? (
-            <div className="v2-fade -mt-6 flex flex-1 items-start justify-center px-6">
-              <div className="relative rounded-[24px] bg-white px-6 py-5 text-center shadow-lg">
-                <p className="whitespace-pre-line text-[1.05rem] font-medium leading-[1.75]">“{reactText}”</p>
+      {/* ⑤ 월화가 한 질문씩 — 전체 화면 월화 루프 + 아래 검은 블러, 질문은 타이핑, 입력칸은 그 아래 */}
+      {(phase === "q" || phase === "react") && cur && (() => {
+        const face = FACE[cur.id] ?? FACE_DEFAULT;
+        return (
+          <div className="absolute inset-0 z-10 flex flex-col">
+            <video key={face.src} src={face.src} poster={face.poster} autoPlay muted loop playsInline className="v2-fade absolute inset-0 h-full w-full object-cover object-[50%_18%]" />
+            <DarkVeil strong />
+            <div className="relative flex items-center gap-3 px-5 pt-[calc(env(safe-area-inset-top)+3.4rem)]">
+              <button type="button" onClick={back} aria-label="이전" className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white">←</button>
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
+                <div className="h-full rounded-full bg-[#d2384f] transition-all" style={{ width: `${((idx + 1) / total) * 100}%` }} />
               </div>
+              {cur.optional && idx < total - 1 && (
+                <button type="button" onClick={() => setStep(idx + 1)} className="text-[0.78rem] text-white/85 underline">건너뛰기</button>
+              )}
             </div>
-          ) : (
-            <>
-              <div key={cur.id} className="v2-fade -mt-6 flex-1 overflow-y-auto px-5 pb-4">
-                <div className="relative rounded-[24px] bg-white px-5 py-4 shadow-md">
-                  <span className="absolute -top-2 left-8 h-4 w-4 rotate-45 bg-white" />
-                  <p className="text-[0.7rem] font-bold tracking-[0.15em] text-[#b0475a]">월화</p>
-                  <p className="mt-1 whitespace-pre-line text-[1.08rem] font-semibold leading-[1.65]">“{fill(cur.question).replace(/\n/g, " ")}”</p>
-                  {cur.sub && <p className="mt-1.5 whitespace-pre-line text-[0.78rem] leading-[1.7] text-[#7a6a6c]">{fill(cur.sub)}</p>}
+            <div className="flex-1" />
+            <div className="relative max-h-[64svh] overflow-y-auto px-6 pb-3">
+              <button type="button" onClick={() => setTypedN(typedSource.length)} className="block w-full text-center">
+                <p className="font-display whitespace-pre-line text-[1.18rem] leading-[1.85] text-ivory drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+                  “{typed}
+                  {!typedDone && <span className="v2-caret">|</span>}
+                  {typedDone && "”"}
+                </p>
+              </button>
+              {phase === "q" && (
+                <div className={`transition-opacity duration-300 ${typedDone ? "opacity-100" : "pointer-events-none opacity-0"}`}>
+                  {cur.sub && <p className="mt-2 whitespace-pre-line text-center text-[0.76rem] leading-[1.7] text-ivory/60">{fill(cur.sub)}</p>}
+                  <div className="v2-dark-input mt-5">
+                    <StepInput
+                      step={cur}
+                      app={app}
+                      setApp={setApp}
+                      fill={fill}
+                      onPicked={picked}
+                      onUnknown={() => {
+                        setApp((a) => cur.set(a, null));
+                        if (idx < total - 1) setStep(idx + 1);
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-4 rounded-[22px] bg-[#1a1214] p-4">
-                  <StepInput
-                    step={cur}
-                    app={app}
-                    setApp={setApp}
-                    fill={fill}
-                    onPicked={picked}
-                    onUnknown={() => {
-                      setApp((a) => cur.set(a, null));
-                      if (idx < total - 1) setStep(idx + 1);
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="sticky bottom-0 border-t border-black/5 bg-[#f6efe6] px-5 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] pt-3">
+              )}
+            </div>
+            {phase === "q" && (
+              <div className={`relative px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-2 transition-opacity duration-300 ${typedDone ? "opacity-100" : "pointer-events-none opacity-0"}`}>
                 {tried && !cur.valid(app) && (
-                  <p className="mb-2 text-[0.76rem] text-[#c8324a]">
+                  <p className="mb-2 text-center text-[0.76rem] text-[#ff8fa3]">
                     {cur.kind === "email" ? (isValidEmail(app.email) ? "필수 확인 두 가지를 눌러 주세요." : "이메일 주소를 확인해 주세요.") : "답을 남겨 주시면 다음으로 넘어가요."}
                   </p>
                 )}
                 <button type="button" onClick={next} className={btn}>
-                  {idx >= total - 1 ? "다 들려줬어요" : "다음"}
+                  {idx >= total - 1 ? "다 들려줬어요" : "다음으로"}
                 </button>
               </div>
-            </>
-          )}
-        </div>
-      )}
+            )}
+            {phase === "react" && <div className="h-[calc(env(safe-area-inset-bottom)+5rem)]" />}
+          </div>
+        );
+      })()}
 
       {/* ⑥ 붉은 실 고르기 */}
       {phase === "ritual" && (
@@ -635,4 +666,18 @@ function todayLabel() {
   } catch {
     return "";
   }
+}
+
+/* 청월당의 흰 블러를 월하연은 검은 블러로 — 위는 비우고 아래로 갈수록 어둡고 흐리게 */
+function DarkVeil({ strong = false }: { strong?: boolean }) {
+  return (
+    <>
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[70%] backdrop-blur-[6px]"
+        style={{ WebkitMaskImage: "linear-gradient(to bottom, transparent, black 45%)", maskImage: "linear-gradient(to bottom, transparent, black 45%)" }}
+      />
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent ${strong ? "to-black/95" : "to-black/90"}`} />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black via-black/80 to-transparent" />
+    </>
+  );
 }
