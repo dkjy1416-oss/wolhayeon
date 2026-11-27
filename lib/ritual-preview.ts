@@ -182,6 +182,9 @@ async function storyQuoteLine(order: RitualOrderRow, highRisk: boolean): Promise
   const story = (order.story ?? "").replace(/\s+/g, " ").trim();
   if (highRisk || story.length < 20) return null;
   const fallback = ruleQuoteLine(story);
+  /* 11/27 운영자 요청 "미리보기는 API 더 안 닳게": 사연에 따옴표로 직접 적은 말이 있으면
+     그 말로 바로 인용하고 AI 는 부르지 않는다. 따옴표가 없는 사연만 짧은 AI 호출(Haiku) 1번. */
+  if (fallback) return fallback;
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) return fallback;
   const t0 = Date.now();
