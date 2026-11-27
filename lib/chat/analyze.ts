@@ -89,7 +89,7 @@ export async function analyzeChat(
 ): Promise<ChatResult | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey || images.length === 0) return null;
-  const client = new Anthropic({ apiKey, maxRetries: 1 });
+  const client = new Anthropic({ apiKey, maxRetries: 0 }) /* 11/27: 재시도는 아래 반복문과 process.ts 가 이미 함 — SDK 숨은 재시도까지 겹치면 같은 대화 전체를 한 번 더 보냄 */;
   const model = process.env.CHAT_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-6";
   const partner = o.partner_label || "그 사람";
   const intro = `[손님 정보]
@@ -139,7 +139,7 @@ ${answerText(o)}
 export async function analyzeChatText(o: ChatOrder, text: string): Promise<ChatResult | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey || !text.trim()) return null;
-  const client = new Anthropic({ apiKey, maxRetries: 1 });
+  const client = new Anthropic({ apiKey, maxRetries: 0 }) /* 11/27: 재시도는 아래 반복문과 process.ts 가 이미 함 — SDK 숨은 재시도까지 겹치면 같은 대화 전체를 한 번 더 보냄 */;
   const model = process.env.CHAT_ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-6";
   const partner = o.partner_label || "그 사람";
   const prompt = `[손님 정보]
