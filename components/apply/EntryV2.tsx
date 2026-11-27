@@ -28,7 +28,7 @@ const IMG = {
   reading: "/book/v3/w-reading.webp",
   fight: "/book/v3/fight2.webp",
   street: "/book/v3/cry.webp",
-  bed: "/book/v3/bed.webp",
+  alone: "/book/v3/alone.webp",
 };
 
 /* 화이트보드 ⑤ 순서: 이름 → 그 사람 → 관계 → 기간·연락 → 누가 먼저 → 마음 → 알고 싶은 것 → 이야기 → 선택 묶음 → 이메일 */
@@ -323,26 +323,32 @@ export default function EntryV2() {
               <span key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 8) * 0.55}s`, animationDuration: `${4 + (i % 5)}s` }} />
             ))}
           </div>
-          {/* 컷 1·2 */}
+          {/* 컷 1·2 — 청월당처럼 위아래 두 컷, 비스듬한 프레임, 말풍선은 얼굴을 피해 모서리에 */}
           <div className={`absolute inset-0 transition-all duration-500 ${beat >= 5 ? "-translate-y-full opacity-0" : ""}`}>
-            <div className={`absolute left-[4%] top-[7%] h-[40%] w-[86%] overflow-hidden shadow-[0_6px_24px_rgba(0,0,0,0.25)] transition-all duration-500 ${beat >= 0 ? "v2-in-left" : "opacity-0"}`} style={{ transform: "rotate(-3deg)" }}>
+            <div
+              className={`absolute left-[3%] top-[6%] h-[43%] w-[94%] ${beat >= 0 ? "v2-in-left" : "opacity-0"}`}
+              style={{ clipPath: "polygon(0 3%, 100% 0, 98% 100%, 2% 95%)", transform: "rotate(-1.5deg)" }}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={IMG.fight} alt="" className="h-full w-full object-cover object-[50%_30%]" />
+              <img src={IMG.fight} alt="" className="h-full w-full object-cover object-[50%_18%]" />
             </div>
-            {beat >= 1 && <Bubble className="left-[3%] top-[26%]" text={<>그만하자,<br /><b className="text-[#9b1d32]">우리.</b></>} />}
-            <div className={`absolute bottom-[8%] right-[4%] h-[40%] w-[86%] overflow-hidden shadow-[0_6px_24px_rgba(0,0,0,0.25)] ${beat >= 2 ? "v2-in-right" : "opacity-0"}`} style={{ transform: "rotate(2deg)" }}>
+            {beat >= 1 && <Bubble className="left-[1%] top-[33%]" text={<>그만하자,<br /><b className="text-[#9b1d32]">우리.</b></>} />}
+            <div
+              className={`absolute left-[3%] top-[50.5%] h-[43%] w-[94%] ${beat >= 2 ? "v2-in-right" : "opacity-0"}`}
+              style={{ clipPath: "polygon(2% 5%, 100% 0, 100% 97%, 0 100%)", transform: "rotate(1deg)" }}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={IMG.street} alt="" className="h-full w-full object-cover object-[50%_25%]" />
+              <img src={IMG.street} alt="" className="h-full w-full object-cover object-[60%_14%]" />
             </div>
-            {beat >= 3 && <Bubble className="right-[3%] top-[52%]" text={<>…응.<br /><b className="text-[#9b1d32]">잘 지내.</b></>} />}
+            {beat >= 3 && <Bubble className="right-[1%] top-[77%]" text={<>…응.<br /><b className="text-[#9b1d32]">잘 지내.</b></>} />}
           </div>
-          {/* 컷 3 — 그 사람 생각 */}
+          {/* 컷 3 — 혼자 남은 밤, 그 사람 생각 */}
           {beat >= 5 && (
             <div className="v2-fade absolute inset-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={IMG.bed} alt="" className="v2-zoom h-full w-full object-cover object-[50%_30%]" />
-              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/50" />
-              {beat >= 6 && <Bubble className="left-1/2 top-[14%] -translate-x-1/2" text={<>그 사람도…<br /><b className="text-[#9b1d32]">가끔 내 생각 할까?</b></>} />}
+              <img src={IMG.alone} alt="" className="v2-zoom h-full w-full object-cover object-[50%_35%]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/40" />
+              {beat >= 6 && <Bubble className="right-[5%] top-[9%]" text={<>그 사람도…<br /><b className="text-[#9b1d32]">가끔 내 생각 할까?</b></>} />}
             </div>
           )}
           <button type="button" onClick={() => setPhase("chat")} aria-label="건너뛰기" className="absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-[0.9rem] text-white">
@@ -574,7 +580,7 @@ export default function EntryV2() {
 function Bubble({ text, className = "" }: { text: React.ReactNode; className?: string }) {
   return (
     <div className={`absolute z-20 ${className}`}>
-      <div className="v2-pop flex h-[132px] w-[132px] items-center justify-center rounded-full bg-white/95 text-center text-[0.95rem] font-medium leading-[1.55] text-[#3a2a2c] shadow-[0_0_0_3px_rgba(255,255,255,0.6),0_0_0_4px_rgba(200,50,74,0.45),0_0_28px_8px_rgba(255,255,255,0.75)]">
+      <div className="v2-pop flex h-[118px] w-[118px] items-center justify-center rounded-full bg-white/95 text-center text-[0.88rem] font-medium leading-[1.5] text-[#3a2a2c] shadow-[0_0_0_3px_rgba(255,255,255,0.6),0_0_0_4px_rgba(200,50,74,0.45),0_0_28px_8px_rgba(255,255,255,0.75)]">
         <p>{text}</p>
       </div>
     </div>
