@@ -426,10 +426,10 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
           </div>
           {/* 11/27 운영자 요청: 누적 고객 말풍선과 같은 모양으로 '하고 싶은 말 적어보기' 안내 */}
           <div className="flex justify-center pb-3">
-            <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/90 px-4 py-2 text-center text-[0.84rem] font-semibold text-ivory">
-              그 사람에게 <b className="text-[#ff8fab]">하고 싶은 말</b>, 여기에 적어 보세요
-              <span className="block text-[0.64rem] font-normal text-ivory/60">실제로 보내지지 않아요</span>
-              <span aria-hidden className="absolute -bottom-[6px] left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
+            <p className="relative rounded-full border border-white/80 bg-white/70 px-4 py-2 text-center text-[0.84rem] font-semibold text-[#2b3a47] shadow-[0_4px_14px_rgba(60,80,100,0.15)] backdrop-blur-sm">
+              그 사람에게 <b className="text-[#d0456a]">하고 싶은 말</b>, 여기에 적어 보세요
+              <span className="block text-[0.64rem] font-normal text-[#6a7a88]">실제로 보내지지 않아요</span>
+              <span aria-hidden className="absolute -bottom-[6px] left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-white/80 bg-white/70" />
             </p>
           </div>
           <div className="flex items-center gap-2 bg-white px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]">
