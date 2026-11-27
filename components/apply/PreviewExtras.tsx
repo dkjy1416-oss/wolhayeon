@@ -71,7 +71,7 @@ export default function PreviewExtras({ kind, afterReviews }: { kind: "ritual" |
            (.paper .night 는 회색 바탕을 덮어써서 Hook 의 갈색과 어긋났음 → night 클래스 대신 색 이름만 직접 지정)
            누적 고객 말풍선은 아래 따라다니는 버튼에 이미 있어 여기선 뺌 */
         <div
-          className="relative mt-10 bg-[#120e10] text-ivory"
+          className="relative mt-10 text-ivory"
           style={
             {
               ["--color-ink" as string]: "#120e10",
@@ -83,13 +83,14 @@ export default function PreviewExtras({ kind, afterReviews }: { kind: "ritual" |
             } as React.CSSProperties
           }
         >
-          <div aria-hidden className="h-44" style={{ background: "linear-gradient(to bottom, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
-          <div className="-mt-px">
+          {/* 경계선이 1px 비치지 않게: 그라데이션을 어두운 장면 '위에' 겹쳐 올림 */}
+          <div aria-hidden className="pointer-events-none relative z-10 -mb-44 h-44" style={{ background: "linear-gradient(to bottom, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
+          <div className="bg-[#120e10] pb-24">
             <Hook visitors={0} inPreview />
             <Turn inPreview />
             <Mystery />
           </div>
-          <div aria-hidden className="h-44" style={{ background: "linear-gradient(to top, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
+          <div aria-hidden className="pointer-events-none relative z-10 -mt-44 h-44" style={{ background: "linear-gradient(to top, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
         </div>
       )}
 
