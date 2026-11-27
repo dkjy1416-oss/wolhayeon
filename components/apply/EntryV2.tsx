@@ -343,7 +343,6 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
 
       {phase !== "chat" && (<>
       <BrandLogo className="absolute left-5 top-[calc(env(safe-area-inset-top)+1rem)] z-30 drop-shadow-[0_1px_6px_rgba(0,0,0,0.6)]" size={22} />
-      <span className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-30 rounded-full bg-black/50 px-2.5 py-1 text-[0.62rem] text-ivory/70">프로토타입</span>
       </>)}
 
       {/* ① 표지 */}

@@ -1446,6 +1446,7 @@ export default function PreviewExperience({
           {/* 11/27 운영자 요청: 미리보기 풍부하게 — 후기 · 받는 것(POINT 1~4) · SNS·유튜브 · 칼럼 */}
           <PreviewExtras
             kind="ritual"
+            visitors={totals?.visitors ?? 0}
             afterReviews={
               totals ? (
                 <div className="mt-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>

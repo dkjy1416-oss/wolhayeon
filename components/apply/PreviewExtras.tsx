@@ -6,7 +6,8 @@
  * 결제·신청 흐름(버튼·주소·상태)은 건드리지 않는다. 색은 테마 클래스라 밝은 미리보기(paper)·어두운 카톡 화면 둘 다 맞는다.
  */
 import Link from "next/link";
-import { Point1, Point2, Point3, Point4 } from "@/components/home3/Points";
+import { Point1, Point2, Point3, Point4, Point5 } from "@/components/home3/Points";
+import { Hook, Turn, Mystery } from "@/components/home3/Story";
 import ShortsRow from "@/components/home2/ShortsRow";
 import { SAVED_REVIEWS } from "@/lib/home/reviews-saved";
 import { ReviewCard, Stars5 } from "@/components/home4/ReviewCard";
@@ -26,7 +27,7 @@ const CFG = {
 
 const YT_PICK = ["r7-OOdStniE", "A6ZCzFbe6DI", "F0-Bb9RHJhA", "lMHD1SXc1Ks"];
 
-export default function PreviewExtras({ kind, afterReviews }: { kind: "ritual" | "chat"; afterReviews?: React.ReactNode }) {
+export default function PreviewExtras({ kind, afterReviews, visitors = 0 }: { kind: "ritual" | "chat"; afterReviews?: React.ReactNode; visitors?: number }) {
   const cfg = CFG[kind];
   const reviews = SAVED_REVIEWS.filter((r) => (cfg.products as readonly string[]).includes(r.product)).slice(0, 12);
   const cols = cfg.columns.map((s) => COLUMNS.find((c) => c.slug === s)).filter(Boolean) as typeof COLUMNS;
@@ -63,6 +64,15 @@ export default function PreviewExtras({ kind, afterReviews }: { kind: "ritual" |
       {/* 11/27 운영자 요청: 월계수 누적 집계는 후기 바로 밑 */}
       {afterReviews}
 
+      {/* 11/27 운영자 요청: 기존 재회 분석 첫 화면 1~4 (대화창 → 그런데 → 붉은 실 → 미치도록 궁금했던 이야기) */}
+      {kind === "ritual" && (
+        <div className="night mt-10 bg-[#120e10] text-ivory" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
+          <Hook visitors={visitors} inPreview />
+          <Turn inPreview />
+          <Mystery />
+        </div>
+      )}
+
       {/* ② 메인 페이지의 '받는 것' (재회 분석) */}
       {kind === "ritual" && (
         <section className="mt-10" aria-label="결과에서 받는 것">
@@ -77,6 +87,8 @@ export default function PreviewExtras({ kind, afterReviews }: { kind: "ritual" |
             <Point2 />
             <Point3 />
             <Point4 />
+            {/* 11/27 요청: POINT 5 (한 번의 결제로 부담 없이) */}
+            <Point5 bare />
           </div>
         </section>
       )}
