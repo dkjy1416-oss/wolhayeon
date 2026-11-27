@@ -273,6 +273,10 @@ export default function EntryV2() {
         @keyframes v2p{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
         .v2-dust span{position:absolute;top:-10px;width:5px;height:5px;border-radius:9999px;background:radial-gradient(circle,#fff 0,#ffd9df 45%,transparent 70%);opacity:.85;animation-name:v2d;animation-timing-function:linear;animation-iteration-count:infinite}
         @keyframes v2d{from{transform:translateY(0) translateX(0)}to{transform:translateY(110vh) translateX(30px)}}
+        .v2-dot{display:block;width:6px;height:6px;border-radius:9999px;background:#f5d64a;animation:v2dot 1s ease-in-out infinite}
+        @keyframes v2dot{0%,60%,100%{transform:translateY(0);opacity:.55}30%{transform:translateY(-4px);opacity:1}}
+        .v2-typing{animation:v2ty 5s ease-in-out infinite}
+        @keyframes v2ty{0%,8%{opacity:0;transform:translateY(4px)}14%,70%{opacity:1;transform:none}78%,100%{opacity:0;transform:translateY(4px)}}
         .v2-glow{animation:v2g 1.6s ease-in-out infinite}
         @keyframes v2g{0%,100%{filter:drop-shadow(0 0 4px #c8324a)}50%{filter:drop-shadow(0 0 14px #ff5a72)}}
       `}</style>
@@ -386,7 +390,18 @@ export default function EntryV2() {
                 </div>
               </div>
             </div>
-            <p className="mx-auto mt-6 w-fit rounded-full bg-black/15 px-3 py-1 text-[0.72rem] text-white">21일째, 대화가 멈춰 있어요</p>
+            {/* 11/27 운영자 요청: 카톡 '입력 중' 말풍선 — 점 세 개가 통통 튀고, 썼다 지웠다 하듯 사라졌다 다시 나타남 */}
+            <div className="v2-typing mt-3 flex items-start gap-2">
+              <span className="h-10 w-10 shrink-0 rounded-[15px] bg-[#9fb3c4]" />
+              <div>
+                <p className="text-[0.72rem] text-[#3d4b57]">그 사람</p>
+                <div className="mt-1 flex h-[34px] w-[58px] items-center justify-center gap-[5px] rounded-[14px] rounded-tl-[4px] bg-[#9fb0c0]/80">
+                  <i className="v2-dot" />
+                  <i className="v2-dot" style={{ animationDelay: ".18s" }} />
+                  <i className="v2-dot" style={{ animationDelay: ".36s" }} />
+                </div>
+              </div>
+            </div>
             {sent && (
               <div className="v2-fade mt-4 flex items-end justify-end gap-1.5">
                 <span className="text-right text-[0.62rem] leading-tight text-[#556677]"><b className="block text-[#e8c400]">1</b>지금</span>
