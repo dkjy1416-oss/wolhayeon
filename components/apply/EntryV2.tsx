@@ -55,6 +55,14 @@ const ORDER = [
   "partner_birth_year",
   "email",
 ];
+/* 배경 그림 → 같은 장면 루프 영상 */
+const LOOP: Record<string, string> = {
+  [IMG.wait]: "/wolhwa/v4/wait.mp4",
+  [IMG.thread]: "/book/v3/w-thread.mp4",
+  [IMG.reading]: "/book/v3/w-reading.mp4",
+  [IMG.night]: "/book/v3/night.mp4",
+  [IMG.typing]: "/book/v3/typing.mp4",
+};
 const V2_STEPS: StepDef[] = ORDER.map((id) => STEPS.find((s) => s.id === id)).filter(Boolean) as StepDef[];
 
 /* 질문마다 월화 표정(기존 이미지) */
@@ -289,10 +297,13 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
           playsInline
         />
       )}
-      {bg && (
+      {/* 11/27 운영자 요청: 뒤 배경은 그림 대신 움직이는 루프 영상 (영상이 있는 장면만, 없으면 그림) */}
+      {bg && (LOOP[bg] ? (
+        <video key={bg} src={LOOP[bg]} poster={bg} autoPlay muted loop playsInline className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_25%]" />
+      ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img key={bg} src={bg} alt="" className="v2-zoom pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_25%]" />
-      )}
+      ))}
       <div className="pointer-events-none absolute inset-0 z-[2] bg-gradient-to-b from-black/55 via-black/10 to-black/85" />
 
       {phase !== "chat" && (<>
@@ -445,10 +456,14 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
       {/* ③ 잠깐. */}
       {phase === "stop" && (
         <button type="button" onClick={() => setPhase("travel")} className="relative z-10 flex min-h-[100svh] w-full flex-col items-center justify-end px-6 pb-[calc(env(safe-area-inset-bottom)+3rem)] text-center">
-          <p className="v2-stop font-display text-[3.2rem] font-bold text-ivory drop-shadow-[0_2px_16px_rgba(0,0,0,0.9)]">잠깐.</p>
-          <p className="v2-fade mt-4 rounded-2xl bg-black/55 px-4 py-3 text-[0.95rem] leading-relaxed text-ivory/90" style={{ animationDelay: ".5s" }}>
-            “{line}”<br />그 한 줄, 보내기 전에…
-          </p>
+          <p className="v2-stop font-display font-bold text-ivory drop-shadow-[0_2px_16px_rgba(0,0,0,0.9)]" style={{ fontSize: "3.2rem", lineHeight: 1.1 }}>잠깐.</p>
+          {/* 월화 말풍선 (④ 소개 장면과 같은 크림색 말풍선) */}
+          <div className="v2-fade relative mt-5 rounded-[26px] bg-[#fbf6ee] px-6 py-4 text-[#2a1d1f] shadow-xl" style={{ animationDelay: ".5s" }}>
+            <span className="absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-[#fbf6ee]" />
+            <p className="text-[0.7rem] font-bold tracking-[0.15em] text-[#b0475a]">월화</p>
+            <p className="mt-1 text-[0.82rem] text-[#7a6a6c]">“{line}”</p>
+            <p className="mt-1.5 text-[1.02rem] font-semibold leading-[1.6]">그 한 줄, 보내기 전에<br />조금만 같이 볼까요?</p>
+          </div>
           <span className="mt-6 text-[0.75rem] text-ivory/55">눌러서 계속</span>
         </button>
       )}
