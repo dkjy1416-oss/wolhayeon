@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Header from "@/components/Header";
 import ChatFunnel from "@/components/chat/ChatFunnel";
+import { getSiteTotals } from "@/lib/site-totals";
+import { getPublicReviews } from "@/lib/reviews";
+
+/* 11/27: 후기 · 누적 집계를 요청마다 새로 */
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "카톡 대화 분석 | 월하연 月下緣",
@@ -13,12 +18,13 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: "그 사람 카톡, 숫자로 읽어 드려요 | 월하연", description: "답장 시간·먼저 연락·대화 온도 — 대화 파일만 올리면 1분 무료 분석", images: ["/og/chat.jpg"] },
 };
 
-export default function ChatPage() {
+export default async function ChatPage() {
+  const [totals, reviews] = await Promise.all([getSiteTotals().catch(() => null), getPublicReviews(8).catch(() => [])]);
   return (
     <>
       <Header ctaHref="/chat" ctaLabel="무료 유형 보기" />
       <main className="fx-grain bg-[#0e0b0d] min-h-[100svh]">
-        <ChatFunnel />
+        <ChatFunnel totals={totals} reviews={reviews} />
       </main>
     </>
   );
