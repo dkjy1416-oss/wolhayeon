@@ -1,4 +1,5 @@
 /** 카톡 분석 결과 화면 (손님 결과 · 관리자 미리보기 공용) */
+import BrandLogo from "@/components/BrandLogo";
 import Link from "next/link";
 import InView from "@/components/fx/InView";
 import SplitWords from "@/components/fx/SplitWords";
@@ -23,7 +24,10 @@ export default function ChatResultView({
   const card = "fx-glass mt-3 rounded-2xl px-5 py-4";
   return (
     <article className="mx-auto max-w-[620px]">
-      <Link href="/home" className="block text-[0.74rem] tracking-[0.2em] text-gold">월하연 月下緣 · 카톡 대화 분석</Link>
+      <div className="flex items-end gap-2">
+        <BrandLogo size={20} />
+        <span className="pb-[1px] text-[0.72rem] tracking-[0.15em] text-gold">카톡 대화 분석</span>
+      </div>
       <SplitWords as="h1" className="font-display mt-3 block text-[1.85rem] font-black leading-[1.3]" wordClassName="fx-shine" text={r.type_label} />
       <p className="mt-3 text-[1rem] leading-[1.9] text-ivory">{r.summary}</p>
 
