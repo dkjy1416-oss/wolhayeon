@@ -8,6 +8,7 @@
  * - 특정 시간 약속 / 가짜 진행률 / 가짜 단계 없음.
  * - 일시적 생성 실패(failed)는 짧게 자동 재시도 후에만 실패 화면으로.
  */
+import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -1038,9 +1039,7 @@ export default function PreviewExperience({
       {/* 11/23 운영자 요청: 맨 위에 월하연 홈으로 돌아가는 줄 */}
       <nav className="border-b border-gold-dim/20 px-6" aria-label="월하연 홈">
         <div className="mx-auto flex h-12 max-w-[640px] items-center justify-between">
-          <Link href="/home" className="font-display text-[1rem] tracking-wide text-ivory">
-            월하연 <span className="text-gold">月下緣</span>
-          </Link>
+          <BrandLogo size={20} />
           <Link href="/home" className="rounded-full border border-gold-dim/40 px-3.5 py-1.5 text-[0.78rem] text-ivory-dim">
             홈으로
           </Link>

@@ -12,6 +12,7 @@
  *   답변은 기존 saveApplication(sessionStorage)에 기존 필드명 그대로 저장 —
  *   confirm/주문 payload는 Production과 100% 동일. DB field/enum 변경 없음.
  */
+import BrandLogo from "@/components/BrandLogo";
 import Link from "next/link";
 import {
   useCallback,
@@ -624,9 +625,7 @@ export default function ImmersiveApplyExperience({
       {/* ---------- INTRO (§6~8) ---------- */}
       {phase === "intro" && (
         <div className="imm-viewport relative z-10 flex flex-col justify-end px-7 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
-          <Link href="/home" className="w-fit text-xs tracking-[0.35em] text-gold/90">
-            월하연 月下緣
-          </Link>
+          <BrandLogo className="w-fit" size={20} />
           <div className="mt-5 min-h-[9.5rem]">
             <p
               key={introIdx}

@@ -8,11 +8,12 @@
  *   → ⑥붉은 실 고르기 → ⑦읽는 중 → ⑧두 이름 카드 → 기존 /apply/confirm → 기존 미리보기
  * 새 이미지 없이 기존 이미지만 사용. 지금 /apply 흐름은 건드리지 않음.
  */
-import Link from "next/link";
+import BrandLogo from "@/components/BrandLogo";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EMPTY_APPLICATION, isValidEmail, type RitualApplication } from "@/lib/ritual-types";
 import { loadApplication, saveApplication } from "@/lib/ritual-storage";
+import RollingCount from "@/components/home3/RollingCount";
 import { STEPS, StepInput, autoAdvances, type StepDef } from "@/components/apply/ImmersiveApplyExperience";
 
 const IMG = {
@@ -85,7 +86,7 @@ type Phase = "cover" | "toon" | "chat" | "stop" | "travel" | "meet" | "q" | "rea
 
 const LINE_KEY = "wolhayeon_v2_line";
 
-export default function EntryV2() {
+export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("cover");
   const [app, setApp] = useState<RitualApplication>({ ...EMPTY_APPLICATION });
@@ -104,11 +105,7 @@ export default function EntryV2() {
 
   useEffect(() => {
     setApp(loadApplication());
-    try {
-      setLine(sessionStorage.getItem(LINE_KEY) ?? "");
-    } catch {
-      /* noop */
-    }
+    /* 11/27 운영자 요청: 입력칸은 항상 비워서 시작 (전에 쓴 한 줄을 미리 채우지 않음) */
     setLoaded(true);
   }, []);
   useEffect(() => {
@@ -299,9 +296,7 @@ export default function EntryV2() {
       <div className="pointer-events-none absolute inset-0 z-[2] bg-gradient-to-b from-black/55 via-black/10 to-black/85" />
 
       {phase !== "chat" && (<>
-      <Link href="/home" className="absolute left-5 top-[calc(env(safe-area-inset-top)+1rem)] z-30 text-[0.82rem] tracking-[0.2em] text-gold/90">
-        월하연 月下緣
-      </Link>
+      <BrandLogo className="absolute left-5 top-[calc(env(safe-area-inset-top)+1rem)] z-30 drop-shadow-[0_1px_6px_rgba(0,0,0,0.6)]" size={22} />
       <span className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-30 rounded-full bg-black/50 px-2.5 py-1 text-[0.62rem] text-ivory/70">프로토타입</span>
       </>)}
 
@@ -311,8 +306,16 @@ export default function EntryV2() {
           {/* 11/27 운영자 요청: 홈 배너와 같은 '월화의 관계 리추얼 · 재회 분석' 로고 */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/wolhwa/v5/logo_ritual.webp" alt="월화의 관계 리추얼 재회 분석" className="v2-fade mx-auto w-[86%] max-w-[380px] drop-shadow-[0_4px_18px_rgba(0,0,0,0.85)]" />
-          <p className="mt-2 text-center text-[0.95rem] leading-relaxed text-ivory/90">보낼까, 말까.<br />오늘 밤도 대화창 앞이라면, 월화에게 먼저 들려주세요.</p>
-          <button type="button" onClick={() => setPhase("toon")} className={`${btn} mt-7`}>
+          {/* 11/27 운영자 요청: 설명 문구 대신 메인과 같은 누적 고객 말풍선 (100명 미만이거나 못 읽으면 숨김) */}
+          {visitors >= 100 && (
+            <div className="mt-4 flex justify-center">
+              <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/90 px-4 py-2 text-[0.84rem] font-semibold text-ivory">
+                누적 고객 <b className="mx-0.5 text-[1.15rem] text-[#ff8fab] [text-shadow:0_0_14px_rgba(255,143,171,0.55)]"><RollingCount value={visitors} /></b>명이 월화를 찾았어요
+                <span aria-hidden className="absolute -bottom-[6px] left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
+              </p>
+            </div>
+          )}
+          <button type="button" onClick={() => setPhase("toon")} className={`${btn} mt-5`}>
             내 이야기 시작하기
           </button>
           <p className="mt-3 text-center text-[0.72rem] text-ivory/60">무료 미리보기 · 약 5분</p>
@@ -327,6 +330,7 @@ export default function EntryV2() {
               <span key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 8) * 0.55}s`, animationDuration: `${4 + (i % 5)}s` }} />
             ))}
           </div>
+          {/* 11/27: 컷마다 움직이는 루프 영상 (기존 book/v3 클립, 소리 없음) */}
           {/* 컷 1·2 — 청월당처럼 위아래 두 컷, 비스듬한 프레임, 말풍선은 얼굴을 피해 모서리에 */}
           <div className={`absolute inset-0 transition-all duration-500 ${beat >= 5 ? "-translate-y-full opacity-0" : ""}`}>
             <div
@@ -334,7 +338,7 @@ export default function EntryV2() {
               style={{ clipPath: "polygon(0 3%, 100% 0, 98% 100%, 2% 95%)", transform: "rotate(-1.5deg)" }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={IMG.fight} alt="" className="h-full w-full object-cover object-[50%_18%]" />
+              <video src="/book/v3/fight2.mp4" poster={IMG.fight} autoPlay muted loop playsInline className="h-full w-full object-cover object-[50%_18%]" />
             </div>
             {beat >= 1 && <Bubble className="left-[1%] top-[33%]" text={<>그만하자,<br /><b className="text-[#9b1d32]">우리.</b></>} />}
             <div
@@ -342,7 +346,7 @@ export default function EntryV2() {
               style={{ clipPath: "polygon(2% 5%, 100% 0, 100% 97%, 0 100%)", transform: "rotate(1deg)" }}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={IMG.street} alt="" className="h-full w-full object-cover object-[60%_14%]" />
+              <video src="/book/v3/cry.mp4" poster={IMG.street} autoPlay muted loop playsInline className="h-full w-full object-cover object-[60%_14%]" />
             </div>
             {beat >= 3 && <Bubble className="right-[1%] top-[77%]" text={<>…응.<br /><b className="text-[#9b1d32]">잘 지내.</b></>} />}
           </div>
@@ -350,7 +354,7 @@ export default function EntryV2() {
           {beat >= 5 && (
             <div className="v2-fade absolute inset-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={IMG.alone} alt="" className="v2-zoom h-full w-full object-cover object-[50%_35%]" />
+              <video src="/book/v3/alone.mp4" poster={IMG.alone} autoPlay muted loop playsInline className="h-full w-full object-cover object-[50%_35%]" />
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/40" />
               {beat >= 6 && <Bubble className="right-[5%] top-[9%]" text={<>그 사람도…<br /><b className="text-[#9b1d32]">가끔 내 생각 할까?</b></>} />}
             </div>
@@ -373,7 +377,7 @@ export default function EntryV2() {
             </span>
           </div>
           <div className="flex-1 overflow-y-auto px-3 pb-3">
-            <p className="mx-auto mt-2 w-fit rounded-full bg-black/15 px-3 py-1 text-[0.72rem] text-white">2026년 11월 6일 금요일</p>
+            <p className="mx-auto mt-2 w-fit rounded-full bg-black/15 px-3 py-1 text-[0.72rem] text-white">{todayLabel()}</p>
             {/* 내가 보낸 것 */}
             <div className="mt-4 flex items-end justify-end gap-1.5">
               <span className="text-[0.62rem] text-[#556677]">오후 11:38</span>
@@ -409,7 +413,14 @@ export default function EntryV2() {
               </div>
             )}
           </div>
-          <p className="pb-2 text-center text-[0.66rem] text-[#4e5f6e]">예시 화면이에요 · 여기 쓴 한 줄은 실제로 보내지지 않아요</p>
+          {/* 11/27 운영자 요청: 누적 고객 말풍선과 같은 모양으로 '하고 싶은 말 적어보기' 안내 */}
+          <div className="flex justify-center pb-3">
+            <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/90 px-4 py-2 text-center text-[0.84rem] font-semibold text-ivory">
+              그 사람에게 <b className="text-[#ff8fab]">하고 싶은 말</b>, 여기에 적어 보세요
+              <span className="block text-[0.64rem] font-normal text-ivory/60">실제로 보내지지 않아요</span>
+              <span aria-hidden className="absolute -bottom-[6px] left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
+            </p>
+          </div>
           <div className="flex items-center gap-2 bg-white px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]">
             <span className="flex h-8 w-8 items-center justify-center rounded-full text-[1.4rem] text-[#9a9a9a]">+</span>
             <input
@@ -420,7 +431,7 @@ export default function EntryV2() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !sent) send();
               }}
-              placeholder="그 사람에게 보내고 싶은 한 줄"
+              placeholder="메시지 입력"
               className="h-10 flex-1 rounded-full bg-[#f2f2f2] px-4 text-base text-[#191919] placeholder:text-[#a0a0a0] focus:outline-none"
             />
             <button type="button" onClick={() => !sent && send()} className="h-10 shrink-0 rounded-full bg-[#fee500] px-4 text-[0.88rem] font-bold text-[#191919]">
@@ -600,4 +611,13 @@ function Bubble({ text, className = "" }: { text: React.ReactNode; className?: s
       </div>
     </div>
   );
+}
+
+/* 11/27 운영자 요청: 카톡 날짜 줄은 오늘 날짜(한국 시간) — 예: 2026년 11월 27일 금요일 */
+function todayLabel() {
+  try {
+    return new Date().toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "long", day: "numeric", weekday: "long" });
+  } catch {
+    return "";
+  }
 }
