@@ -27,7 +27,8 @@ import {
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getPublicReviews } from "@/lib/reviews";
 import { SAVED_REVIEWS } from "@/lib/home/reviews-saved";
-import { ReviewCard, Stars5 } from "@/components/home4/ReviewCard";
+import { Stars5, maskName } from "@/components/home4/ReviewCard";
+import ReviewMarquee from "@/components/home4/ReviewMarquee";
 import { upgradeOrderStatus } from "@/lib/book/book-upgrade";
 import type { UpgradeStatus } from "@/lib/book/upgrade-rules";
 import { UpgradeBanner, UpgradeOffer } from "@/components/book/UpgradeOffer";
@@ -806,13 +807,12 @@ export default async function BookPage({
               </div>
               <Link href="/reviews" className="shrink-0 text-[0.76rem] text-ivory-dim underline underline-offset-4">전체 후기</Link>
             </div>
-            <div className="mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none]">
-              {SAVED_REVIEWS.filter((r) => r.product === "심층 재회 리포트" || r.product === "리추얼 + 심층 리포트").slice(0, 10).map((r) => (
-                <div key={r.id} className="w-[84%] shrink-0 snap-center">
-                  <ReviewCard r={{ key: String(r.id), id: r.id, product: r.product, body: r.body, age: r.age, stars: 5 }} clamp={5} href="/reviews" />
-                </div>
-              ))}
-            </div>
+            {/* 11/27 요청: 후기 3줄 (왼·오·왼으로 흐름) */}
+            <ReviewMarquee
+              className="mt-5"
+              href="/reviews"
+              items={SAVED_REVIEWS.filter((r) => r.product === "심층 재회 리포트" || r.product === "리추얼 + 심층 리포트").map((r) => ({ key: String(r.id), id: r.id, name: maskName(r.id), product: r.product, body: r.body, age: r.age, stars: 5 }))}
+            />
           </section>
 
           {/* ===== 9. 월화의 말 ===== */}
