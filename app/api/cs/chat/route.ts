@@ -231,11 +231,22 @@ export async function POST(req: Request) {
   }
   try {
     const client = new Anthropic({ apiKey });
+    /* 11/27 운영자 요청 "API 덜 닳게": 프롬프트 캐시.
+       고정 안내문(csSystem)과 지금까지의 대화를 캐시해 두면, 같은 손님이 이어서 묻는 두 번째 질문부터
+       앞부분 입력 비용이 1/10 로 줄어든다(5분 안). 답변 내용·모델은 그대로. */
+    const cached = messages.map((m, i) =>
+      i === messages.length - 1
+        ? { role: m.role, content: [{ type: "text" as const, text: m.content, cache_control: { type: "ephemeral" as const } }] }
+        : m
+    );
     const res = await client.messages.create({
       model: getModel(),
       max_tokens: 500,
-      system: csSystem() + statusBlock,
-      messages,
+      system: [
+        { type: "text", text: csSystem(), cache_control: { type: "ephemeral" } },
+        ...(statusBlock.trim() ? [{ type: "text" as const, text: statusBlock.trim() }] : []),
+      ],
+      messages: cached,
     });
     const reply = res.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
