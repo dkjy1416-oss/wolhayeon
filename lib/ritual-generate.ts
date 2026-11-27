@@ -50,6 +50,12 @@ export function getModelId(): string {
   return process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_MODEL;
 }
 
+/** 11/27 운영자 결정 (API 비용 절감 중간안): 편지·관계 분석(core_a~d)은 Sonnet 그대로,
+ *  목록형 파트(실행 가이드 action_a·b, 21일 여정 journey, 실전 노트 playbook)만 Haiku.
+ *  분량·구조·검증은 같다. 마지막(3번째) 시도는 Sonnet 으로 — Haiku 가 두 번 실패해도 결과가 막히지 않게.
+ *  되돌리려면 GEN_LIGHT_MODEL 환경변수에 Sonnet 모델 ID 를 넣으면 된다. */
+const LIGHT_MODEL = () => process.env.GEN_LIGHT_MODEL?.trim() || "claude-haiku-4-5";
+
 /** 15개 파트 한국어 결과는 8천 토큰을 넘을 수 있어 여유 있게 설정.
  *  (1차 실패 원인: 8192에서 출력이 잘려 JSON이 중간에 끊김) */
 /* 병렬 두 호출의 그룹별 출력 상한.
@@ -159,6 +165,8 @@ export async function generateRitualForOrder(
       struct: z.ZodTypeAny;
       check: z.ZodTypeAny;
       maxTokens: number;
+      /** 목록형 그룹은 가벼운 모델 (위 LIGHT_MODEL 설명) */
+      light?: boolean;
     };
     const corePick = (keys: CoreKey[]) =>
       Object.fromEntries(keys.map((k) => [k, true])) as Record<CoreKey, true>;
@@ -177,6 +185,7 @@ export async function generateRitualForOrder(
       /* 실행 가이드는 둘로 나눠 만든다 — 한 번에 만들면 길이 한도(토큰)를 넘겨 잘리는 일이 있었음 */
       {
         label: "action_a",
+        light: true,
         prompt: buildActionUserPrompt(order, introLines, [
           "part_08_preparation",
           "part_09_ritual_steps",
@@ -196,6 +205,7 @@ export async function generateRitualForOrder(
       },
       {
         label: "action_b",
+        light: true,
         prompt: buildActionUserPrompt(order, introLines, [
           "part_11_24h_guide",
           "part_12_7day_guide",
@@ -215,6 +225,7 @@ export async function generateRitualForOrder(
       },
       {
         label: "journey",
+        light: true,
         prompt: buildJourneyUserPrompt(order, introLines),
         struct: RitualJourneyStructSchema,
         check: RitualResultSchema.pick({ part_13_21day_plan: true }),
@@ -234,7 +245,7 @@ export async function generateRitualForOrder(
         try {
           const message = await client.messages.create(
             {
-              model: getModelId(),
+              model: g.light && attempt < MAX_ATTEMPTS ? LIGHT_MODEL() : getModelId(),
               max_tokens: g.maxTokens,
               system: WOLHWA_SYSTEM_PROMPT,
               messages: [
@@ -309,6 +320,7 @@ export async function generateRitualForOrder(
     /* 선택 그룹 — 실전 노트. 실패해도 결과 전체는 그대로 진행 */
     const playbookGroup: Group = {
       label: "playbook",
+        light: true,
       prompt: buildPlaybookUserPrompt(order, introLines),
       struct: RitualPlaybookStructSchema,
       check: RitualResultSchema.pick({ bonus_playbook: true }).required(),
