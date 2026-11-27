@@ -18,7 +18,8 @@ import { BUSINESS } from "@/components/legal/LegalPage";
 import { FREE_TESTS, type FreeTest } from "@/lib/home/free-tests";
 import { COLUMNS } from "@/lib/home/columns";
 import { SAVED_REVIEWS } from "@/lib/home/reviews-saved";
-import { ReviewCard, Stars5, maskName } from "@/components/home4/ReviewCard";
+import { Stars5, maskName } from "@/components/home4/ReviewCard";
+import ReviewMarquee from "@/components/home4/ReviewMarquee";
 import { todayDaily } from "@/lib/home/daily";
 
 /* ⑧ SNS 칸 — 묘수 홈 구도(겹쳐 쌓은 카드 + 세로 영상 2개). 위치는 묘수 실측 비율(358×432) 기준 % */
@@ -586,16 +587,15 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
               전체보기 ›
             </Link>
           </div>
-          <div className="scrollbar-none -mx-4 mt-3 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4">
-            {[
+          {/* 11/27 요청: 후기 3줄 (왼·오·왼으로 흐름) */}
+          <ReviewMarquee
+            className="-mx-4 mt-3"
+            href={u("/reviews")}
+            items={[
               ...reviews.map((r) => ({ key: `d${r.id}`, id: r.id + 100, name: r.name, stars: r.rating, body: r.body, product: r.product })),
-              ...SAVED_REVIEWS.filter((_, i) => i % 5 === 0 || i % 5 === 2).map((r) => ({ key: `s${r.id}`, id: r.id, name: maskName(r.id), stars: 5, body: r.body, product: r.product, age: r.age })),
-            ].map((r) => (
-              <div key={r.key} className="w-[86%] max-w-[330px] shrink-0 snap-center">
-                <ReviewCard r={r} clamp={4} href={u("/reviews")} />
-              </div>
-            ))}
-          </div>
+              ...SAVED_REVIEWS.map((r) => ({ key: `s${r.id}`, id: r.id, name: maskName(r.id), stars: 5, body: r.body, product: r.product, age: r.age })),
+            ]}
+          />
           <Link href={u("/reviews")} className="mt-3 block rounded-xl border border-[#2A2A2E] py-3 text-center text-[14px] font-bold text-[#E7E7EA]">
             후기 더보기 ›
           </Link>
