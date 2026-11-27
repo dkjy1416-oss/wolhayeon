@@ -9,7 +9,7 @@ import PackSheet, { type PackOption, type PackService } from "@/components/pay/P
 
 const R = 19900; // 재회 정가
 const K = 34900; // 카톡 정가 (안)
-const B = 44000; // 책 정가 (안)
+const B = 45000; // 책 정가 (안) — 전부 패키지가 딱 50%가 되도록
 const ALL: PackOption = { key: "all", name: "전부 받기 패키지", desc: "재회 분석 + 카톡 분석 + 120쪽 심층 리포트", price: 49900, regular: R + K + B };
 const RK = (name: string): PackOption => ({ key: "rk", name, desc: "카톡 대화로 보는 그 사람 마음 · 다음에 보낼 메시지 3개까지", price: 29900, regular: R + K, badge: "추천" });
 const RB = (name: string): PackOption => ({ key: "rb", name, desc: "내 사연으로 만든 120쪽 심층 리포트까지", price: 39900, regular: R + B, badge: "추천" });
