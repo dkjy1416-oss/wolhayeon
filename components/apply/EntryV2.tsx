@@ -311,7 +311,7 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
         @keyframes v2c{50%{opacity:0}}
         .v2-dark-input input[type=text],.v2-dark-input input[type=email],.v2-dark-input input:not([type]){background:transparent!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.35)!important;border-radius:0!important;padding-left:2px!important}
         .v2-compact .flex-col{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important}
-        .v2-compact button{min-height:40px!important;padding:8px 12px!important;font-size:.8rem!important;border-radius:9999px!important;text-align:center!important;background:rgba(255,255,255,.08)!important}
+        .v2-compact button{min-height:40px!important;padding:8px 12px!important;font-size:.8rem!important;border-radius:9999px!important;text-align:center!important}.v2-compact button:not([aria-pressed=true]){background:rgba(255,255,255,.08)!important}.v2-compact button[aria-pressed=true]{background:rgba(210,56,79,.45)!important;border-color:#ff8fa3!important;color:#fff!important}
         .v2-sway{animation:v2sw 3.6s ease-in-out infinite}
         @keyframes v2sw{0%,100%{transform:rotate(-2.2deg)}50%{transform:rotate(2.2deg)}}
         .v2-glow{animation:v2g 1.6s ease-in-out infinite}
