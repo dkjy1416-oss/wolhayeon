@@ -597,7 +597,7 @@ export default function HomeV4({ reviews, rating, totalsNode }: { reviews: Revie
             ))}
           </div>
           <Link href={u("/reviews")} className="mt-3 block rounded-xl border border-[#2A2A2E] py-3 text-center text-[14px] font-bold text-[#E7E7EA]">
-            후기 {reviews.length + SAVED_REVIEWS.length}개 모두 보기 ›
+            후기 더보기 ›
           </Link>
           {rating !== null && (
             <p className="m-0 mt-3 text-center text-[14px] font-bold">
