@@ -28,7 +28,7 @@ const CFG = {
 
 const YT_PICK = ["r7-OOdStniE", "A6ZCzFbe6DI", "F0-Bb9RHJhA", "lMHD1SXc1Ks"];
 
-export default function PreviewExtras({ kind, afterReviews, visitors = 0 }: { kind: "ritual" | "chat"; afterReviews?: React.ReactNode; visitors?: number }) {
+export default function PreviewExtras({ kind, afterReviews }: { kind: "ritual" | "chat"; afterReviews?: React.ReactNode; visitors?: number }) {
   const cfg = CFG[kind];
   const reviews = SAVED_REVIEWS.filter((r) => (cfg.products as readonly string[]).includes(r.product)).slice(0, 18);
   const cols = cfg.columns.map((s) => COLUMNS.find((c) => c.slug === s)).filter(Boolean) as typeof COLUMNS;
@@ -67,10 +67,29 @@ export default function PreviewExtras({ kind, afterReviews, visitors = 0 }: { ki
 
       {/* 11/27 운영자 요청: 기존 재회 분석 첫 화면 1~4 (대화창 → 그런데 → 붉은 실 → 미치도록 궁금했던 이야기) */}
       {kind === "ritual" && (
-        <div className="night mt-10 bg-[#120e10] text-ivory" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
-          <Hook visitors={visitors} inPreview />
-          <Turn inPreview />
-          <Mystery />
+        /* 11/27 운영자 피드백 "뚝뚝 끊긴다": 밝은 바탕 ↔ 어두운 구간을 그라데이션으로 잇고, 세 장면 배경을 같은 밤색 하나로.
+           (.paper .night 는 회색 바탕을 덮어써서 Hook 의 갈색과 어긋났음 → night 클래스 대신 색 이름만 직접 지정)
+           누적 고객 말풍선은 아래 따라다니는 버튼에 이미 있어 여기선 뺌 */
+        <div
+          className="relative mt-10 bg-[#120e10] text-ivory"
+          style={
+            {
+              ["--color-ink" as string]: "#120e10",
+              ["--color-ink-soft" as string]: "#1d181b",
+              ["--color-ivory" as string]: "#efe6d8",
+              ["--color-ivory-dim" as string]: "#a59c8f",
+              ["--color-gold" as string]: "#d9b878",
+              ["--color-gold-dim" as string]: "#6b5a3e",
+            } as React.CSSProperties
+          }
+        >
+          <div aria-hidden className="h-28 bg-gradient-to-b from-[#f7f3ef] via-[#f7f3ef]/40 to-[#120e10]" />
+          <div className="-mt-px">
+            <Hook visitors={0} inPreview />
+            <Turn inPreview />
+            <Mystery />
+          </div>
+          <div aria-hidden className="h-28 bg-gradient-to-b from-[#120e10] via-[#120e10]/60 to-[#f7f3ef]" />
         </div>
       )}
 
