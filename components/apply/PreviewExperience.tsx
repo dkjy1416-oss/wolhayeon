@@ -1224,6 +1224,15 @@ export default function PreviewExperience({
                       </div>
                     ),
                   },
+                  /* 11/27 운영자 요청: 7일 순서 다음, 궁금한 질문 앞에 루프 하나 — 얼굴이 위쪽인 '글 쓰는 월화', 위아래는 흐리게 */
+                  {
+                    who: "raw",
+                    node: (
+                      <div className="pointer-events-none -mx-4 -mb-[4%] mt-4">
+                        <TalkMedia video="/book/v3/w-final.mp4" image="/book/v3/w-final.webp" alt="편지를 쓰는 월화" />
+                      </div>
+                    ),
+                  },
                   { who: "w", text: "그리고 아마 다음은 이게 궁금할 거예요." },
                   ...q.next.map((t) => ({ who: "me" as const, text: t })),
                   { who: "w", text: `그 답은 ${who}의 사연으로만 쓸 수 있어서, 여기까지만 보여 드려요.` },
