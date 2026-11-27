@@ -87,7 +87,7 @@ type StepKind =
   | "email"
   | "consent";
 
-interface StepDef {
+export interface StepDef {
   id: string;
   kind: StepKind;
   /** {name} / {partner} 치환 */
@@ -105,7 +105,7 @@ interface StepDef {
   set: (a: RitualApplication, v: unknown) => RitualApplication;
 }
 
-const STEPS: StepDef[] = [
+export const STEPS: StepDef[] = [
   /* 11/16 순서 개편: 공감 질문 먼저, 신상 질문은 뒤로 (필드명·저장 형식은 그대로) */
   {
     id: "applicant_name",
@@ -342,7 +342,7 @@ function progressLabel(index: number, total: number): string {
 }
 
 /* 하나만 고르면 자동으로 넘어가는 질문 (관계 '기타'는 직접 입력이 필요해 제외) */
-function autoAdvances(step: StepDef, value: string): boolean {
+export function autoAdvances(step: StepDef, value: string): boolean {
   if (step.kind !== "select") return false;
   if (step.id === "relationship_type" && value === "other") return false;
   return true;
@@ -890,7 +890,7 @@ const STORY_EXAMPLES = [
   "장문으로 사과했는데 단답만 왔어요.",
 ];
 
-function StepInput({
+export function StepInput({
   step,
   app,
   setApp,
