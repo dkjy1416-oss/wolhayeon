@@ -176,28 +176,70 @@ export default function ChatLanding({
   return (
     <div className="fx-grain bg-[#0e0b0d] text-white">
       {/* 히어로 */}
-      {/* 11/27 요청: 꽉 찬 첫 화면 · 버튼은 화면 아래쪽 */}
-      <section className="relative flex min-h-[100svh] flex-col justify-end overflow-hidden">
+      {/* 11/28 운영자 요청: 재회 분석 첫 화면처럼 '현실감' 있게 — 질문 3줄 → 진짜 카톡 같은 카드 → 누적 고객 → 큰 버튼.
+          첫 화면에는 금액을 절대 보이지 않는다 (금액은 아래 구간·따라다니는 버튼에만). */}
+      <section className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden">
         <div className="absolute inset-0" aria-hidden>
-          <LoopVideo src="/book/v3/w-phone.mp4" poster="/book/v3/w-phone.webp" className="h-full w-full object-cover opacity-60" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0e0b0d]/20 via-[#0e0b0d]/45 to-[#0e0b0d]" />
-          <div className="fx-aurora" />
+          <LoopVideo src="/book/v3/w-phone.mp4" poster="/book/v3/w-phone.webp" className="h-full w-full scale-110 object-cover opacity-35 blur-[6px]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0e0b0d]/70 via-[#0e0b0d]/55 to-[#0e0b0d]" />
         </div>
-        <div className="relative mx-auto w-full max-w-[560px] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-32">
-          <p className="fx-kicker text-[#e8b04a]">月下緣 · Conversation Reading</p>
-          <h1 className="font-display mt-5 text-[2.35rem] font-black leading-[1.22]">
-            <SplitWords text="그 사람 마음," />
-            <br />
-            <SplitWords text="대화에 이미 남아 있어요." wordClassName="fx-shine" delayMs={280} />
+        <div className="relative mx-auto w-full max-w-[560px] px-5 pb-8 pt-24 text-center">
+          <p className="text-[0.95rem] font-bold text-[#e46b8a]">혹시 오늘도,</p>
+          <h1 className="font-display mt-3 text-[1.95rem] leading-[1.38] text-[#efe6d8]">
+            <SplitWords text={"'응' 한 글자에\n하루 종일\n마음이 쓰였나요?"} />
           </h1>
-          <InView className="reveal mt-5"><p className="text-[1rem] leading-[1.85] text-white/80">
-            두 사람이 나눈 카톡을 월화가 처음부터 끝까지 읽고,
-            <br />
-            말투·답장 속도·대화의 흐름을 <b className="fx-rose font-semibold">숫자와 문장</b>으로 짚어 드려요.
-          </p></InView>
-          <div ref={heroCtaRef} className="mt-7">{cta("내 카톡으로 무료 분석 시작")}</div>
-          <a href="/chat/sample" className="mt-3 block text-center text-[0.84rem] text-white/70 underline underline-offset-4">결과 리포트 예시 보기</a>
-          <p className="mt-3 text-center text-[0.76rem] text-white/50">파일을 올리면 숫자 분석은 바로 무료 · 해석 리포트 {CHAT_PRICE_KRW.toLocaleString()}원 · 구독 없음</p>
+
+          {/* 진짜 카톡 같은 대화 카드 (예시 화면) */}
+          <InView className="reveal mx-auto mt-7 max-w-[340px] rounded-[1.6rem] border border-white/10 bg-[#1a1618]/85 p-4 text-left shadow-[0_20px_60px_rgba(0,0,0,0.5)] backdrop-blur">
+            <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
+              <span className="h-8 w-8 rounded-[0.7rem] bg-white/15" aria-hidden />
+              <span className="text-[0.9rem] text-white/80">그 사람</span>
+            </div>
+            <div className="mt-3 flex flex-col gap-2.5 text-[0.9rem]">
+              <div className="flex items-end justify-end gap-1.5">
+                <span className="text-[0.66rem] text-white/40">오후 7:12</span>
+                <span className="rounded-2xl rounded-tr-md bg-[#fee500] px-3.5 py-2 text-[#191919]">오늘 뭐 해? 저녁은 먹었어?</span>
+              </div>
+              <div className="flex items-end gap-1.5">
+                <span className="rounded-2xl rounded-tl-md bg-white/12 px-3.5 py-2 text-white/90">응</span>
+                <span className="text-[0.66rem] text-white/40">오후 11:48</span>
+              </div>
+              <div className="flex items-end justify-end gap-1.5">
+                <span className="flex flex-col items-end text-[0.66rem] leading-tight">
+                  <b className="font-bold text-[#fee500]">1</b>
+                  <span className="text-white/40">오후 11:52</span>
+                </span>
+                <span className="rounded-2xl rounded-tr-md bg-[#fee500] px-3.5 py-2 text-[#191919]">바빴구나ㅎㅎ 내일은?</span>
+              </div>
+            </div>
+            <p className="mt-3 flex justify-between text-[0.7rem] text-white/45">
+              <span>답장까지 <b className="text-[#ff8fab]">4시간 36분</b></span>
+              <span>예시 화면</span>
+            </p>
+          </InView>
+
+          {visitors >= 100 && (
+            <div className="mt-6 flex justify-center">
+              <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/90 px-4 py-2 text-[0.84rem] font-semibold text-white">
+                누적 고객{" "}
+                <b className="mx-0.5 text-[1.1rem] text-[#ff8fab] [text-shadow:0_0_12px_rgba(255,143,171,0.5)]">
+                  <RollingCount value={visitors} />
+                </b>
+                명이 월화를 찾았어요
+                <span aria-hidden className="absolute -bottom-[5px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
+              </p>
+            </div>
+          )}
+          <div ref={heroCtaRef} className={visitors >= 100 ? "mt-4" : "mt-6"}>
+            <button type="button" onClick={onFile} className="fx-sheen flex min-h-14 w-full items-center justify-center rounded-full bg-[#e46b8a] px-5 text-[1.05rem] font-bold text-white shadow-[0_0_40px_rgba(228,107,138,0.35)] active:opacity-85">
+              내 카톡으로 무료 분석 시작
+            </button>
+          </div>
+          <p className="mt-3 text-[0.8rem] text-white/55">
+            <button type="button" onClick={onQuiz} className="underline underline-offset-4">캡처로 하기</button>
+            <span className="mx-2 text-white/25">·</span>
+            <a href="/chat/sample" className="underline underline-offset-4">결과 예시 보기</a>
+          </p>
         </div>
       </section>
 
