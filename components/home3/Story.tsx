@@ -14,14 +14,15 @@ import { Gutter, MyLine, NoteLine, Petals, TalkCut } from "./Webtoon";
 /** 11/17: 월화 릴스에서 잘라 낸 월화 클로즈업 반복 영상 */
 const TALK = (k: string) => ({ video: `/wolhwa/v3/${k}.mp4`, poster: `/wolhwa/v3/${k}.webp` });
 
-export function Hook({ visitors = 0 }: { visitors?: number }) {
+/** inPreview: 11/27 요청으로 미리보기 페이지 안에도 들어감 — 이미 미리보기를 받은 분이라 '무료 미리보기' 버튼은 빼고 위 여백만 줄임 */
+export function Hook({ visitors = 0, inPreview = false }: { visitors?: number; inPreview?: boolean }) {
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0" aria-hidden>
         <LoopVideo src="/book/v3/check.mp4" poster="/book/v3/check.webp" className="h-full w-full object-cover opacity-55" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#120e10] via-[#120e10]/60 to-[#120e10]" />
       </div>
-      <div className="relative px-5 pb-14 pt-28 text-center">
+      <div className={`relative px-5 pb-14 text-center ${inPreview ? "pt-16" : "pt-28"}`}>
         <p className="text-[1.05rem] font-bold text-[#e46b8a]">혹시 오늘도,</p>
         <Big className="mt-3 text-[1.85rem]">{"하루에 몇 번씩\n대화창을 열었다\n닫았나요?"}</Big>
 
@@ -52,13 +53,13 @@ export function Hook({ visitors = 0 }: { visitors?: number }) {
             </p>
           </div>
         )}
-        <div className={`-mx-5 ${visitors >= 100 ? "mt-4" : "mt-6"}`}>
+        {!inPreview && <div className={`-mx-5 ${visitors >= 100 ? "mt-4" : "mt-6"}`}>
           <Cta
             id="hero-cta"
             placement="hero"
             sub={`미리보기 무료 · 미리보기 후 24시간 첫 구매 ${FIRST_OFFER_PRICE_KRW.toLocaleString()}원 · 정기결제 없음`}
           />
-        </div>
+        </div>}
 
         <p className="mt-8 text-[1.02rem] leading-[1.8] text-ivory-dim">
           보낼까, 말까.
@@ -69,7 +70,7 @@ export function Hook({ visitors = 0 }: { visitors?: number }) {
   );
 }
 
-export function Turn() {
+export function Turn({ inPreview = false }: { inPreview?: boolean } = {}) {
   return (
     <section className="pb-14">
       <div className="mx-5 rounded-[1.4rem] bg-gradient-to-r from-[#7a2340] via-[#a83a57] to-[#7a2340] px-5 py-7 text-center shadow-[0_0_60px_rgba(168,58,87,0.35)]">
@@ -85,15 +86,23 @@ export function Turn() {
         <b className="text-ivory">무엇을 보낼지보다, 지금 내 상황이 어떤지</b>가 먼저예요.
       </p>
       <div className="mt-8 grid grid-cols-2 gap-2 px-4">
-        {MOMENTS.map((m) => (
+        {MOMENTS.map((m) =>
+          inPreview ? (
+            <div key={m.src} className="relative block overflow-hidden rounded-2xl bg-[#1d181b]">
+            <LoopVideo src={m.src} poster={m.poster} className="block aspect-[9/13] w-full object-cover" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#120e10] via-[#120e10]/75 to-transparent" />
+            <p className="pointer-events-none absolute inset-x-0 bottom-0 whitespace-pre-line px-3 pb-3 text-[0.9rem] font-bold leading-[1.45] text-ivory">{m.line}</p>
+            </div>
+          ) : (
           <TrackedCtaLink key={m.src} event="home_cta_click" placement={`moment_${m.sit}`} href={`/apply?sit=${m.sit}`} className="relative block overflow-hidden rounded-2xl bg-[#1d181b]">
             <LoopVideo src={m.src} poster={m.poster} className="block aspect-[9/13] w-full object-cover" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#120e10] via-[#120e10]/75 to-transparent" />
             <p className="pointer-events-none absolute inset-x-0 bottom-0 whitespace-pre-line px-3 pb-3 text-[0.9rem] font-bold leading-[1.45] text-ivory">{m.line}</p>
           </TrackedCtaLink>
-        ))}
+          )
+        )}
       </div>
-      <p className="mt-3 text-center text-[0.76rem] text-ivory-dim">내 상황을 누르면 그 이야기로 시작해요</p>
+      {!inPreview && <p className="mt-3 text-center text-[0.76rem] text-ivory-dim">내 상황을 누르면 그 이야기로 시작해요</p>}
     </section>
   );
 }

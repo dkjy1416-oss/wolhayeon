@@ -158,10 +158,11 @@ export function Point4() {
   );
 }
 
-export function Point5() {
+/** bare: 미리보기 페이지 안에서는 '무료 미리보기부터 받기' 버튼 없이 (11/27) */
+export function Point5({ bare = false }: { bare?: boolean } = {}) {
   const p = PRODUCTS.message;
   return (
-    <section id="price" className="scroll-mt-16 py-16">
+    <section id={bare ? undefined : "price"} className="scroll-mt-16 py-16">
       <PointHead n={5} title={<>한 번의 결제로<br /><R>부담 없이</R> 받아요</>} sub="미리보기는 무료 · 전체 구성이 필요할 때만 1회 결제" />
       <div className="mx-5 mt-8 overflow-hidden rounded-[1.4rem] border-2 border-[#a83a57] bg-white shadow-[0_10px_30px_rgba(168,58,87,0.15)]">
         <div className="relative aspect-[16/10] w-full">
@@ -191,9 +192,11 @@ export function Point5() {
           </ul>
         </div>
       </div>
-      <div className="mt-6">
-        <Cta placement="price" label="무료 미리보기부터 받기" />
-      </div>
+      {!bare && (
+        <div className="mt-6">
+          <Cta placement="price" label="무료 미리보기부터 받기" />
+        </div>
+      )}
     </section>
   );
 }
