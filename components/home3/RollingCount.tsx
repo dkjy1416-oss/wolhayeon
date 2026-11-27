@@ -22,19 +22,25 @@ export default function RollingCount({ value, className = "" }: { value: number;
       setGo(true);
       return;
     }
+    /* 11/27 운영자 요청: 화면에 들어온 순간 촤라락 보이게.
+       이전엔 1.2초 뒤 무조건 멈춤 → 아래로 내려왔을 땐 이미 끝나 있었음.
+       이제 관찰이 한 번이라도 응답하면 화면에 들어올 때까지 기다리고,
+       관찰이 아예 응답하지 않는 앱 안 브라우저만 1.2초 뒤 실제 숫자로. */
+    let answered = false;
     const io = new IntersectionObserver(
       ([e]) => {
+        answered = true;
         if (e.isIntersecting) {
-          /* 첫 화면이 그려진 뒤 굴리기 시작 */
-          window.setTimeout(() => setGo(true), 250);
+          window.setTimeout(() => setGo(true), 150);
           io.disconnect();
         }
       },
-      { threshold: 0.6 }
+      { threshold: 0.5 }
     );
     io.observe(el);
-    /* 11/26: 앱 안 브라우저 등에서 관찰이 늦거나 안 되면 0,000 으로 비어 보임 → 1.2초 뒤에는 무조건 실제 숫자로 */
-    const fb = window.setTimeout(() => setGo(true), 1200);
+    const fb = window.setTimeout(() => {
+      if (!answered) setGo(true);
+    }, 1200);
     return () => {
       io.disconnect();
       window.clearTimeout(fb);
