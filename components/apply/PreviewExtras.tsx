@@ -10,7 +10,8 @@ import { Point1, Point2, Point3, Point4, Point5 } from "@/components/home3/Point
 import { Hook, Turn, Mystery } from "@/components/home3/Story";
 import ShortsRow from "@/components/home2/ShortsRow";
 import { SAVED_REVIEWS } from "@/lib/home/reviews-saved";
-import { ReviewCard, Stars5 } from "@/components/home4/ReviewCard";
+import { Stars5, maskName } from "@/components/home4/ReviewCard";
+import ReviewMarquee from "@/components/home4/ReviewMarquee";
 import { COLUMNS, colPal } from "@/lib/home/columns";
 import { SHORTS_YT, ytThumb } from "@/lib/home/videos";
 
@@ -29,7 +30,7 @@ const YT_PICK = ["r7-OOdStniE", "A6ZCzFbe6DI", "F0-Bb9RHJhA", "lMHD1SXc1Ks"];
 
 export default function PreviewExtras({ kind, afterReviews, visitors = 0 }: { kind: "ritual" | "chat"; afterReviews?: React.ReactNode; visitors?: number }) {
   const cfg = CFG[kind];
-  const reviews = SAVED_REVIEWS.filter((r) => (cfg.products as readonly string[]).includes(r.product)).slice(0, 12);
+  const reviews = SAVED_REVIEWS.filter((r) => (cfg.products as readonly string[]).includes(r.product)).slice(0, 18);
   const cols = cfg.columns.map((s) => COLUMNS.find((c) => c.slug === s)).filter(Boolean) as typeof COLUMNS;
   const head = "text-[0.76rem] font-semibold tracking-wider text-gold";
   const h2 = "font-display mt-1 text-[1.15rem] font-semibold leading-[1.5] text-ivory [word-break:keep-all]";
@@ -51,13 +52,13 @@ export default function PreviewExtras({ kind, afterReviews, visitors = 0 }: { ki
                 전체 후기
               </Link>
             </div>
-            <div className="scrollbar-none -mx-6 mt-3 flex snap-x gap-2.5 overflow-x-auto px-6">
-              {reviews.map((r) => (
-                <div key={r.id} className="w-[84%] max-w-[310px] shrink-0 snap-start">
-                  <ReviewCard r={{ key: String(r.id), id: r.id, product: r.product, body: r.body, age: r.age, stars: 5 }} clamp={5} light={kind === "ritual"} href="/reviews" />
-                </div>
-              ))}
-            </div>
+            {/* 11/27 요청: 후기 3줄 (왼·오·왼으로 흐름) */}
+            <ReviewMarquee
+              className="-mx-6 mt-3"
+              light={kind === "ritual"}
+              href="/reviews"
+              items={reviews.map((r) => ({ key: String(r.id), id: r.id, name: maskName(r.id), product: r.product, body: r.body, age: r.age, stars: 5 }))}
+            />
           </div>
         </section>
       )}
