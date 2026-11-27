@@ -83,13 +83,13 @@ export default function PreviewExtras({ kind, afterReviews }: { kind: "ritual" |
             } as React.CSSProperties
           }
         >
-          <div aria-hidden className="h-28 bg-gradient-to-b from-[#f7f3ef] via-[#f7f3ef]/40 to-[#120e10]" />
+          <div aria-hidden className="h-44" style={{ background: "linear-gradient(to bottom, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
           <div className="-mt-px">
             <Hook visitors={0} inPreview />
             <Turn inPreview />
             <Mystery />
           </div>
-          <div aria-hidden className="h-28 bg-gradient-to-b from-[#120e10] via-[#120e10]/60 to-[#f7f3ef]" />
+          <div aria-hidden className="h-44" style={{ background: "linear-gradient(to top, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
         </div>
       )}
 
