@@ -1,5 +1,6 @@
 "use client";
 
+import BrandLogo from "@/components/BrandLogo";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -29,12 +30,7 @@ export default function Header({
       }`}
     >
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5">
-        <Link
-          href="/home"
-          className="font-display text-base text-ivory tracking-wide"
-        >
-          월하연 <span className="text-gold">月下緣</span>
-        </Link>
+        <BrandLogo />
         <Link
           href={ctaHref}
           className="rounded-full border border-gold-dim/40 px-4 py-2 text-sm text-ivory transition-colors hover:border-gold/70 hover:text-gold"
