@@ -185,7 +185,7 @@ export default function ChatLanding({
         </div>
         <div className="relative mx-auto w-full max-w-[560px] px-5 pb-8 pt-24 text-center">
           <p className="text-[0.95rem] font-bold text-[#e46b8a]">혹시 오늘도,</p>
-          <h1 className="font-display mt-3 text-[1.95rem] leading-[1.38] text-[#efe6d8]">
+          <h1 className="font-display mt-3 text-[1.5rem] leading-[1.45] text-[#efe6d8]">
             <SplitWords text={"'응' 한 글자에\n하루 종일\n마음이 쓰였나요?"} />
           </h1>
 
