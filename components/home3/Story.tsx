@@ -22,7 +22,7 @@ export function Hook({ visitors = 0, inPreview = false }: { visitors?: number; i
         <LoopVideo src="/book/v3/check.mp4" poster="/book/v3/check.webp" className="h-full w-full object-cover opacity-55" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#120e10] via-[#120e10]/60 to-[#120e10]" />
       </div>
-      <div className={`relative px-5 pb-14 text-center ${inPreview ? "pt-16" : "pt-28"}`}>
+      <div className={`relative px-5 pb-14 text-center ${inPreview ? "pt-48" : "pt-28"}`}>
         <p className="text-[1.05rem] font-bold text-[#e46b8a]">혹시 오늘도,</p>
         <Big className="mt-3 text-[1.85rem]">{"하루에 몇 번씩\n대화창을 열었다\n닫았나요?"}</Big>
 
