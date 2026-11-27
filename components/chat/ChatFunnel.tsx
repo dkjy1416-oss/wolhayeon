@@ -12,6 +12,8 @@ import { CHAT_QUESTIONS, CHAT_LOCKED_ITEMS, freeChatType } from "@/lib/chat/ques
 import { CHAT_PRICE_KRW, CHAT_BUNDLE_PRICE_KRW, type ChatProduct } from "@/lib/chat/types";
 import { sendSiteEvent } from "@/lib/site-track";
 import ChatLanding from "@/components/chat/ChatLanding";
+import type { SiteTotals } from "@/lib/site-totals";
+import type { PublicReview } from "@/lib/reviews";
 import ChatFileFlow, { StatsPreview, type FileReady } from "@/components/chat/ChatFileFlow";
 import { transcript } from "@/lib/chat/kakao-parse";
 import SplitWords from "@/components/fx/SplitWords";
@@ -49,7 +51,7 @@ function readUtm(): Record<string, string> {
 
 const won = (n: number) => `${n.toLocaleString()}원`;
 
-export default function ChatFunnel() {
+export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: SiteTotals | null; reviews?: PublicReview[] } = {}) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("intro");
   const [mode, setMode] = useState<"file" | "quiz">("file");
@@ -201,6 +203,8 @@ export default function ChatFunnel() {
   if (step === "intro")
     return (
       <ChatLanding
+        totals={totals}
+        reviews={reviews}
         onFile={() => {
           setMode("file");
           setStep("file");

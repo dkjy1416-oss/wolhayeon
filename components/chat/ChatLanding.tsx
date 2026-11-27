@@ -9,6 +9,15 @@ import TempChart from "@/components/chat/TempChart";
 import InView from "@/components/fx/InView";
 import SplitWords from "@/components/fx/SplitWords";
 import { CHAT_PRICE_KRW } from "@/lib/chat/types";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import Totals from "@/components/home3/Totals";
+import RollingCount from "@/components/home3/RollingCount";
+import ReviewMarquee from "@/components/home4/ReviewMarquee";
+import { maskName, type ReviewView } from "@/components/home4/ReviewCard";
+import { SAVED_REVIEWS } from "@/lib/home/reviews-saved";
+import type { SiteTotals } from "@/lib/site-totals";
+import type { PublicReview } from "@/lib/reviews";
 
 type Line = { me?: boolean; text: string; time?: string; note?: string };
 
@@ -107,7 +116,53 @@ const CARDS: {
   },
 ];
 
-export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; onQuiz: () => void }) {
+export default function ChatLanding({
+  onFile,
+  onQuiz,
+  totals = null,
+  reviews = [],
+}: {
+  onFile: () => void;
+  onQuiz: () => void;
+  totals?: SiteTotals | null;
+  reviews?: PublicReview[];
+}) {
+  /* 11/27 운영자 요청: 첫 화면 버튼이 지나가면 하단 버튼이 따라다님 (마지막 버튼 근처에서는 숨김) */
+  const heroCtaRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLElement>(null);
+  const [heroVisible, setHeroVisible] = useState(true);
+  const [nearEnd, setNearEnd] = useState(false);
+  useEffect(() => {
+    const ios: IntersectionObserver[] = [];
+    if (typeof IntersectionObserver === "undefined") return;
+    if (heroCtaRef.current) {
+      const io = new IntersectionObserver((es) => setHeroVisible(es.some((e) => e.isIntersecting || e.boundingClientRect.top > 0)));
+      io.observe(heroCtaRef.current);
+      ios.push(io);
+    }
+    if (endRef.current) {
+      const io = new IntersectionObserver((es) => setNearEnd(es.some((e) => e.isIntersecting)));
+      io.observe(endRef.current);
+      ios.push(io);
+    }
+    return () => ios.forEach((io) => io.disconnect());
+  }, []);
+  const stickyOn = !heroVisible && !nearEnd;
+  const visitors = totals?.visitors ?? 0;
+  /* 후기: 카톡 분석 후기를 앞에, 나머지 실제 후기를 뒤에 (DB 승인 + 운영자 저장 원문) */
+  const reviewItems: ReviewView[] = [
+    ...SAVED_REVIEWS.filter((r) => r.product === "카톡 대화 분석"),
+    ...reviews.map((r) => ({ id: r.id + 100, product: r.product, body: r.body, age: undefined as string | undefined, name: r.name, stars: r.rating, db: true })),
+    ...SAVED_REVIEWS.filter((r) => r.product !== "카톡 대화 분석"),
+  ].map((r) => ({
+    key: `${"db" in r ? "d" : "s"}${r.id}`,
+    id: r.id,
+    name: "name" in r && r.name ? r.name : maskName(r.id),
+    stars: "stars" in r && r.stars ? r.stars : 5,
+    body: r.body,
+    product: r.product,
+    age: r.age,
+  }));
   const cta = (label: string) => (
     <div className="flex flex-col gap-2.5">
       <button type="button" onClick={onFile} className="fx-sheen flex min-h-14 w-full items-center justify-center rounded-full bg-[#e46b8a] px-5 text-[1rem] font-bold text-white shadow-[0_0_40px_rgba(228,107,138,0.35)] active:opacity-85">
@@ -121,13 +176,14 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
   return (
     <div className="fx-grain bg-[#0e0b0d] text-white">
       {/* 히어로 */}
-      <section className="relative overflow-hidden">
+      {/* 11/27 요청: 꽉 찬 첫 화면 · 버튼은 화면 아래쪽 */}
+      <section className="relative flex min-h-[100svh] flex-col justify-end overflow-hidden">
         <div className="absolute inset-0" aria-hidden>
           <LoopVideo src="/book/v3/w-phone.mp4" poster="/book/v3/w-phone.webp" className="h-full w-full object-cover opacity-60" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#0e0b0d]/20 via-[#0e0b0d]/45 to-[#0e0b0d]" />
           <div className="fx-aurora" />
         </div>
-        <div className="relative mx-auto max-w-[560px] px-5 pb-12 pt-32">
+        <div className="relative mx-auto w-full max-w-[560px] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-32">
           <p className="fx-kicker text-[#e8b04a]">月下緣 · Conversation Reading</p>
           <h1 className="font-display mt-5 text-[2.35rem] font-black leading-[1.22]">
             <SplitWords text="그 사람 마음," />
@@ -139,11 +195,55 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
             <br />
             말투·답장 속도·대화의 흐름을 <b className="fx-rose font-semibold">숫자와 문장</b>으로 짚어 드려요.
           </p></InView>
-          <div className="mt-7">{cta("내 카톡으로 무료 분석 시작")}</div>
+          <div ref={heroCtaRef} className="mt-7">{cta("내 카톡으로 무료 분석 시작")}</div>
           <a href="/chat/sample" className="mt-3 block text-center text-[0.84rem] text-white/70 underline underline-offset-4">결과 리포트 예시 보기</a>
           <p className="mt-3 text-center text-[0.76rem] text-white/50">파일을 올리면 숫자 분석은 바로 무료 · 해석 리포트 {CHAT_PRICE_KRW.toLocaleString()}원 · 구독 없음</p>
         </div>
       </section>
+
+      {/* 3단계 */}
+      <section className="mx-auto mt-10 max-w-[560px] px-5">
+        <p className="fx-kicker text-[#e8b04a]">How it works</p>
+        <SplitWords as="h2" className="font-display mt-3 block text-[1.6rem] font-bold" text="딱 3단계면 끝" />
+        <ol className="mt-4 flex flex-col gap-3">
+          {[
+            ["대화 내보내기", "카톡 대화방 → 메뉴 → 대화 내보내기 (텍스트만). 인스타 DM 파일도 돼요."],
+            ["파일 올리고 무료 숫자 분석", "주별 대화 온도, 먼저 연락한 횟수, 답장 시간 변화를 바로 보여 드려요. 이 단계는 무료예요."],
+            ["해석 리포트 받기", "결제하면 1~2분 안에 월화가 대화 전체를 읽고 해석과 다음 메시지까지 정리해 드려요."],
+          ].map(([t, d], i) => (
+            <InView as="li" key={t} className="reveal fx-glass flex gap-3 rounded-2xl px-4 py-4" style={{ transitionDelay: `${i * 120}ms` }}>
+              <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#e46b8a] to-[#8a2442] text-[1rem] font-bold">{i + 1}</span>
+              <span className="min-w-0">
+                <b className="block text-[0.98rem]">{t}</b>
+                <span className="mt-0.5 block text-[0.84rem] leading-[1.7] text-white/65">{d}</span>
+              </span>
+            </InView>
+          ))}
+        </ol>
+      </section>
+
+      {/* 11/27 요청: 3단계 밑에 후기 3줄 (왼·오·왼으로 흐름) */}
+      {reviewItems.length > 0 && (
+        <section className="mt-14">
+          <div className="mx-auto max-w-[560px] px-5">
+            <p className="fx-kicker text-[#e46b8a]">Reviews</p>
+            <SplitWords as="h2" className="font-display mt-3 block text-[1.6rem] font-bold leading-[1.35]" text="먼저 열어 본 분들의 이야기" />
+          </div>
+          <ReviewMarquee className="mx-auto mt-6 max-w-[560px]" items={reviewItems} href="/reviews" />
+          <div className="mx-auto max-w-[560px] px-5">
+            <Link href="/reviews" className="mt-4 block rounded-xl border border-white/15 py-3 text-center text-[14px] font-bold text-white/90">
+              후기 더보기 ›
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* 11/27 요청: 후기 밑에 월계수 (실제 집계 · 테스트 주문 제외) */}
+      {totals && (
+        <div className="mx-auto max-w-[560px]" style={{ ["--color-ivory" as string]: "#efe6d8", ["--color-ivory-dim" as string]: "#a59c8f" } as React.CSSProperties}>
+          <Totals totals={totals} />
+        </div>
+      )}
 
       {/* 무엇을 보는지 */}
       <section className="mx-auto max-w-[560px] px-5 pt-6">
@@ -206,27 +306,6 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
         </section>
       ))}
 
-      {/* 3단계 */}
-      <section className="mx-auto mt-14 max-w-[560px] px-5">
-        <p className="fx-kicker text-[#e8b04a]">How it works</p>
-        <SplitWords as="h2" className="font-display mt-3 block text-[1.6rem] font-bold" text="딱 3단계면 끝" />
-        <ol className="mt-4 flex flex-col gap-3">
-          {[
-            ["대화 내보내기", "카톡 대화방 → 메뉴 → 대화 내보내기 (텍스트만). 인스타 DM 파일도 돼요."],
-            ["파일 올리고 무료 숫자 분석", "주별 대화 온도, 먼저 연락한 횟수, 답장 시간 변화를 바로 보여 드려요. 이 단계는 무료예요."],
-            ["해석 리포트 받기", "결제하면 1~2분 안에 월화가 대화 전체를 읽고 해석과 다음 메시지까지 정리해 드려요."],
-          ].map(([t, d], i) => (
-            <InView as="li" key={t} className="reveal fx-glass flex gap-3 rounded-2xl px-4 py-4" style={{ transitionDelay: `${i * 120}ms` }}>
-              <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#e46b8a] to-[#8a2442] text-[1rem] font-bold">{i + 1}</span>
-              <span className="min-w-0">
-                <b className="block text-[0.98rem]">{t}</b>
-                <span className="mt-0.5 block text-[0.84rem] leading-[1.7] text-white/65">{d}</span>
-              </span>
-            </InView>
-          ))}
-        </ol>
-      </section>
-
       {/* 자주 묻는 질문 */}
       <section className="mx-auto mt-14 max-w-[560px] px-5">
         <p className="fx-kicker text-[#e8b04a]">FAQ</p>
@@ -252,12 +331,41 @@ export default function ChatLanding({ onFile, onQuiz }: { onFile: () => void; on
         </div>
       </section>
 
-      <section className="mx-auto max-w-[560px] px-5 pb-28 pt-12">
+      <section ref={endRef} className="mx-auto max-w-[560px] px-5 pb-28 pt-12">
         <a href="/chat/sample" className="mb-4 flex min-h-12 w-full items-center justify-center rounded-full border border-white/25 text-[0.92rem] text-white/85">
           결과 리포트 예시 먼저 보기
         </a>
         {cta("그 사람 마음 확인하기")}
       </section>
+
+      {/* 11/27 요청: 따라다니는 하단 버튼 + 누적 고객 말풍선 (100명 미만이면 숨김) */}
+      <div
+        className={`fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[560px] border-t border-white/10 bg-[#0e0b0d]/95 px-4 pt-2.5 backdrop-blur transition-transform duration-300 ${stickyOn ? "translate-y-0" : "translate-y-full"}`}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.6rem)" }}
+        aria-hidden={!stickyOn}
+      >
+        {visitors >= 100 && (
+          <div className={`pointer-events-none absolute inset-x-0 -top-11 flex justify-center transition-opacity duration-300 ${stickyOn ? "opacity-100" : "opacity-0"}`}>
+            <p className="relative rounded-full border border-[#e46b8a]/40 bg-[#1d181b]/95 px-3.5 py-1.5 text-[0.8rem] font-semibold text-white shadow-[0_6px_20px_rgba(0,0,0,0.45)]">
+              누적 고객{" "}
+              <b className="mx-0.5 text-[1.02rem] text-[#ff8fab] [text-shadow:0_0_12px_rgba(255,143,171,0.5)]">
+                <RollingCount value={visitors} />
+              </b>
+              명이 월화를 찾았어요
+              <span aria-hidden className="absolute -bottom-[5px] left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b border-r border-[#e46b8a]/40 bg-[#1d181b]" />
+            </p>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onFile}
+          tabIndex={stickyOn ? 0 : -1}
+          className="fx-sheen flex h-12 w-full items-center justify-center rounded-full bg-[#e46b8a] text-[0.96rem] font-bold text-white active:opacity-85"
+        >
+          내 카톡으로 무료 분석 시작
+        </button>
+        <p className="mt-1 text-center text-[0.72rem] text-white/50">숫자 분석 무료 · 해석 리포트 {CHAT_PRICE_KRW.toLocaleString()}원 · 구독 없음</p>
+      </div>
     </div>
   );
 }
