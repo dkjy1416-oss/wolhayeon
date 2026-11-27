@@ -12,7 +12,8 @@ import ChatPromo from "@/components/home3/ChatPromo";
 import ShortsRow from "@/components/home2/ShortsRow";
 import StickyCta from "@/components/home2/StickyCta";
 import { FAQ } from "@/components/home2/content";
-import { Hook, Turn, Mystery, MeetWolhwa, Webtoon, Checklist, Worries, Prepared } from "@/components/home3/Story";
+import { LeadHero, LeadSteps, LeadReviews } from "@/components/home3/Lead";
+import { Turn, Mystery, MeetWolhwa, Webtoon, Checklist, Worries, Prepared } from "@/components/home3/Story";
 import { Point1, Point2, Point3, Point4, Point5, BookAddon, Finale } from "@/components/home3/Points";
 
 /* 가격·후기를 요청마다 새로 계산 */
@@ -35,13 +36,16 @@ export default async function Home() {
         <AutoFx />
         <Header ctaLabel="무료 미리보기" />
         <main>
-          <Hook visitors={customers} />
+          {/* 11/27 요청: 꽉 찬 첫 화면 → 3단계 → 후기 3줄 → 월계수 (하단 버튼은 처음부터 따라다님) */}
+          <LeadHero />
+          <LeadSteps />
+          <LeadReviews reviews={reviews} />
+          {totals && <Totals totals={totals} />}
           <ResumeCard />
           <Turn />
           <Mystery />
           <MeetWolhwa />
           <Webtoon />
-          {totals && <Totals totals={totals} />}
           <Checklist />
           {reviews.length > 0 && <RealReviewsSection reviews={reviews} />}
           <Worries />
