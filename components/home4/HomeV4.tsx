@@ -144,7 +144,7 @@ const H2 = "m-0 text-[20px] font-extrabold leading-[1.35] tracking-[-0.02em] tex
 const EB = "m-0 mb-1 text-[13px] text-[#B5B5BA]";
 
 const BANNERS = [
-  { href: "/apply", img: "/wolhwa/v5/p_ritual.webp", video: "/wolhwa/v5/loop_ritual.mp4", logo: "/wolhwa/v5/logo_ritual.webp", title: "월화의 재회 분석", line: "보낼까 말까, 내 사연으로 같이 읽어요", tag: "무료 미리보기" },
+  { href: "/", img: "/wolhwa/v5/p_ritual.webp", video: "/wolhwa/v5/loop_ritual.mp4", logo: "/wolhwa/v5/logo_ritual.webp", title: "월화의 재회 분석", line: "보낼까 말까, 내 사연으로 같이 읽어요", tag: "무료 미리보기" },
   { href: "/chat", img: "/wolhwa/v5/p_kakao.webp", video: "/wolhwa/v5/loop_kakao.mp4", logo: "/wolhwa/v5/logo_kakao.webp", title: "카톡 대화 분석", line: "그 사람 카톡, 숫자로 먼저 읽어 봐요", tag: "숫자 분석 무료" },
   { href: "/book", img: "/wolhwa/v5/p_book.webp", video: "/wolhwa/v5/loop_book.mp4", logo: "/wolhwa/v5/logo_book.webp", title: "심층 재회 리포트", line: "120쪽 · 6만 자 이상, 내 사연으로 쓰는 심층 분석", tag: "NEW" },
 ];
@@ -177,7 +177,7 @@ const CAT: Record<string, { title: string; cards: CatCard[] }> = {
   ritual: {
     title: "리추얼",
     cards: [
-      { img: "/wolhwa/v5/p_ritual.webp", logo: "/wolhwa/v5/logo_ritual.webp", t: "월화의 재회 분석", d: "보낼까 말까, 내 사연으로 같이 읽어요", h: "/apply", tag: "무료 미리보기" },
+      { img: "/wolhwa/v5/p_ritual.webp", logo: "/wolhwa/v5/logo_ritual.webp", t: "월화의 재회 분석", d: "보낼까 말까, 내 사연으로 같이 읽어요", h: "/", tag: "무료 미리보기" },
       { img: "/wolhwa/v5/p_pack.webp", t: "리추얼 + 심층 리포트", d: "지금 읽을 메시지와 120쪽 심층 리포트", h: "/book" },
       { img: "/wolhwa/v5/t_free3.webp", t: "상황을 골라 바로 시작", d: "매달렸을 때 · 단답이 왔을 때 · 또 싸웠을 때", h: "/apply?sit=1" },
     ],
@@ -278,7 +278,7 @@ const GROUPS: Array<{ id: string; eb: string; title: string; items: Array<{ img:
     eb: "리추얼 분야",
     title: "다시 이을 실마리가 궁금하신가요?",
     items: [
-      { img: "/wolhwa/v5/p_ritual.webp", logo: "/wolhwa/v5/logo_ritual.webp", who: "월화", t: "월화의 재회 분석", h: "/apply" },
+      { img: "/wolhwa/v5/p_ritual.webp", logo: "/wolhwa/v5/logo_ritual.webp", who: "월화", t: "월화의 재회 분석", h: "/" },
       { img: "/wolhwa/v5/p_pack.webp", who: "월화의 추천", t: "리추얼 + 심층 리포트", h: "/book" },
     ],
   },
