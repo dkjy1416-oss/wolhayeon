@@ -694,7 +694,11 @@ export async function getOrCreatePreview(
         let pv = cached.data;
         const quoted = /^[‘'“"]/.test((pv.reasons?.[0] ?? "").trim());
         const recent = Date.now() - Date.parse(order.created_at) < 7 * 24 * 3600 * 1000;
-        if (!quoted && recent && order.payment_status === "pending" && (order.story ?? "").trim().length >= 20) {
+        /* 11/27 "API 덜 닳게": 11/18 이후 미리보기는 이미 인용 단계를 거쳤다(인용할 말이 없던 사연 포함).
+           예전엔 그런 사연이면 미리보기를 열 때마다 AI 를 다시 불렀음 → 11/18 이전에 만든 것만 한 번 채움 */
+        const madeBeforeQuote =
+          Date.parse(order.preview_generated_at ?? order.created_at) < Date.parse("2026-11-18T00:00:00+09:00");
+        if (!quoted && recent && madeBeforeQuote && order.payment_status === "pending" && (order.story ?? "").trim().length >= 20) {
           const line = await storyQuoteLine(order, (order.safety_concerns ?? []).some((v) => HIGH_RISK_SAFETY_VALUES.includes(v)));
           if (line) {
             const base = pv.reasons && pv.reasons.length ? pv.reasons : [];
