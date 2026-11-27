@@ -84,13 +84,13 @@ export default function PreviewExtras({ kind, afterReviews }: { kind: "ritual" |
           }
         >
           {/* 경계선이 1px 비치지 않게: 그라데이션을 어두운 장면 '위에' 겹쳐 올림 */}
-          <div aria-hidden className="pointer-events-none relative z-10 -mb-44 h-44" style={{ background: "linear-gradient(to bottom, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
+          <div aria-hidden className="pointer-events-none relative z-10 -mb-44 -mt-1 h-[calc(11rem+4px)]" style={{ background: "linear-gradient(to bottom, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
           <div className="bg-[#120e10] pb-24">
             <Hook visitors={0} inPreview />
             <Turn inPreview />
             <Mystery />
           </div>
-          <div aria-hidden className="pointer-events-none relative z-10 -mt-44 h-44" style={{ background: "linear-gradient(to top, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
+          <div aria-hidden className="pointer-events-none relative z-10 -mb-1 -mt-44 h-[calc(11rem+4px)]" style={{ background: "linear-gradient(to top, #f7f3ef 0%, rgba(247,243,239,0.9) 18%, rgba(247,243,239,0.6) 38%, rgba(247,243,239,0.28) 62%, rgba(247,243,239,0.08) 84%, rgba(247,243,239,0) 100%)" }} />
         </div>
       )}
 
