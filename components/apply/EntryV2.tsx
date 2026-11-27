@@ -247,11 +247,22 @@ export default function EntryV2() {
         @keyframes v2g{0%,100%{filter:drop-shadow(0 0 4px #c8324a)}50%{filter:drop-shadow(0 0 14px #ff5a72)}}
       `}</style>
 
+      {phase === "cover" && (
+        <video
+          className="pointer-events-none absolute inset-0 z-[1] h-full w-full object-cover object-[50%_25%]"
+          src="/wolhwa/v5/loop_ritual.mp4"
+          poster={IMG.cover}
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+      )}
       {bg && (
         // eslint-disable-next-line @next/next/no-img-element
         <img key={bg} src={bg} alt="" className="v2-zoom pointer-events-none absolute inset-0 h-full w-full object-cover object-[50%_25%]" />
       )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/55 via-black/10 to-black/85" />
+      <div className="pointer-events-none absolute inset-0 z-[2] bg-gradient-to-b from-black/55 via-black/10 to-black/85" />
 
       <Link href="/home" className="absolute left-5 top-[calc(env(safe-area-inset-top)+1rem)] z-30 text-[0.82rem] tracking-[0.2em] text-gold/90">
         월하연 月下緣
@@ -261,11 +272,10 @@ export default function EntryV2() {
       {/* ① 표지 */}
       {phase === "cover" && (
         <div className="v2-fade relative z-10 flex min-h-[100svh] flex-col justify-end px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
-          <p className="text-center text-[0.8rem] tracking-[0.3em] text-gold/90">月下緣 · 재회 분석</p>
-          <h1 className="font-display mt-3 text-center text-[2.4rem] font-bold leading-tight text-ivory drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-            보낼까, 말까
-          </h1>
-          <p className="mt-3 text-center text-[0.95rem] leading-relaxed text-ivory/85">오늘 밤도 대화창 앞이라면,<br />보내기 전에 월화에게 먼저 들려주세요.</p>
+          {/* 11/27 운영자 요청: 홈 배너와 같은 '월화의 관계 리추얼 · 재회 분석' 로고 */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/wolhwa/v5/logo_ritual.webp" alt="월화의 관계 리추얼 재회 분석" className="v2-fade mx-auto w-[86%] max-w-[380px] drop-shadow-[0_4px_18px_rgba(0,0,0,0.85)]" />
+          <p className="mt-2 text-center text-[0.95rem] leading-relaxed text-ivory/90">보낼까, 말까.<br />오늘 밤도 대화창 앞이라면, 월화에게 먼저 들려주세요.</p>
           <button type="button" onClick={() => setPhase("chat")} className={`${btn} mt-7`}>
             내 이야기 시작하기
           </button>
