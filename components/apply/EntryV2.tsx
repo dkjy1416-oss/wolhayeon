@@ -26,6 +26,9 @@ const IMG = {
   hold: "/wolhwa/v4/thread.webp",
   letter: "/wolhwa/v4/letter.webp",
   reading: "/book/v3/w-reading.webp",
+  fight: "/book/v3/fight2.webp",
+  street: "/book/v3/cry.webp",
+  bed: "/book/v3/bed.webp",
 };
 
 /* 화이트보드 ⑤ 순서: 이름 → 그 사람 → 관계 → 기간·연락 → 누가 먼저 → 마음 → 알고 싶은 것 → 이야기 → 선택 묶음 → 이메일 */
@@ -78,7 +81,7 @@ const REACT: Record<string, string> = {
   story: "말해 줘서 고마워요.\n조금만 더 물어볼게요.",
 };
 
-type Phase = "cover" | "chat" | "stop" | "travel" | "meet" | "q" | "react" | "ritual" | "load" | "card";
+type Phase = "cover" | "toon" | "chat" | "stop" | "travel" | "meet" | "q" | "react" | "ritual" | "load" | "card";
 
 const LINE_KEY = "wolhayeon_v2_line";
 
@@ -95,6 +98,8 @@ export default function EntryV2() {
   const [knot, setKnot] = useState<number | null>(null);
   const [pct, setPct] = useState(0);
   const [shake, setShake] = useState(false);
+  const [beat, setBeat] = useState(0);
+  const [sent, setSent] = useState(false);
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -140,11 +145,15 @@ export default function EntryV2() {
     }
     /* 보내려던 한 줄은 '이야기'에 미리 넣어 둠 (나중에 고칠 수 있음) */
     setApp((a) => (a.story.trim() ? a : { ...a, story: `보내려던 한 줄: "${l}"\n` }));
-    setShake(true);
+    setSent(true);
     timer.current = window.setTimeout(() => {
-      setShake(false);
-      setPhase("stop");
-    }, 450);
+      setShake(true);
+      timer.current = window.setTimeout(() => {
+        setShake(false);
+        setSent(false);
+        setPhase("stop");
+      }, 450);
+    }, 700);
   };
 
   /* ④ 월화 소개 말풍선 */
@@ -212,12 +221,25 @@ export default function EntryV2() {
     return () => window.clearTimeout(t);
   }, [phase, router]);
 
+  /* 웹툰 인트로: 컷이 차례로 들어오고 말풍선이 뜬 뒤 카톡 화면으로 (청월당 오프닝 구조) */
+  const BEATS = [0, 450, 1000, 1500, 2900, 3350, 3900, 5600];
+  useEffect(() => {
+    if (phase !== "toon") return;
+    setBeat(0);
+    const ts = BEATS.slice(1).map((ms, i) =>
+      window.setTimeout(() => {
+        if (i + 1 >= BEATS.length - 1) setPhase("chat");
+        else setBeat(i + 1);
+      }, ms)
+    );
+    return () => ts.forEach((t) => window.clearTimeout(t));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   const bg =
     phase === "cover"
       ? IMG.cover
-      : phase === "chat"
-        ? IMG.night
-        : phase === "stop"
+      : phase === "stop"
           ? IMG.wait
           : phase === "travel"
             ? IMG.thread
@@ -243,6 +265,14 @@ export default function EntryV2() {
         @keyframes v2s{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
         .v2-stop{animation:v2st .5s cubic-bezier(.2,1.6,.4,1) both}
         @keyframes v2st{from{opacity:0;transform:scale(1.8)}to{opacity:1;transform:scale(1)}}
+        .v2-in-left{animation:v2il .5s cubic-bezier(.2,.8,.2,1) both}
+        @keyframes v2il{from{opacity:0;translate:-60px -20px}to{opacity:1;translate:0 0}}
+        .v2-in-right{animation:v2ir .5s cubic-bezier(.2,.8,.2,1) both}
+        @keyframes v2ir{from{opacity:0;translate:60px 30px}to{opacity:1;translate:0 0}}
+        .v2-pop{animation:v2p .45s cubic-bezier(.2,1.5,.4,1) both}
+        @keyframes v2p{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+        .v2-dust span{position:absolute;top:-10px;width:5px;height:5px;border-radius:9999px;background:radial-gradient(circle,#fff 0,#ffd9df 45%,transparent 70%);opacity:.85;animation-name:v2d;animation-timing-function:linear;animation-iteration-count:infinite}
+        @keyframes v2d{from{transform:translateY(0) translateX(0)}to{transform:translateY(110vh) translateX(30px)}}
         .v2-glow{animation:v2g 1.6s ease-in-out infinite}
         @keyframes v2g{0%,100%{filter:drop-shadow(0 0 4px #c8324a)}50%{filter:drop-shadow(0 0 14px #ff5a72)}}
       `}</style>
@@ -276,41 +306,104 @@ export default function EntryV2() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/wolhwa/v5/logo_ritual.webp" alt="월화의 관계 리추얼 재회 분석" className="v2-fade mx-auto w-[86%] max-w-[380px] drop-shadow-[0_4px_18px_rgba(0,0,0,0.85)]" />
           <p className="mt-2 text-center text-[0.95rem] leading-relaxed text-ivory/90">보낼까, 말까.<br />오늘 밤도 대화창 앞이라면, 월화에게 먼저 들려주세요.</p>
-          <button type="button" onClick={() => setPhase("chat")} className={`${btn} mt-7`}>
+          <button type="button" onClick={() => setPhase("toon")} className={`${btn} mt-7`}>
             내 이야기 시작하기
           </button>
           <p className="mt-3 text-center text-[0.72rem] text-ivory/60">무료 미리보기 · 약 5분</p>
         </div>
       )}
 
-      {/* ② 대화창에 보내고 싶은 한 줄 */}
-      {phase === "chat" && (
-        <div className="v2-fade relative z-10 flex min-h-[100svh] flex-col justify-end px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
-          <p className="font-display mb-5 text-center text-[1.3rem] leading-[1.7] text-ivory drop-shadow">
-            오늘도 몇 번씩<br />대화창을 열었다 닫았나요?
-          </p>
-          <div className="rounded-3xl border border-white/10 bg-[#1b1416]/90 p-4 backdrop-blur">
-            <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-              <span className="h-8 w-8 rounded-full bg-white/15" />
-              <span className="text-[0.9rem]">그 사람</span>
-              <span className="ml-auto text-[0.7rem] text-ivory/50">마지막 대화 · 21일 전</span>
-            </div>
-            <div className="mt-3 w-fit rounded-2xl bg-white/10 px-3.5 py-2 text-[0.9rem]">응 잘 지내</div>
-            <div className="mt-4 flex items-center gap-2">
-              <input
-                autoFocus
-                value={line}
-                maxLength={80}
-                onChange={(e) => setLine(e.target.value)}
-                placeholder="자니..? 그냥 갑자기 생각나서"
-                className="h-12 flex-1 rounded-2xl border border-[#e0566e]/60 bg-black/40 px-4 text-base text-ivory placeholder:text-ivory/40 focus:outline-none"
-              />
-              <button type="button" onClick={send} className="h-12 shrink-0 rounded-2xl bg-[#e0566e] px-4 text-[0.9rem] font-bold text-white">
-                전송
-              </button>
-            </div>
-            <p className="mt-2 text-right text-[0.66rem] text-ivory/45">그 사람에게 보내고 싶은 한 줄을 적어 보세요 · 실제로 보내지지 않아요</p>
+      {/* 웹툰 인트로 — 헤어지던 날 두 컷 → 그 사람 생각 한 컷 */}
+      {phase === "toon" && (
+        <div className="absolute inset-0 z-20 overflow-hidden bg-[#f4ede4]">
+          <div className="v2-dust pointer-events-none absolute inset-0 z-30" aria-hidden>
+            {Array.from({ length: 16 }).map((_, i) => (
+              <span key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 8) * 0.55}s`, animationDuration: `${4 + (i % 5)}s` }} />
+            ))}
           </div>
+          {/* 컷 1·2 */}
+          <div className={`absolute inset-0 transition-all duration-500 ${beat >= 5 ? "-translate-y-full opacity-0" : ""}`}>
+            <div className={`absolute left-[4%] top-[7%] h-[40%] w-[86%] overflow-hidden shadow-[0_6px_24px_rgba(0,0,0,0.25)] transition-all duration-500 ${beat >= 0 ? "v2-in-left" : "opacity-0"}`} style={{ transform: "rotate(-3deg)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={IMG.fight} alt="" className="h-full w-full object-cover object-[50%_30%]" />
+            </div>
+            {beat >= 1 && <Bubble className="left-[3%] top-[26%]" text={<>그만하자,<br /><b className="text-[#9b1d32]">우리.</b></>} />}
+            <div className={`absolute bottom-[8%] right-[4%] h-[40%] w-[86%] overflow-hidden shadow-[0_6px_24px_rgba(0,0,0,0.25)] ${beat >= 2 ? "v2-in-right" : "opacity-0"}`} style={{ transform: "rotate(2deg)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={IMG.street} alt="" className="h-full w-full object-cover object-[50%_25%]" />
+            </div>
+            {beat >= 3 && <Bubble className="right-[3%] top-[52%]" text={<>…응.<br /><b className="text-[#9b1d32]">잘 지내.</b></>} />}
+          </div>
+          {/* 컷 3 — 그 사람 생각 */}
+          {beat >= 5 && (
+            <div className="v2-fade absolute inset-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={IMG.bed} alt="" className="v2-zoom h-full w-full object-cover object-[50%_30%]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/50" />
+              {beat >= 6 && <Bubble className="left-1/2 top-[14%] -translate-x-1/2" text={<>그 사람도…<br /><b className="text-[#9b1d32]">가끔 내 생각 할까?</b></>} />}
+            </div>
+          )}
+          <button type="button" onClick={() => setPhase("chat")} aria-label="건너뛰기" className="absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] right-4 z-40 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-[0.9rem] text-white">
+            »
+          </button>
+        </div>
+      )}
+
+      {/* ② 카카오톡 같은 대화창 — 보내고 싶은 한 줄 */}
+      {phase === "chat" && (
+        <div className="v2-fade absolute inset-0 z-20 flex flex-col bg-[#b2c7d9] text-[#191919]">
+          <div className="flex items-center gap-3 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.9rem)]">
+            <span className="text-[1.4rem] leading-none">‹</span>
+            <span className="text-[1.05rem] font-bold">그 사람</span>
+            <span className="ml-auto flex items-center gap-4 text-[1.1rem] opacity-80">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto px-3 pb-3">
+            <p className="mx-auto mt-2 w-fit rounded-full bg-black/15 px-3 py-1 text-[0.72rem] text-white">2026년 11월 6일 금요일</p>
+            {/* 내가 보낸 것 */}
+            <div className="mt-4 flex items-end justify-end gap-1.5">
+              <span className="text-[0.62rem] text-[#556677]">오후 11:38</span>
+              <p className="max-w-[70%] rounded-[14px] rounded-tr-[4px] bg-[#fee500] px-3 py-2 text-[0.92rem]">잘 지내?</p>
+            </div>
+            {/* 그 사람 */}
+            <div className="mt-3 flex items-start gap-2">
+              <span className="h-10 w-10 shrink-0 rounded-[15px] bg-[#9fb3c4]" />
+              <div>
+                <p className="text-[0.72rem] text-[#3d4b57]">그 사람</p>
+                <div className="mt-1 flex items-end gap-1.5">
+                  <p className="max-w-[70%] rounded-[14px] rounded-tl-[4px] bg-white px-3 py-2 text-[0.92rem]">응 잘 지내</p>
+                  <span className="text-[0.62rem] text-[#556677]">오후 11:52</span>
+                </div>
+              </div>
+            </div>
+            <p className="mx-auto mt-6 w-fit rounded-full bg-black/15 px-3 py-1 text-[0.72rem] text-white">21일째, 대화가 멈춰 있어요</p>
+            {sent && (
+              <div className="v2-fade mt-4 flex items-end justify-end gap-1.5">
+                <span className="text-right text-[0.62rem] leading-tight text-[#556677]"><b className="block text-[#e8c400]">1</b>지금</span>
+                <p className="max-w-[70%] rounded-[14px] rounded-tr-[4px] bg-[#fee500] px-3 py-2 text-[0.92rem]">{line.trim() || "자니..? 그냥 갑자기 생각나서"}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 bg-white px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full text-[1.4rem] text-[#9a9a9a]">+</span>
+            <input
+              autoFocus
+              value={line}
+              maxLength={80}
+              onChange={(e) => setLine(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !sent) send();
+              }}
+              placeholder="그 사람에게 보내고 싶은 한 줄"
+              className="h-10 flex-1 rounded-full bg-[#f2f2f2] px-4 text-base text-[#191919] placeholder:text-[#a0a0a0] focus:outline-none"
+            />
+            <button type="button" onClick={() => !sent && send()} className="h-10 shrink-0 rounded-full bg-[#fee500] px-4 text-[0.88rem] font-bold text-[#191919]">
+              전송
+            </button>
+          </div>
+          <p className="pointer-events-none absolute left-1/2 top-[calc(env(safe-area-inset-top)+3.4rem)] -translate-x-1/2 rounded-full bg-white/70 px-2.5 py-0.5 text-[0.62rem] text-[#556677]">예시 화면 · 실제로 보내지지 않아요</p>
         </div>
       )}
 
@@ -470,6 +563,17 @@ export default function EntryV2() {
           <p className="v2-fade mt-6 text-[0.95rem] text-ivory/80" style={{ animationDelay: ".6s" }}>두 사람의 이야기, 월화가 다 들었어요.</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/* 청월당식 둥근 말풍선 — 달빛 흰 원 + 가는 붉은 실 테두리 */
+function Bubble({ text, className = "" }: { text: React.ReactNode; className?: string }) {
+  return (
+    <div className={`absolute z-20 ${className}`}>
+      <div className="v2-pop flex h-[132px] w-[132px] items-center justify-center rounded-full bg-white/95 text-center text-[0.95rem] font-medium leading-[1.55] text-[#3a2a2c] shadow-[0_0_0_3px_rgba(255,255,255,0.6),0_0_0_4px_rgba(200,50,74,0.45),0_0_28px_8px_rgba(255,255,255,0.75)]">
+        <p>{text}</p>
+      </div>
     </div>
   );
 }
