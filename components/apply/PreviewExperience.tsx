@@ -870,12 +870,12 @@ export default function PreviewExperience({
       ? `${name ? `${name}님의 ` : "나의 "}책 받기 · ${BOOK_PRICE_KRW.toLocaleString()}원`
       : want === "bundle"
         ? `월화 패키지로 보기 · ${bundleNow.toLocaleString()}원`
-        : `${RECEIVE[sit].label} · ${priceText}`;
+        : `재회 분석 지금 보기 · ${priceText}`; /* 11/27 운영자 요청: 상품 이름이 바로 보이게 */
   /* 11/23: 책·패키지로 들어온 주문은 가격 줄도 버튼과 같은 금액으로 */
   const shownPriceText =
     want === "book" ? `${BOOK_PRICE_KRW.toLocaleString()}원` : want === "bundle" ? `${bundleNow.toLocaleString()}원` : priceText;
   /* 하단 고정 버튼은 폭이 좁아 짧은 문구 */
-  const stickyLabel = want ? mainLabel : `${RECEIVE[sit].short} · ${priceText}`;
+  const stickyLabel = want ? mainLabel : `재회 분석 지금 보기 · ${priceText}`;
   /* 첫 구매 할인(신청 후 24시간)이 끝나 정가인 주문 — 왜 16,900원인지 밝힘 (11/18) */
   const offerExpired = !want && !offerOn && !isPromoActive() && price === regularPriceFor("message");
   const onCtaClick = (where: string) => {
@@ -1125,9 +1125,11 @@ export default function PreviewExperience({
             </section>
 
             {/* 장면 2 — 설명하는 월화: 질문 → 판단 → 근거 → 가능성 → 기간 → 잠금 */}
-            <section className="mt-3" aria-label="내 질문과 월화의 판단">
+            <section className="mt-6" aria-label="내 질문과 월화의 판단">
+              {/* 11/27 운영자 요청: 글이 길어지는 판단 구간 앞에 루프 하나 — 얼굴이 위쪽인 상반신(휴대폰 보는 월화), 말풍선은 아래쪽부터 */}
+              <TalkMedia video="/book/v3/w-phone2.mp4" image="/book/v3/w-phone2.webp" alt="휴대폰을 보는 월화" />
               <TalkThread
-                className="relative z-10"
+                className="relative z-10 -mt-[20%]"
                 lines={[
                   { who: "me", text: `“${q.q}”`, tag: name ? `${name}님이 물어본 질문` : "내가 물어본 질문" },
                   { who: "w", text: oneLine, tag: "월화의 현재 판단", strong: true },
