@@ -309,6 +309,7 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
         @keyframes v2ty{0%,8%{opacity:0;transform:translateY(4px)}14%,70%{opacity:1;transform:none}78%,100%{opacity:0;transform:translateY(4px)}}
         .v2-caret{display:inline-block;margin-left:1px;animation:v2c .8s steps(1) infinite;color:#ffb3c0}
         @keyframes v2c{50%{opacity:0}}
+        .v2-dark-input input[type=text],.v2-dark-input input[type=email],.v2-dark-input input:not([type]){background:transparent!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.35)!important;border-radius:0!important;padding-left:2px!important}
         .v2-glow{animation:v2g 1.6s ease-in-out infinite}
         @keyframes v2g{0%,100%{filter:drop-shadow(0 0 4px #c8324a)}50%{filter:drop-shadow(0 0 14px #ff5a72)}}
       `}</style>
@@ -673,11 +674,11 @@ function DarkVeil({ strong = false }: { strong?: boolean }) {
   return (
     <>
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[70%] backdrop-blur-[6px]"
-        style={{ WebkitMaskImage: "linear-gradient(to bottom, transparent, black 45%)", maskImage: "linear-gradient(to bottom, transparent, black 45%)" }}
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[48%] backdrop-blur-[6px]"
+        style={{ WebkitMaskImage: "linear-gradient(to bottom, transparent, black 55%)", maskImage: "linear-gradient(to bottom, transparent, black 55%)" }}
       />
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent ${strong ? "to-black/95" : "to-black/90"}`} />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black via-black/80 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[50%] bg-gradient-to-t from-black via-black/80 to-transparent" />
     </>
   );
 }
