@@ -61,7 +61,6 @@ const GROUPS: Group[] = [
   { key: "g_story", ids: ["story"], q: "두 사람의 이야기를\n편하게 들려주세요.", face: V3("write") },
   { key: "g_more", ids: ["last_conversation_memory"], q: "월화에게\n더 하고 싶은 말이 있나요?", face: W("reading") },
   { key: "g_new", ids: ["partner_new_relationship"], q: "그 사람 곁에\n새로운 사람이 있나요?", face: V3("listen") },
-  { key: "g_safety", ids: ["safety_concerns"], q: "혹시 두 사람 사이에\n이런 일이 있었나요?", face: V3("explain") },
   { key: "g_me", ids: ["applicant_birth_year", "applicant_gender", "life_stage"], q: "{name}님에 대해\n조금만 더 알려 주세요.", face: W("final") },
   { key: "g_pyear", ids: ["partner_birth_year"], q: "{partner}님은\n몇 년생인가요?", face: V3("smile") },
   { key: "g_email", ids: ["email"], q: "마지막이에요.\n결과를 받을 이메일을 남겨 주세요.", face: V3("greet") },
@@ -211,7 +210,11 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
     setTried(false);
     const r = REACT[curG.steps[curG.steps.length - 1].id] ?? REACT[curG.steps[0].id];
     const go = () => {
-      if (idx >= total - 1) setPhase("ritual");
+      if (idx >= total - 1) {
+        /* 11/27 운영자 요청으로 안전 질문 화면을 뺐으므로, 저장값은 '답하고 싶지 않음'으로 (지어내지 않음) */
+        setApp((a) => (a.safety_concerns.length ? a : { ...a, safety_concerns: ["prefer_not_to_say"] }));
+        setPhase("ritual");
+      }
       else {
         setStep(idx + 1);
         setPhase("q");
@@ -562,12 +565,14 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
               </button>
               {phase === "q" && (
                 <div className={`transition-opacity duration-300 ${typedDone ? "opacity-100" : "pointer-events-none opacity-0"}`}>
-                  {curG.steps.length === 1 && cur?.sub && <p className="mt-2 whitespace-pre-line text-center text-[0.76rem] leading-[1.7] text-ivory/60">{fill(cur.sub)}</p>}
+                  {curG.steps.length === 1 && cur?.sub && cur.kind !== "year" && <p className="mt-2 whitespace-pre-line text-center text-[0.76rem] leading-[1.7] text-ivory/60">{fill(cur.sub)}</p>}
                   {curOptional && <p className="mt-2 text-center text-[0.72rem] text-ivory/50">* 답하지 않아도 다음으로 넘어갈 수 있어요.</p>}
                   <div className="mt-5 space-y-3">
                     {curG.steps.map((st) =>
                       st.kind === "select" && SENT[st.id] ? (
                         <SentenceSelect key={st.id} step={st} app={app} setApp={setApp} sent={SENT[st.id]} />
+                      ) : st.kind === "year" ? (
+                        <YearSelect key={st.id} step={st} app={app} setApp={setApp} who={st.id === "partner_birth_year" ? `${partner}님은` : "저는"} />
                       ) : (
                         <div key={st.id} className={`v2-dark-input ${st.kind === "multi" ? "v2-compact" : ""}`}>
                           <StepInput
@@ -859,6 +864,54 @@ function ThreadPull({ name, onDone }: { name: string; onDone: (i: number) => voi
       {chosen !== null && (
         <p className="v2-fade font-display absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+2.5rem)] z-20 text-center text-[1rem] text-ivory/85">이 실로 이야기를 맡길게요.</p>
       )}
+    </div>
+  );
+}
+
+/* 11/27 운영자 요청: 생년도 앞 질문들처럼 보기에서 고르기 — "저는 [1994 ▾] 년생이에요." */
+function YearSelect({
+  step,
+  app,
+  setApp,
+  who,
+}: {
+  step: StepDef;
+  app: RitualApplication;
+  setApp: React.Dispatch<React.SetStateAction<RitualApplication>>;
+  who: string;
+}) {
+  const cur = step.get(app) as number | null;
+  const top = new Date().getFullYear() - 14;
+  const years = Array.from({ length: top - 1959 }, (_, i) => top - i);
+  const v = cur === null || cur === undefined ? (step.optional ? "unknown" : "") : String(cur);
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[0.98rem] text-ivory/85">
+      <span>{who}</span>
+      <span className="relative">
+        <select
+          value={v}
+          onChange={(e) => setApp((a) => step.set(a, e.target.value === "unknown" || e.target.value === "" ? null : Number(e.target.value)))}
+          className={`h-11 appearance-none rounded-xl border border-white/15 bg-white/10 pl-4 pr-9 text-[0.95rem] backdrop-blur focus:outline-none ${v && v !== "unknown" ? "text-ivory" : "text-ivory/45"}`}
+        >
+          {!step.optional && (
+            <option value="" disabled>
+              태어난 해
+            </option>
+          )}
+          {step.optional && (
+            <option value="unknown" className="text-black">
+              잘 모르겠어요
+            </option>
+          )}
+          {years.map((y) => (
+            <option key={y} value={y} className="text-black">
+              {y}
+            </option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[0.7rem] text-ivory/60">▼</span>
+      </span>
+      <span>년생이에요.</span>
     </div>
   );
 }
