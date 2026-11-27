@@ -1110,9 +1110,10 @@ export default function PreviewExperience({
           <>
             {/* 장면 1 — 말을 건네는 월화 */}
             <section className="mt-1" aria-label="월화가 읽은 내 사연">
-              <TalkMedia video="/wolhwa/v3/smile.mp4" image="/wolhwa/v3/smile.webp" alt="말을 건네는 월화" />
+              {/* 11/27 운영자 요청: 장면 1·2가 끊겨 보여 한 장면으로 이음. 얼굴이 말풍선에 가리지 않는 상반신 루프(얼굴은 위쪽), 말풍선은 아래쪽부터 */}
+              <TalkMedia video="/book/v3/w-reading.mp4" image="/book/v3/w-reading.webp" alt="편지를 읽는 월화" />
               <TalkThread
-                className="relative z-10 -mt-[26%]"
+                className="relative z-10 -mt-[20%]"
                 lines={[
                   ...(intro.length
                     ? intro.map((t, i) => ({ who: "w" as const, text: t, strong: i === 0 }))
@@ -1124,10 +1125,9 @@ export default function PreviewExperience({
             </section>
 
             {/* 장면 2 — 설명하는 월화: 질문 → 판단 → 근거 → 가능성 → 기간 → 잠금 */}
-            <section className="mt-8" aria-label="내 질문과 월화의 판단">
-              <TalkMedia video="/wolhwa/v3/explain.mp4" image="/wolhwa/v3/explain.webp" alt="설명하는 월화" ratio="aspect-square" />
+            <section className="mt-3" aria-label="내 질문과 월화의 판단">
               <TalkThread
-                className="relative z-10 -mt-[18%]"
+                className="relative z-10"
                 lines={[
                   { who: "me", text: `“${q.q}”`, tag: name ? `${name}님이 물어본 질문` : "내가 물어본 질문" },
                   { who: "w", text: oneLine, tag: "월화의 현재 판단", strong: true },
@@ -1243,22 +1243,7 @@ export default function PreviewExperience({
                       </span>
                     ),
                   },
-                  ...(PAYMENTS_OPEN
-                    ? [{
-                        who: "raw" as const,
-                        node: (
-                          <div className="mt-1">
-                            {!want && (
-                              <p className="mb-2 text-center text-[0.82rem] text-ivory-dim">
-                                {badge.strike !== null && <span className="mr-1.5 line-through">{badge.strike.toLocaleString()}원</span>}
-                                <b className="text-burgundy">{priceText}</b> · 1회 결제 · {DELIVERY_TIME_TEXT} 도착
-                              </p>
-                            )}
-                            {ctaButton("talk", mainLabel)}
-                          </div>
-                        ),
-                      }]
-                    : []),
+                  /* 11/27 운영자 요청: 첫 번째 가격·구매 버튼은 너무 빨리 나와서 뺌 (아래 가격 카드·하단 버튼은 그대로) */
                 ]}
               />
               {facts.length > 0 && (
@@ -1457,7 +1442,16 @@ export default function PreviewExperience({
           )}
 
           {/* 11/27 운영자 요청: 미리보기 풍부하게 — 후기 · 받는 것(POINT 1~4) · SNS·유튜브 · 칼럼 */}
-          <PreviewExtras kind="ritual" />
+          <PreviewExtras
+            kind="ritual"
+            afterReviews={
+              totals ? (
+                <div className="mt-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
+                  <Totals totals={totals} />
+                </div>
+              ) : null
+            }
+          />
 
         </>
       )}
@@ -1511,12 +1505,6 @@ export default function PreviewExperience({
 
       {PAYMENTS_OPEN ? (
         <>
-          {totals && (
-            <div className="mt-8" style={{ ["--color-ivory" as string]: "#e8ddc8", ["--color-ivory-dim" as string]: "#a2977f" } as React.CSSProperties}>
-              <Totals totals={totals} />
-            </div>
-          )}
-
           {/* ---------- 결제 직전 FAQ (접힘) ---------- */}
           <section className="mt-10 px-6">
             <div className="mx-auto max-w-[640px]">

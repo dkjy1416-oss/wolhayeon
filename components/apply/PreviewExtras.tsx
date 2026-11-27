@@ -26,7 +26,7 @@ const CFG = {
 
 const YT_PICK = ["r7-OOdStniE", "A6ZCzFbe6DI", "F0-Bb9RHJhA", "lMHD1SXc1Ks"];
 
-export default function PreviewExtras({ kind }: { kind: "ritual" | "chat" }) {
+export default function PreviewExtras({ kind, afterReviews }: { kind: "ritual" | "chat"; afterReviews?: React.ReactNode }) {
   const cfg = CFG[kind];
   const reviews = SAVED_REVIEWS.filter((r) => (cfg.products as readonly string[]).includes(r.product)).slice(0, 12);
   const cols = cfg.columns.map((s) => COLUMNS.find((c) => c.slug === s)).filter(Boolean) as typeof COLUMNS;
@@ -60,6 +60,8 @@ export default function PreviewExtras({ kind }: { kind: "ritual" | "chat" }) {
           </div>
         </section>
       )}
+      {/* 11/27 운영자 요청: 월계수 누적 집계는 후기 바로 밑 */}
+      {afterReviews}
 
       {/* ② 메인 페이지의 '받는 것' (재회 분석) */}
       {kind === "ritual" && (
