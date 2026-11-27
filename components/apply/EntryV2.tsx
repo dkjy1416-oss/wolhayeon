@@ -104,7 +104,7 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
   const [step, setStep] = useState(0);
   const [tried, setTried] = useState(false);
   const [reactText, setReactText] = useState("");
-  const [knot, setKnot] = useState<number | null>(null);
+  const [, setKnot] = useState<number | null>(null);
   const [pct, setPct] = useState(0);
   const [shake, setShake] = useState(false);
   const [beat, setBeat] = useState(0);
@@ -279,9 +279,7 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
             ? IMG.thread
             : phase === "load" || phase === "card"
                 ? IMG.reading
-                : phase === "ritual"
-                  ? IMG.thread
-                  : null;
+                : null;
 
   const btn =
     "inline-flex h-[56px] w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-[#6a1b26] to-[#341015] text-[0.98rem] font-semibold text-ivory active:opacity-85";
@@ -314,6 +312,8 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
         .v2-dark-input input[type=text],.v2-dark-input input[type=email],.v2-dark-input input:not([type]){background:transparent!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.35)!important;border-radius:0!important;padding-left:2px!important}
         .v2-compact .flex-col{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important}
         .v2-compact button{min-height:40px!important;padding:8px 12px!important;font-size:.8rem!important;border-radius:9999px!important;text-align:center!important;background:rgba(255,255,255,.08)!important}
+        .v2-sway{animation:v2sw 3.6s ease-in-out infinite}
+        @keyframes v2sw{0%,100%{transform:rotate(-2.2deg)}50%{transform:rotate(2.2deg)}}
         .v2-glow{animation:v2g 1.6s ease-in-out infinite}
         @keyframes v2g{0%,100%{filter:drop-shadow(0 0 4px #c8324a)}50%{filter:drop-shadow(0 0 14px #ff5a72)}}
       `}</style>
@@ -604,32 +604,15 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
         );
       })()}
 
-      {/* ⑥ 붉은 실 고르기 */}
+      {/* ⑥ 붉은 실 — 청월당 '제비 뽑기' 자리. 1) 실을 쥔 월화가 권함 → 2) 세 가닥 중 하나를 당김 */}
       {phase === "ritual" && (
-        <div className="v2-fade relative z-10 flex min-h-[100svh] flex-col justify-end px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
-          <p className="font-display text-center text-[1.3rem] leading-[1.8] text-ivory drop-shadow">
-            마지막이에요.<br />{name}님 마음에 가까운 실 하나를 골라 주세요.
-          </p>
-          <div className="mt-8 flex justify-center gap-5">
-            {[0, 1, 2].map((i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setKnot(i)}
-                aria-label={`실 ${i + 1}`}
-                className={`flex h-36 w-20 items-center justify-center rounded-2xl border transition-all ${knot === i ? "v2-glow -translate-y-3 border-[#ff5a72] bg-black/60" : "border-white/15 bg-black/40"}`}
-              >
-                <svg viewBox="0 0 40 120" className="h-28 w-10">
-                  <path d={i === 0 ? "M20 0 C5 30 35 45 20 60 C5 75 35 95 20 120" : i === 1 ? "M20 0 C35 25 5 40 20 60 C35 80 5 100 20 120" : "M20 0 C10 20 30 35 20 50 C8 62 32 72 20 84 C12 96 28 108 20 120"} fill="none" stroke="#d2384f" strokeWidth="3" strokeLinecap="round" />
-                  <circle cx="20" cy="60" r="5" fill="#d2384f" />
-                </svg>
-              </button>
-            ))}
-          </div>
-          <button type="button" disabled={knot === null} onClick={() => setPhase("load")} className={`${btn} mt-8 disabled:opacity-40`}>
-            이 실로 이야기 맡기기
-          </button>
-        </div>
+        <ThreadPull
+          name={name}
+          onDone={(i) => {
+            setKnot(i);
+            setPhase("load");
+          }}
+        />
       )}
 
       {/* ⑦ 읽는 중 */}
@@ -738,6 +721,143 @@ function SentenceSelect({
           placeholder="어떤 사이였는지 짧게 적어 주세요"
           className="mx-auto mt-3 block h-11 w-full max-w-[320px] border-0 border-b border-white/35 bg-transparent px-1 text-center text-base text-ivory placeholder:text-ivory/40 focus:outline-none"
         />
+      )}
+    </div>
+  );
+}
+
+/* ───────── 붉은 실 당기기 (프로토타입: 지금 있는 그림 + 코드로 그린 실) ─────────
+   1단계: 실을 쥔 월화(v4/thread) + 타이핑 대사 + "붉은 실 당기러 가기"
+   2단계: 어두운 배경(w-thread 루프, 흐리게) 위에 위에서 늘어진 세 가닥 실.
+          가운데는 앞, 양옆은 뒤(작고 흐리게)라 입체감. 각자 다른 박자로 흔들림.
+          실을 아래로 끌면(또는 누르면) 늘어나며 빛나고, 충분히 당기면 선택 → 나머지는 사라짐 */
+function ThreadPull({ name, onDone }: { name: string; onDone: (i: number) => void }) {
+  const [stage, setStage] = useState<0 | 1>(0);
+  const [pull, setPull] = useState<number[]>([0, 0, 0]);
+  const [chosen, setChosen] = useState<number | null>(null);
+  const drag = useRef<{ i: number; y0: number } | null>(null);
+  const line0 = `${name}님, 이제 마지막이에요.`;
+  const line1 = "세 가닥 실 중에\n마음이 가는 하나만 당겨 주시겠어요?";
+  const [n, setN] = useState(0);
+  const text = stage === 0 ? `${line0}\n${line1}` : "마음이 가는 실을\n아래로 천천히 당겨 주세요.";
+  useEffect(() => {
+    setN(0);
+    const iv = window.setInterval(() => setN((x) => (x >= text.length ? (window.clearInterval(iv), x) : x + 1)), 45);
+    return () => window.clearInterval(iv);
+  }, [text]);
+  const done = n >= text.length;
+
+  const choose = (i: number) => {
+    if (chosen !== null) return;
+    setChosen(i);
+    setPull((p) => p.map((v, k) => (k === i ? 230 : v)));
+    window.setTimeout(() => onDone(i), 1300);
+  };
+  const onDown = (i: number) => (e: React.PointerEvent) => {
+    if (chosen !== null) return;
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    drag.current = { i, y0: e.clientY };
+  };
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const dy = Math.max(0, Math.min(200, e.clientY - d.y0));
+    setPull((p) => p.map((v, k) => (k === d.i ? dy : v)));
+  };
+  const onUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    if (pull[d.i] > 70 || pull[d.i] < 6) choose(d.i); /* 충분히 당겼거나, 그냥 눌렀으면 선택 */
+    else setPull((p) => p.map((v, k) => (k === d.i ? 0 : v)));
+  };
+
+  if (stage === 0)
+    return (
+      <div className="absolute inset-0 z-10 flex flex-col justify-end">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/wolhwa/v4/thread.webp" alt="" className="v2-zoom absolute inset-0 h-full w-full object-cover object-[50%_20%]" />
+        <DarkVeil />
+        <div className="relative px-6 pb-[calc(env(safe-area-inset-bottom)+1.2rem)]">
+          <p className="font-display min-h-[90px] whitespace-pre-line text-center text-[1.15rem] leading-[1.85] text-ivory drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+            “{text.slice(0, n)}
+            {!done && <span className="v2-caret">|</span>}
+            {done && "”"}
+          </p>
+          <button
+            type="button"
+            onClick={() => setStage(1)}
+            className={`mt-5 inline-flex h-[56px] w-full items-center justify-center rounded-full border border-gold/30 bg-gradient-to-b from-[#6a1b26] to-[#341015] text-[0.98rem] font-semibold text-ivory transition-opacity ${done ? "opacity-100" : "pointer-events-none opacity-0"}`}
+          >
+            붉은 실 당기러 가기
+          </button>
+        </div>
+      </div>
+    );
+
+  const X = [28, 50, 72]; /* % 위치 */
+  const DEPTH = [0.86, 1, 0.86]; /* 가운데 앞, 양옆 뒤 */
+  return (
+    <div className="absolute inset-0 z-10 overflow-hidden bg-black" onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} style={{ touchAction: "none" }}>
+      <video src="/book/v3/w-thread.mp4" poster="/book/v3/w-thread.webp" autoPlay muted loop playsInline className="absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-[3px]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/30 to-black/90" />
+      <div className="v2-dust pointer-events-none absolute inset-0" aria-hidden>
+        {Array.from({ length: 12 }).map((_, i) => (
+          <span key={i} style={{ left: `${(i * 41) % 100}%`, animationDelay: `${(i % 6) * 0.7}s`, animationDuration: `${6 + (i % 4)}s` }} />
+        ))}
+      </div>
+      <p className="font-display absolute inset-x-0 top-[calc(env(safe-area-inset-top)+4.2rem)] z-20 whitespace-pre-line px-6 text-center text-[1.12rem] leading-[1.8] text-ivory drop-shadow">
+        “{text.slice(0, n)}
+        {!done && <span className="v2-caret">|</span>}
+        {done && "”"}
+      </p>
+      {/* 실을 쥔 손 자리 — 지금은 빛나는 매듭으로 대신 (새 그림: 위에서 실 세 가닥을 쥔 월화의 손) */}
+      <div className="absolute left-1/2 top-[22%] z-10 h-6 w-40 -translate-x-1/2 rounded-full bg-[#d2384f]/30 blur-xl" />
+      <div className="absolute inset-0" style={{ perspective: "700px" }}>
+        {X.map((x, i) => {
+          const L = 300 + pull[i];
+          const gone = chosen !== null && chosen !== i;
+          const on = chosen === i;
+          return (
+            <div
+              key={i}
+              className={`absolute top-[24%] transition-[opacity,filter] duration-700 ${gone ? "opacity-0" : "opacity-100"}`}
+              style={{
+                left: `${x}%`,
+                transform: `translateX(-50%) scale(${DEPTH[i]})`,
+                transformOrigin: "top center",
+                filter: DEPTH[i] < 1 ? "blur(0.6px) brightness(.85)" : undefined,
+                zIndex: DEPTH[i] === 1 ? 3 : 2,
+              }}
+            >
+              <div
+                className={on || drag.current?.i === i ? "" : "v2-sway"}
+                style={{ transformOrigin: "top center", animationDuration: `${3.2 + i * 0.7}s`, animationDelay: `${i * -1.1}s` }}
+              >
+                <svg
+                  width="70"
+                  height={L + 70}
+                  viewBox={`0 0 70 ${L + 70}`}
+                  onPointerDown={onDown(i)}
+                  className="cursor-grab touch-none overflow-visible"
+                  style={{ filter: on ? "drop-shadow(0 0 10px #ff4d6a) drop-shadow(0 0 22px #ff4d6a)" : "drop-shadow(0 0 4px rgba(210,56,79,.6))" }}
+                >
+                  {/* 실 */}
+                  <path d={`M35 0 C ${30 - pull[i] / 20} ${L * 0.35}, ${40 + pull[i] / 20} ${L * 0.7}, 35 ${L}`} stroke="#d2384f" strokeWidth={on ? 3.2 : 2.4} fill="none" strokeLinecap="round" />
+                  <path d={`M36 0 C ${31 - pull[i] / 20} ${L * 0.35}, ${41 + pull[i] / 20} ${L * 0.7}, 36 ${L}`} stroke="#ff8a9b" strokeWidth="0.8" fill="none" opacity=".6" />
+                  {/* 매듭 + 술 */}
+                  <circle cx="35" cy={L + 6} r="8" fill="#b51f38" stroke="#ffb1bd" strokeWidth="1" />
+                  <path d={`M35 ${L + 12} l-7 40 M35 ${L + 12} l-2.5 42 M35 ${L + 12} l2.5 42 M35 ${L + 12} l7 40`} stroke="#d2384f" strokeWidth="1.6" strokeLinecap="round" />
+                  {/* 손가락으로 잡기 쉬운 투명 영역 */}
+                  <rect x="5" y="0" width="60" height={L + 60} fill="transparent" />
+                </svg>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {chosen !== null && (
+        <p className="v2-fade font-display absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+2.5rem)] z-20 text-center text-[1rem] text-ivory/85">이 실로 이야기를 맡길게요.</p>
       )}
     </div>
   );
