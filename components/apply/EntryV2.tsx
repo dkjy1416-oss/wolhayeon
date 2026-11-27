@@ -32,29 +32,6 @@ const IMG = {
   alone: "/book/v3/alone.webp",
 };
 
-/* 화이트보드 ⑤ 순서: 이름 → 그 사람 → 관계 → 기간·연락 → 누가 먼저 → 마음 → 알고 싶은 것 → 이야기 → 선택 묶음 → 이메일 */
-const ORDER = [
-  "applicant_name",
-  "partner_name",
-  "relationship_type",
-  "breakup_elapsed",
-  "contact_status",
-  "breakup_initiator",
-  "last_conversation",
-  "current_emotion",
-  "pain_points",
-  "main_wish",
-  "story",
-  "last_conversation_memory",
-  "partner_new_relationship",
-  "safety_concerns",
-  "relationship_duration",
-  "applicant_birth_year",
-  "applicant_gender",
-  "life_stage",
-  "partner_birth_year",
-  "email",
-];
 /* 배경 그림 → 같은 장면 루프 영상 */
 const LOOP: Record<string, string> = {
   [IMG.wait]: "/wolhwa/v4/wait.mp4",
@@ -63,29 +40,47 @@ const LOOP: Record<string, string> = {
   [IMG.night]: "/book/v3/night.mp4",
   [IMG.typing]: "/book/v3/typing.mp4",
 };
-const V2_STEPS: StepDef[] = ORDER.map((id) => STEPS.find((s) => s.id === id)).filter(Boolean) as StepDef[];
 
 /* 11/27 운영자 요청: 질문마다 월화 루프 영상 (wolhwa/v3 — 말하는 월화) */
 const V3 = (n: string) => ({ src: `/wolhwa/v3/${n}.mp4`, poster: `/wolhwa/v3/${n}.webp` });
-const FACE: Record<string, { src: string; poster: string }> = {
-  applicant_name: V3("greet"),
-  partner_name: V3("listen"),
-  relationship_type: V3("listen"),
-  breakup_elapsed: V3("explain"),
-  contact_status: V3("explain"),
-  breakup_initiator: V3("listen"),
-  last_conversation: V3("listen"),
-  current_emotion: V3("smile"),
-  pain_points: V3("listen"),
-  main_wish: V3("offer"),
-  story: V3("write"),
-  last_conversation_memory: V3("write"),
-  partner_new_relationship: V3("explain"),
-  safety_concerns: V3("explain"),
-  email: V3("smile"),
-};
-const FACE_DEFAULT = V3("explain");
 const MEET_FACE = V3("greet");
+
+/* 11/27 운영자 요청: 청월당처럼 한 화면에 문장형 선택칸 1~3개 ("지금은 [연애 상황 ▾] 이에요.")
+   질문·저장 필드는 /apply 와 같은 STEPS 그대로, 화면 묶음과 문장만 프로토타입용 */
+const STEP_BY_ID: Record<string, StepDef> = Object.fromEntries(STEPS.map((x) => [x.id, x]));
+const W = (n: string) => ({ src: `/book/v3/w-${n}.mp4`, poster: `/book/v3/w-${n}.webp` });
+type Group = { key: string; ids: string[]; q: string; face: { src: string; poster: string } };
+const GROUPS: Group[] = [
+  { key: "g_name", ids: ["applicant_name"], q: "저는 월화예요.\n당신을 뭐라고 불러드릴까요?", face: V3("greet") },
+  { key: "g_partner", ids: ["partner_name"], q: "{name}님, 그 사람은\n어떻게 불러드릴까요?", face: V3("listen") },
+  { key: "g_relation", ids: ["relationship_type", "relationship_duration"], q: "{partner}님과는\n어떤 사이였나요?", face: V3("explain") },
+  { key: "g_now", ids: ["breakup_elapsed", "contact_status", "breakup_initiator"], q: "지금 두 사람은\n어디쯤 와 있나요?", face: W("phone2") },
+  { key: "g_heart", ids: ["last_conversation", "current_emotion"], q: "마지막 대화와\n지금 마음을 알려 주세요.", face: V3("smile") },
+  { key: "g_pain", ids: ["pain_points"], q: "요즘 가장 마음을\n힘들게 하는 건 뭔가요?", face: W("mirror") },
+  { key: "g_wish", ids: ["main_wish"], q: "월화에게\n가장 알고 싶은 건 뭔가요?", face: V3("offer") },
+  { key: "g_story", ids: ["story"], q: "두 사람의 이야기를\n편하게 들려주세요.", face: V3("write") },
+  { key: "g_more", ids: ["last_conversation_memory"], q: "월화에게\n더 하고 싶은 말이 있나요?", face: W("reading") },
+  { key: "g_new", ids: ["partner_new_relationship"], q: "그 사람 곁에\n새로운 사람이 있나요?", face: V3("listen") },
+  { key: "g_safety", ids: ["safety_concerns"], q: "혹시 두 사람 사이에\n이런 일이 있었나요?", face: V3("explain") },
+  { key: "g_me", ids: ["applicant_birth_year", "applicant_gender", "life_stage"], q: "{name}님에 대해\n조금만 더 알려 주세요.", face: W("final") },
+  { key: "g_pyear", ids: ["partner_birth_year"], q: "{partner}님은\n몇 년생인가요?", face: V3("smile") },
+  { key: "g_email", ids: ["email"], q: "마지막이에요.\n결과를 받을 이메일을 남겨 주세요.", face: V3("greet") },
+];
+/* 문장형 선택칸: [앞말, 뒷말] */
+const SENT: Record<string, [string, string]> = {
+  relationship_type: ["두 사람은", "사이였어요."],
+  relationship_duration: ["함께한 시간은", "이에요."],
+  breakup_elapsed: ["멀어진 지", "됐어요."],
+  contact_status: ["지금 연락은", ""],
+  breakup_initiator: ["먼저 멀어지자고 한 건", ""],
+  last_conversation: ["마지막 대화는", ""],
+  current_emotion: ["떠올리면 먼저", ""],
+  main_wish: ["가장 알고 싶은 건", ""],
+  partner_new_relationship: ["그 사람 곁의 새 사람은", ""],
+  applicant_gender: ["저는", "이에요."],
+  life_stage: ["요즘 저는", ""],
+};
+
 
 /* 답을 들은 뒤 월화 한마디 (청월당 "지영? 예쁜 이름이네요" 자리) */
 const REACT: Record<string, string> = {
@@ -128,14 +123,21 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
     if (timer.current) window.clearTimeout(timer.current);
   }, []);
 
-  const steps = useMemo(
-    () => V2_STEPS.filter((s) => !s.visible || s.visible(app)),
+  const groups = useMemo(
+    () =>
+      GROUPS.map((g) => ({ ...g, steps: g.ids.map((id) => STEP_BY_ID[id]).filter((x) => x && (!x.visible || x.visible(app))) })).filter(
+        (g) => g.steps.length > 0
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [app.relationship_type]
   );
-  const total = steps.length;
+  const total = groups.length;
   const idx = Math.min(step, total - 1);
-  const cur = steps[idx];
+  const curG = groups[idx];
+  const cur = curG?.steps[0];
+  const curValid = !!curG && curG.steps.every((x) => x.valid(app));
+  const curOptional = !!curG && curG.steps.every((x) => x.optional);
+  const hasEmail = !!curG && curG.steps.some((x) => x.kind === "email");
 
   const name = app.applicant_name.trim() || "당신";
   const partner = app.partner_name.trim() || "그 사람";
@@ -153,7 +155,7 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
 
   /* 11/27 운영자 요청: 청월당처럼 월화의 말이 한 글자씩 타이핑되듯 나타남 (눌러서 건너뛰기) */
   const typedSource =
-    phase === "meet" ? MEET[meetIdx] : phase === "react" ? reactText : phase === "q" && cur ? fill(cur.question).replace(/\n/g, " ") : "";
+    phase === "meet" ? MEET[meetIdx] : phase === "react" ? reactText : phase === "q" && curG ? fill(curG.q) : "";
   const [typedN, setTypedN] = useState(0);
   useEffect(() => {
     setTypedN(0);
@@ -196,8 +198,8 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
 
 
   const next = () => {
-    if (!cur) return;
-    if (!cur.valid(app)) {
+    if (!curG) return;
+    if (!curValid) {
       setTried(true);
       return;
     }
@@ -205,9 +207,9 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
   };
   /* 검사 없이 다음으로 (하나 고르면 자동으로 넘어가는 질문용) */
   const advance = () => {
-    if (!cur) return;
+    if (!curG) return;
     setTried(false);
-    const r = REACT[cur.id];
+    const r = REACT[curG.steps[curG.steps.length - 1].id] ?? REACT[curG.steps[0].id];
     const go = () => {
       if (idx >= total - 1) setPhase("ritual");
       else {
@@ -225,10 +227,10 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
   advanceRef.current = advance;
   const back = () => {
     if (idx > 0) setStep(idx - 1);
-    else setPhase("meet");
+    else setPhase("cover");
   };
   const picked = (v: string) => {
-    if (!cur || !autoAdvances(cur, v)) return;
+    if (!curG || curG.steps.length !== 1 || !cur || !autoAdvances(cur, v)) return;
     timer.current = window.setTimeout(() => advanceRef.current(), 320);
   };
 
@@ -310,6 +312,8 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
         .v2-caret{display:inline-block;margin-left:1px;animation:v2c .8s steps(1) infinite;color:#ffb3c0}
         @keyframes v2c{50%{opacity:0}}
         .v2-dark-input input[type=text],.v2-dark-input input[type=email],.v2-dark-input input:not([type]){background:transparent!important;border:0!important;border-bottom:1px solid rgba(255,255,255,.35)!important;border-radius:0!important;padding-left:2px!important}
+        .v2-compact .flex-col{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important}
+        .v2-compact button{min-height:40px!important;padding:8px 12px!important;font-size:.8rem!important;border-radius:9999px!important;text-align:center!important;background:rgba(255,255,255,.08)!important}
         .v2-glow{animation:v2g 1.6s ease-in-out infinite}
         @keyframes v2g{0%,100%{filter:drop-shadow(0 0 4px #c8324a)}50%{filter:drop-shadow(0 0 14px #ff5a72)}}
       `}</style>
@@ -498,7 +502,7 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
 
       {/* 이동: 붉은 실을 따라 */}
       {phase === "travel" && (
-        <button type="button" onClick={() => setPhase("meet")} className="relative z-10 flex min-h-[100svh] w-full flex-col items-center justify-center px-8 text-center">
+        <button type="button" onClick={() => { setStep(0); setPhase("q"); }} className="relative z-10 flex min-h-[100svh] w-full flex-col items-center justify-center px-8 text-center">
           <p className="v2-fade font-display text-[1.35rem] leading-[1.9] text-ivory drop-shadow">
             보내지 못한 한 줄이<br />붉은 실을 따라 흘러가요.
           </p>
@@ -532,8 +536,8 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
       )}
 
       {/* ⑤ 월화가 한 질문씩 — 전체 화면 월화 루프 + 아래 검은 블러, 질문은 타이핑, 입력칸은 그 아래 */}
-      {(phase === "q" || phase === "react") && cur && (() => {
-        const face = FACE[cur.id] ?? FACE_DEFAULT;
+      {(phase === "q" || phase === "react") && curG && (() => {
+        const face = curG.face;
         return (
           <div className="absolute inset-0 z-10 flex flex-col">
             <video key={face.src} src={face.src} poster={face.poster} autoPlay muted loop playsInline className="v2-fade absolute inset-0 h-full w-full object-cover object-[50%_18%]" />
@@ -543,7 +547,7 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
               <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
                 <div className="h-full rounded-full bg-[#d2384f] transition-all" style={{ width: `${((idx + 1) / total) * 100}%` }} />
               </div>
-              {cur.optional && idx < total - 1 && (
+              {curOptional && idx < total - 1 && (
                 <button type="button" onClick={() => setStep(idx + 1)} className="text-[0.78rem] text-white/85 underline">건너뛰기</button>
               )}
             </div>
@@ -558,28 +562,36 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
               </button>
               {phase === "q" && (
                 <div className={`transition-opacity duration-300 ${typedDone ? "opacity-100" : "pointer-events-none opacity-0"}`}>
-                  {cur.sub && <p className="mt-2 whitespace-pre-line text-center text-[0.76rem] leading-[1.7] text-ivory/60">{fill(cur.sub)}</p>}
-                  <div className="v2-dark-input mt-5">
-                    <StepInput
-                      step={cur}
-                      app={app}
-                      setApp={setApp}
-                      fill={fill}
-                      onPicked={picked}
-                      onUnknown={() => {
-                        setApp((a) => cur.set(a, null));
-                        if (idx < total - 1) setStep(idx + 1);
-                      }}
-                    />
+                  {curG.steps.length === 1 && cur?.sub && <p className="mt-2 whitespace-pre-line text-center text-[0.76rem] leading-[1.7] text-ivory/60">{fill(cur.sub)}</p>}
+                  {curOptional && <p className="mt-2 text-center text-[0.72rem] text-ivory/50">* 답하지 않아도 다음으로 넘어갈 수 있어요.</p>}
+                  <div className="mt-5 space-y-3">
+                    {curG.steps.map((st) =>
+                      st.kind === "select" && SENT[st.id] ? (
+                        <SentenceSelect key={st.id} step={st} app={app} setApp={setApp} sent={SENT[st.id]} />
+                      ) : (
+                        <div key={st.id} className={`v2-dark-input ${st.kind === "multi" ? "v2-compact" : ""}`}>
+                          <StepInput
+                            step={st}
+                            app={app}
+                            setApp={setApp}
+                            fill={fill}
+                            onPicked={picked}
+                            onUnknown={() => {
+                              setApp((a) => st.set(a, null));
+                            }}
+                          />
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               )}
             </div>
             {phase === "q" && (
               <div className={`relative px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-2 transition-opacity duration-300 ${typedDone ? "opacity-100" : "pointer-events-none opacity-0"}`}>
-                {tried && !cur.valid(app) && (
+                {tried && !curValid && (
                   <p className="mb-2 text-center text-[0.76rem] text-[#ff8fa3]">
-                    {cur.kind === "email" ? (isValidEmail(app.email) ? "필수 확인 두 가지를 눌러 주세요." : "이메일 주소를 확인해 주세요.") : "답을 남겨 주시면 다음으로 넘어가요."}
+                    {hasEmail ? (isValidEmail(app.email) ? "필수 확인 두 가지를 눌러 주세요." : "이메일 주소를 확인해 주세요.") : "답을 남겨 주시면 다음으로 넘어가요."}
                   </p>
                 )}
                 <button type="button" onClick={next} className={btn}>
@@ -680,5 +692,53 @@ function DarkVeil({ strong = false }: { strong?: boolean }) {
       <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent ${strong ? "to-black/95" : "to-black/90"}`} />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[50%] bg-gradient-to-t from-black via-black/80 to-transparent" />
     </>
+  );
+}
+
+/* 청월당식 문장형 선택칸 — "지금은 [연애 상황 ▾] 이에요." (값·저장은 기존 STEPS 의 set 그대로) */
+function SentenceSelect({
+  step,
+  app,
+  setApp,
+  sent,
+}: {
+  step: StepDef;
+  app: RitualApplication;
+  setApp: React.Dispatch<React.SetStateAction<RitualApplication>>;
+  sent: [string, string];
+}) {
+  const v = String(step.get(app) ?? "");
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-[0.98rem] text-ivory/85">
+        {sent[0] && <span>{sent[0]}</span>}
+        <span className="relative">
+          <select
+            value={v}
+            onChange={(e) => setApp((a) => step.set(a, e.target.value))}
+            className={`h-11 appearance-none rounded-xl border border-white/15 bg-white/10 pl-4 pr-9 text-[0.95rem] backdrop-blur focus:outline-none ${v ? "text-ivory" : "text-ivory/45"}`}
+          >
+            <option value="" disabled>
+              선택해 주세요
+            </option>
+            {step.options?.map((o) => (
+              <option key={o.value} value={o.value} className="text-black">
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[0.7rem] text-ivory/60">▼</span>
+        </span>
+        {sent[1] && <span>{sent[1]}</span>}
+      </div>
+      {step.id === "relationship_type" && v === "other" && (
+        <input
+          value={app.relationship_type_other}
+          onChange={(e) => setApp((a) => ({ ...a, relationship_type_other: e.target.value }))}
+          placeholder="어떤 사이였는지 짧게 적어 주세요"
+          className="mx-auto mt-3 block h-11 w-full max-w-[320px] border-0 border-b border-white/35 bg-transparent px-1 text-center text-base text-ivory placeholder:text-ivory/40 focus:outline-none"
+        />
+      )}
+    </div>
   );
 }
