@@ -294,10 +294,12 @@ export default function EntryV2() {
       )}
       <div className="pointer-events-none absolute inset-0 z-[2] bg-gradient-to-b from-black/55 via-black/10 to-black/85" />
 
+      {phase !== "chat" && (<>
       <Link href="/home" className="absolute left-5 top-[calc(env(safe-area-inset-top)+1rem)] z-30 text-[0.82rem] tracking-[0.2em] text-gold/90">
         월하연 月下緣
       </Link>
       <span className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] z-30 rounded-full bg-black/50 px-2.5 py-1 text-[0.62rem] text-ivory/70">프로토타입</span>
+      </>)}
 
       {/* ① 표지 */}
       {phase === "cover" && (
@@ -386,6 +388,7 @@ export default function EntryV2() {
               </div>
             )}
           </div>
+          <p className="pb-2 text-center text-[0.66rem] text-[#4e5f6e]">예시 화면이에요 · 여기 쓴 한 줄은 실제로 보내지지 않아요</p>
           <div className="flex items-center gap-2 bg-white px-3 py-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]">
             <span className="flex h-8 w-8 items-center justify-center rounded-full text-[1.4rem] text-[#9a9a9a]">+</span>
             <input
@@ -403,7 +406,7 @@ export default function EntryV2() {
               전송
             </button>
           </div>
-          <p className="pointer-events-none absolute left-1/2 top-[calc(env(safe-area-inset-top)+3.4rem)] -translate-x-1/2 rounded-full bg-white/70 px-2.5 py-0.5 text-[0.62rem] text-[#556677]">예시 화면 · 실제로 보내지지 않아요</p>
+
         </div>
       )}
 
