@@ -9,6 +9,7 @@
  * 새 이미지 없이 기존 이미지만 사용. 지금 /apply 흐름은 건드리지 않음.
  */
 import BrandLogo from "@/components/BrandLogo";
+import { trackEvent } from "@/lib/analytics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { EMPTY_APPLICATION, isValidEmail, type RitualApplication } from "@/lib/ritual-types";
@@ -134,6 +135,30 @@ export default function EntryV2({ visitors = 0 }: { visitors?: number }) {
   const idx = Math.min(step, total - 1);
   const curG = groups[idx];
   const cur = curG?.steps[0];
+  /* 11/28: 메인이 이 화면으로 바뀐 뒤 퍼널 기록이 비어 있었음 → 관리자 통계와 같은 이름으로 남긴다
+     시작(apply_start) · 장면(v2_toon/v2_chat/v2_stop/v2_ritual) · 질문(각 질문 id) · 끝(apply_complete). 같은 기록은 한 번만. */
+  const sentRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const once = (k: string, fn: () => void) => {
+      if (sentRef.current.has(k)) return;
+      sentRef.current.add(k);
+      fn();
+    };
+    if (phase === "toon") {
+      once("start", () => {
+        try {
+          if (sessionStorage.getItem("wolhayeon_apply_started") === "1") return;
+          sessionStorage.setItem("wolhayeon_apply_started", "1");
+        } catch {
+          /* noop */
+        }
+        trackEvent("apply_start");
+      });
+    }
+    if (phase === "toon" || phase === "chat" || phase === "stop" || phase === "ritual") once(`v2_${phase}`, () => trackEvent("apply_step", { step: `v2_${phase}` }));
+    if (phase === "q" && curG) for (const st of curG.steps) once(`q_${st.id}`, () => trackEvent("apply_step", { step: st.id }));
+    if (phase === "load") once("complete", () => trackEvent("apply_complete"));
+  }, [phase, curG]);
   const curValid = !!curG && curG.steps.every((x) => x.valid(app));
   const curOptional = !!curG && curG.steps.every((x) => x.optional);
   const hasEmail = !!curG && curG.steps.some((x) => x.kind === "email");
