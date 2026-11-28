@@ -56,13 +56,15 @@ const HOSTS: Array<[RegExp, string]> = [
 /** 메타(페북·인스타) 광고로 들어온 유입인가: 출처가 메타이고, 인스타 프로필 링크(link_in_bio)가 아니며 캠페인/광고 이름이 붙은 것 */
 function isMetaAd(src?: string | null, campaign?: string | null, content?: string | null): boolean {
   if (!src || !/^(fb|facebook|ig|instagram|meta|an)$/i.test(src)) return false;
-  if (content === "link_in_bio" || campaign === "link_in_bio") return false;
+  /* 11/28: 프로필 링크(utm_campaign=bio)는 광고가 아님 */
+  if (content === "link_in_bio" || campaign === "link_in_bio" || /^(bio|profile|link_in_bio)$/i.test(campaign ?? "")) return false;
   return !!(campaign || content);
 }
 function label(src?: string | null, campaign?: string | null, content?: string | null, host?: string | null): string {
   if (src) {
     const s = /^(ig|instagram|insta)$/i.test(src) ? "인스타그램" : /^(fb|facebook)$/i.test(src) ? "페이스북" : src;
     if (content === "link_in_bio" || campaign === "link_in_bio") return `${s} · 프로필 링크`;
+    if (/^(bio|profile)$/i.test(campaign ?? "")) return `${s} · 프로필 링크${content ? ` · ${content}` : ""}`;
     return [isMetaAd(src, campaign, content) ? `메타 광고 (${s})` : s, campaign, content].filter(Boolean).join(" · ");
   }
   if (!host) return "직접 방문 (주소·북마크·앱 안 링크)";
