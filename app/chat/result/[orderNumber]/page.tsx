@@ -5,6 +5,7 @@ import { verifyChatToken, chatToken } from "@/lib/chat/auth";
 import { getChatOrder } from "@/lib/chat/store";
 import ChatAsk from "@/components/chat/ChatAsk";
 import AddToHome from "@/components/chat/AddToHome";
+import ResultTools from "@/components/chat/ResultTools";
 import { askLeft, askPayOrderId } from "@/lib/chat/ask";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,7 @@ export default async function ChatResultPage({
     <main className="fx-grain bg-[#0e0b0d] min-h-[100svh] px-5 pb-24 pt-10">
       <AddToHome />
       <ChatResultView o={o} r={r} orderNumber={orderNumber} bundleHref={bundleHref} />
+      <ResultTools />
       {/* 11/28: 리포트 뒤 월화에게 묻기 (무료 1 + 3번 4,900원) */}
       <ChatAsk
         orderNumber={orderNumber}
