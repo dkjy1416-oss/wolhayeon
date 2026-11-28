@@ -112,6 +112,10 @@ export interface ChatStats {
   unansweredHours: number | null; // 마지막이 내 메시지면 그 뒤 지난 시간 (파일 기준 마지막 시각까지가 아니라 지금까지)
   weeks: WeekStat[];
   turnWeek: string | null; // 상대 온도가 가장 크게 떨어진 주
+  /** 11/28 추가 (경쟁사 비교): 내가 보낸 뒤 상대 답이 가장 늦었던 때 */
+  longestWait?: { hours: number; at: number } | null;
+  /** 상대 메시지 평균 길이 — 낮(06~22시) / 밤(22~06시) */
+  partnerLenDayNight?: { day: number; night: number; nightMsgs: number } | null;
 }
 
 const FEEL = /(좋아|보고\s?싶|사랑|그리워|고마워|미안해|설레|ㅠㅠ|❤|♥|💕|😍)/g;
@@ -157,6 +161,8 @@ export function analyzeChat(msgs: Msg[], meName: string, now = Date.now()): Chat
     turnWeek: null,
   };
   const rep: { me: number[]; partner: number[] } = { me: [], partner: [] };
+  let wait: { hours: number; at: number } | null = null;
+  const pl = { day: 0, dayN: 0, night: 0, nightN: 0 };
   const repP: { t: number; v: number }[] = [];
   const len = { me: 0, partner: 0 };
   for (let i = 0; i < two.length; i++) {
@@ -166,6 +172,15 @@ export function analyzeChat(msgs: Msg[], meName: string, now = Date.now()): Chat
     const next = two[i + 1];
     s.msgs[k]++;
     len[k] += m.text.length;
+    if (k === "partner") {
+      const hh = new Date(m.t + 9 * 3600 * 1000).getUTCHours();
+      if (hh >= 22 || hh < 6) (pl.night += m.text.length), pl.nightN++;
+      else (pl.day += m.text.length), pl.dayN++;
+      if (prev && isMe(prev)) {
+        const h = (m.t - prev.t) / 3600000;
+        if (!wait || h > wait.hours) wait = { hours: h, at: prev.t };
+      }
+    }
     if (/\?|？/.test(m.text)) s.questions[k]++;
     s.feelingWords[k] += (m.text.match(FEEL) ?? []).length;
     if (MEET.test(m.text) && /\?|？|(자|래|까)(\s|$|[ㅋㅎ~!.])/.test(m.text.trim())) s.meetAsk[k]++;
@@ -188,6 +203,8 @@ export function analyzeChat(msgs: Msg[], meName: string, now = Date.now()): Chat
   s.partnerReplyEarly = median(repP.filter((x) => x.t < mid).map((x) => x.v));
   s.partnerReplyLate = median(repP.filter((x) => x.t >= mid).map((x) => x.v));
   s.avgLen = { me: Math.round(len.me / Math.max(1, s.msgs.me)), partner: Math.round(len.partner / Math.max(1, s.msgs.partner)) };
+  s.longestWait = wait ? { hours: Math.round((wait as { hours: number }).hours * 10) / 10, at: (wait as { at: number }).at } : null;
+  s.partnerLenDayNight = pl.dayN && pl.nightN ? { day: Math.round(pl.day / pl.dayN), night: Math.round(pl.night / pl.nightN), nightMsgs: pl.nightN } : null;
   if (s.lastFrom === "me") s.unansweredHours = Math.round((now - s.to) / 3600000);
 
   /* 주별 대화 온도: 메시지 비중·먼저 연락·답장 속도·질문/감정 표현을 섞은 상대 지표 (점수 아님) */
