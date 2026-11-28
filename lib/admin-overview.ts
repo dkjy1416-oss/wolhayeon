@@ -242,7 +242,7 @@ export async function getOverview(days: number): Promise<Overview> {
     sale("카톡 + 재회 (카톡 결제창)", chatPaid.filter((c) => c.product === "chat_bundle").map((c) => ({ amount: c.amount ?? 0 }))),
     sale("심층 리포트 (책)", bookPaidRows.map(amt)),
     /* 11/28: 카톡 리포트 뒤 '월화에게 묻기' 추가 결제 (3번 4,900원) */
-    sale("월화에게 묻기 (추가 질문)", chats.flatMap((c) => (c.ask_payments ?? []).filter((x) => x.at >= since).map((x) => ({ amount: x.amount })))),
+    sale("월화에게 묻기 (추가 질문)", chats.flatMap((c) => (c.ask_payments ?? []).filter((x) => x.at >= since && x.amount > 0).map((x) => ({ amount: x.amount })))),
   ];
 
   /* ---------- 유입 출처별 (결제까지) ---------- */
