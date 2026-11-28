@@ -3,6 +3,7 @@ import BrandLogo from "@/components/BrandLogo";
 import Link from "next/link";
 import InView from "@/components/fx/InView";
 import SplitWords from "@/components/fx/SplitWords";
+import ResultChapterNav from "@/components/chat/ResultChapterNav";
 import type { ChatOrder, ChatResult } from "@/lib/chat/types";
 
 const VIEW_DAYS = 30;
@@ -23,13 +24,14 @@ export default function ChatResultView({
   const h = "fx-kicker text-gold";
   const card = "fx-glass mt-3 rounded-2xl px-5 py-4";
   return (
-    <article className="mx-auto max-w-[620px]">
+    <article data-chat-result className="mx-auto max-w-[620px]">
       <div className="flex items-end gap-2">
         <BrandLogo size={20} />
         <span className="pb-[1px] text-[0.72rem] tracking-[0.15em] text-gold">카톡 대화 분석</span>
       </div>
       <SplitWords as="h1" className="font-display mt-3 block text-[1.85rem] font-black leading-[1.3]" wordClassName="fx-shine" text={r.type_label} />
       <p className="mt-3 text-[1rem] leading-[1.9] text-ivory">{r.summary}</p>
+      <ResultChapterNav />
 
       {r.overview && (
         <InView as="section" className={`reveal ${sec}`} threshold={0.1}>

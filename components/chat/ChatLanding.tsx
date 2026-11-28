@@ -389,6 +389,30 @@ export default function ChatLanding({
         </a>
       </section>
 
+      {/* 11/28 경쟁사 4곳 비교 후 추가: 'AI 채팅에 붙여넣는 것과 뭐가 달라요?' (사실만) */}
+      <section className="mx-auto mt-14 max-w-[560px] px-5">
+        <p className="fx-kicker text-[#e8b04a]">Why Wolhwa</p>
+        <SplitWords as="h2" className="font-display mt-3 block text-[1.5rem] font-bold leading-[1.4]" text={"AI 채팅에 몇 줄 붙여넣는 것과\n뭐가 달라요?"} />
+        <div className="fx-glass mt-5 overflow-hidden rounded-[24px]">
+          <div className="grid grid-cols-[1fr_1fr] border-b border-white/10 text-[0.78rem] font-semibold">
+            <p className="px-4 py-3 text-white/50">몇 줄 붙여넣기</p>
+            <p className="bg-[#e46b8a]/10 px-4 py-3 text-[#e46b8a]">월화 카톡 분석</p>
+          </div>
+          {[
+            ["내가 고른 몇 줄만 봐요", "대화 파일 전체를 날짜·시각까지 읽어요"],
+            ["느낌으로 답해요", "선톡·답장 시간·대화 지분을 숫자로 먼저 계산해요"],
+            ["근거가 안 보여요", "해석마다 실제 대화 문장을 붙여요"],
+            ["내 편을 들어주기 쉬워요", "내가 반복하는 말 습관과 피할 문장도 짚어요"],
+            ["창을 닫으면 끝이에요", "보낼 문장·반응별 행동까지 정리해 30일 동안 다시 열어요"],
+          ].map(([a, b]) => (
+            <div key={a} className="grid grid-cols-[1fr_1fr] border-b border-white/5 text-[0.82rem] leading-[1.6] last:border-0">
+              <p className="px-4 py-3 text-white/45">{a}</p>
+              <p className="bg-[#e46b8a]/[0.06] px-4 py-3 text-white/90">{b}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* 자주 묻는 질문 */}
       <section className="mx-auto mt-14 max-w-[560px] px-5">
         <p className="fx-kicker text-[#e8b04a]">FAQ</p>
