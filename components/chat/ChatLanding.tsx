@@ -287,8 +287,29 @@ export default function ChatLanding({
         </div>
       )}
 
+      {/* 11/28 경쟁사 비교 후 추가: 개인정보 약속 (실제 처리 방식 그대로 — lib/chat/store.ts deleteChatImages·sweepStaleChatImages) */}
+      <section className="mx-auto mt-14 max-w-[560px] px-5">
+        <p className="fx-kicker text-[#e8b04a]">Privacy</p>
+        <SplitWords as="h2" className="font-display mt-3 block text-[1.5rem] font-bold leading-[1.4]" text={"카톡, 올려도 괜찮을까요?\n월화가 지키는 세 가지"} />
+        <div className="mt-5 flex flex-col gap-2.5">
+          {[
+            ["01", "무료 숫자는 내 휴대폰 안에서", "답장 시간·먼저 연락한 횟수 같은 무료 분석은 휴대폰 안에서 계산해요. 서버로 보내지 않아요."],
+            ["02", "리포트가 나오면 원문은 바로 삭제", "결제 후 리포트를 만들 때만 대화를 읽고, 완성되면 대화 파일·캡처를 지워요. 결제하지 않으면 48시간 안에 지워져요."],
+            ["03", "상대 이름·연락처는 묻지 않아요", "대화 속 이름은 '그 사람' 같은 호칭으로 바꿔 읽어요. 상대에게는 어떤 알림도 가지 않아요."],
+          ].map(([n, t, d]) => (
+            <div key={n} className="fx-glass flex gap-4 rounded-2xl px-4 py-4">
+              <span className="font-display fx-rose text-[1.3rem] font-black leading-none">{n}</span>
+              <div>
+                <p className="text-[0.95rem] font-bold">{t}</p>
+                <p className="mt-1 text-[0.8rem] leading-[1.7] text-white/65">{d}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* 무엇을 보는지 */}
-      <section className="mx-auto max-w-[560px] px-5 pt-6">
+      <section className="mx-auto max-w-[560px] px-5 pt-14">
         <p className="fx-kicker text-[#e46b8a]">What we read</p>
         <SplitWords as="h2" className="font-display mt-3 block text-[1.6rem] font-bold leading-[1.35]" text={"대화에는 마음이 남아요.\n말보다 흐름에서 더 잘 보일 때도 있어요."} />
       </section>
@@ -347,6 +368,26 @@ export default function ChatLanding({
           </InView>
         </section>
       ))}
+
+      {/* 11/28 경쟁사 비교 후 추가: 리포트 목차 (ChatResultView 실제 섹션 순서) */}
+      <section className="mx-auto mt-14 max-w-[560px] px-5">
+        <p className="fx-kicker text-[#e46b8a]">Report</p>
+        <SplitWords as="h2" className="font-display mt-3 block text-[1.5rem] font-bold leading-[1.4]" text={"리포트에는\n이런 것들이 담겨요"} />
+        <div className="fx-glass mt-5 rounded-[24px] px-5 py-5">
+          <ol className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[0.84rem]">
+            {["월화의 총평", "두 사람의 대화 온도", "대화의 균형", "대화가 달라진 지점", "그 사람 마음의 가능성", "말과 행동의 온도차", "그 사람의 신호", "앞으로의 흐름", "내가 잘하고 있는 것", "내 말 습관", "지금 보내면 안 되는 말", "다음에 보낼 메시지", "반응별 다음 행동", "실천 계획"].map((t, i) => (
+              <li key={t} className="flex items-baseline gap-2">
+                <span className="w-5 shrink-0 text-right font-semibold tabular-nums text-[#e8b04a]">{i + 1}</span>
+                <span className="text-white/85">{t}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-4 border-t border-white/10 pt-3 text-[0.74rem] leading-[1.7] text-white/50">모든 해석은 실제 대화 문장을 근거로 붙여요. 상대 마음은 단정하지 않고 &lsquo;가능성&rsquo;으로만 말해요.</p>
+        </div>
+        <a href="/chat/sample" className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full border border-white/20 text-[0.88rem] text-white/80">
+          예시 리포트 전체 보기 ›
+        </a>
+      </section>
 
       {/* 자주 묻는 질문 */}
       <section className="mx-auto mt-14 max-w-[560px] px-5">
