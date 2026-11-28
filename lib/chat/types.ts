@@ -34,6 +34,8 @@ export interface ChatAsk {
   at: string;
   /** 11/28: 'persona' = 그 사람 말투로 쓴 가상 채팅 (질문권 1번에 6턴) */
   kind?: "persona";
+  /** 11/28: 운영자가 숨긴 기록 (손님 화면·횟수에서 빠짐, 데이터는 남김) */
+  hidden?: boolean;
   turns?: { me: string; them: string }[];
 }
 export const PERSONA_TURNS = 6;

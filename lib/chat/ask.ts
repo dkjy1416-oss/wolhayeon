@@ -13,7 +13,7 @@ import { sendOpsAlert } from "@/lib/ops-alert";
 import { ASK_FREE, ASK_PACK_COUNT, ASK_PACK_PRICE_KRW, ASK_PAY_RE, PERSONA_TURNS, type ChatAsk, type ChatOrder } from "@/lib/chat/types";
 
 export function askLeft(o: ChatOrder): number {
-  return Math.max(0, ASK_FREE + (o.ask_credits ?? 0) - (o.asks?.length ?? 0));
+  return Math.max(0, ASK_FREE + (o.ask_credits ?? 0) - (o.asks ?? []).filter((x) => !x.hidden).length);
 }
 
 const SYSTEM = `당신은 '월하연'의 상담 캐릭터 월화입니다. 손님은 카톡 대화 분석 리포트를 이미 받았고, 그 리포트를 읽은 뒤 궁금한 것을 묻습니다.
@@ -44,7 +44,7 @@ export async function askWolhwa(o: ChatOrder, q: string): Promise<string | null>
   if (!apiKey || !o.result) return null;
   const client = new Anthropic({ apiKey, maxRetries: 1 });
   const model = process.env.GEN_LIGHT_MODEL?.trim() || "claude-haiku-4-5";
-  const prev = (o.asks ?? []).filter((x) => x.kind !== "persona").slice(-3);
+  const prev = (o.asks ?? []).filter((x) => x.kind !== "persona" && !x.hidden).slice(-3);
   const messages: Anthropic.MessageParam[] = [];
   prev.forEach((x, i) => {
     messages.push({ role: "user", content: i === 0 ? `${context(o)}\n\n[질문]\n${x.q}` : x.q });
@@ -106,7 +106,7 @@ export async function askPersona(o: ChatOrder, msg: string, turns: { me: string;
 export function openPersona(o: ChatOrder): number {
   const asks = o.asks ?? [];
   const i = asks.length - 1;
-  return i >= 0 && asks[i].kind === "persona" && (asks[i].turns?.length ?? 0) < PERSONA_TURNS ? i : -1;
+  return i >= 0 && asks[i].kind === "persona" && !asks[i].hidden && (asks[i].turns?.length ?? 0) < PERSONA_TURNS ? i : -1;
 }
 
 export async function savePersonaTurn(orderNumber: string, turn: { me: string; them: string }): Promise<ChatOrder | null> {
