@@ -20,6 +20,9 @@ const EVENTS = new Set([
   "chat_start",
   "chat_form",
   "chat_share",
+  /* 11/28 상황 질문 · 월화에게 묻기 */
+  "chat_ctx",
+  "chat_ask",
 ]);
 const ORDER_RE = /^WH-\d{8}-[A-Z0-9]{5}$/;
 const BOT_RE = /bot|crawl|spider|slurp|preview|facebookexternalhit|kakaotalk-scrap|headless|lighthouse/i;
