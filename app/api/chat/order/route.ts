@@ -3,7 +3,7 @@
  * body: { answers, name, email, birthYear, guardianOk, marketingOk, product, mySide, partnerLabel, utm }
  */
 import { NextResponse, after } from "next/server";
-import { CHAT_QUESTIONS, freeChatType } from "@/lib/chat/questions";
+import { CHAT_QUESTIONS, ALL_CHAT_QUESTIONS, freeChatType } from "@/lib/chat/questions";
 import { CHAT_PRODUCTS, type ChatOrder, type ChatProduct } from "@/lib/chat/types";
 import { chatOrderNumber, saveChatOrder, sweepStaleChatImages } from "@/lib/chat/store";
 import { chatToken } from "@/lib/chat/auth";
@@ -20,12 +20,12 @@ export async function POST(request: Request) {
 
   const raw = (b.answers ?? {}) as Record<string, unknown>;
   const answers: Record<string, string> = {};
-  for (const q of CHAT_QUESTIONS) {
+  for (const q of ALL_CHAT_QUESTIONS) {
     const v = raw[q.id];
     if (typeof v === "string" && q.options.some((o) => o.v === v)) answers[q.id] = v;
   }
   const source: "file" | "images" = b.source === "file" ? "file" : "images";
-  if (source === "images" && Object.keys(answers).length < CHAT_QUESTIONS.length)
+  if (source === "images" && CHAT_QUESTIONS.some((q) => !answers[q.id]))
     return NextResponse.json({ ok: false, message: "질문에 모두 답해 주세요." }, { status: 400 });
 
   const email = clip(b.email, 120).toLowerCase();
