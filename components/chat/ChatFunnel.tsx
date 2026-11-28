@@ -118,6 +118,9 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
 
   const submit = async () => {
     setErr(null);
+    /* 11/28: 서버까지 가기 전에 빠진 칸을 바로 알려 줌 */
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setErr("결과 받을 이메일을 확인해 주세요.");
+    if (!birthYear) return setErr("출생연도를 골라 주세요.");
     if (!agree) return setErr("안내 사항에 동의해 주세요.");
     if (under14) return setErr("만 14세 미만은 결제할 수 없어요.");
     if (minor && !guardianOk) return setErr("보호자 동의를 확인해 주세요.");
@@ -414,19 +417,19 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
       ) : (
         <div className={`${card} mt-6 flex flex-col gap-3`}>
           <label className="text-[0.82rem] text-ivory-dim">
-            결과에서 불러 드릴 이름
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={20} className="mt-1 h-12 w-full rounded-xl border border-gold-dim bg-ink px-3 text-ivory" />
+            결과에서 불러 드릴 이름 (선택 · 별명도 좋아요)
+            <input value={name} autoComplete="nickname" onChange={(e) => setName(e.target.value)} maxLength={20} className="mt-1 h-12 w-full rounded-xl border border-gold-dim bg-ink px-3 text-ivory" />
           </label>
           <label className="text-[0.82rem] text-ivory-dim">
             상대를 부를 호칭 (실명 대신, 예: 그 사람 · 그 애 · J)
             <input value={partnerLabel} onChange={(e) => setPartnerLabel(e.target.value)} maxLength={12} placeholder="그 사람" className="mt-1 h-12 w-full rounded-xl border border-gold-dim bg-ink px-3 text-ivory" />
           </label>
           <label className="text-[0.82rem] text-ivory-dim">
-            결과 받을 이메일
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-gold-dim bg-ink px-3 text-ivory" />
+            결과 받을 이메일 (결과 링크를 보내 드려요)
+            <input type="email" inputMode="email" autoComplete="email" placeholder="example@naver.com" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-gold-dim bg-ink px-3 text-ivory" />
           </label>
           <label className="text-[0.82rem] text-ivory-dim">
-            출생연도
+            출생연도 (만 14세 이상 확인용)
             <select value={birthYear} onChange={(e) => setBirthYear(e.target.value)} className="mt-1 h-12 w-full rounded-xl border border-gold-dim bg-ink px-3 text-ivory">
               <option value="">선택해 주세요</option>
               {Array.from({ length: 60 }, (_, i) => thisYear - 10 - i).map((y) => (

@@ -267,7 +267,39 @@ export function StatsPreview({ s, partnerLabel = "그 사람" }: { s: ChatStats;
       <p className="mt-1 text-[0.82rem] text-ivory-dim">
         {d(s.from)} ~ {d(s.to)}
       </p>
-      <InView className={`reveal ${card} mt-5 text-ivory`}>
+      {/* 11/28 경쟁사 비교 후 추가: 한눈에 보이는 '대화 지분' */}
+      {(() => {
+        const me = Math.round((s.msgs.me / Math.max(1, s.msgs.me + s.msgs.partner)) * 100);
+        return (
+          <InView className={`reveal ${card} mt-5 text-ivory`}>
+            <p className="text-[0.84rem] font-semibold">이 대화, 누가 더 채웠을까</p>
+            <p className="mt-2 flex items-end gap-2">
+              <span className="font-display rounded-md bg-[#fee500] px-2.5 py-0.5 text-[2.6rem] font-black leading-none text-[#1a1215]">
+                <CountUp value={me} />
+                <span className="text-[1.2rem]">%</span>
+              </span>
+              <span className="pb-1 text-[0.8rem] text-ivory-dim">가 내 메시지예요</span>
+            </p>
+            {[
+              ["나", me, "bg-[#fee500]"],
+              [partnerLabel, 100 - me, "bg-[#e46b8a]"],
+            ].map(([k, v, c]) => (
+              <div key={k as string} className="mt-2.5 flex items-center gap-3 text-[0.8rem]">
+                <span className="w-14 shrink-0 truncate text-ivory-dim">{k}</span>
+                <div className="h-2.5 flex-1 rounded-full bg-white/10">
+                  <div className={`fx-bar h-full rounded-full ${c}`} style={{ width: `${v}%` }} />
+                </div>
+                <span className="w-9 text-right tabular-nums">{v}%</span>
+              </div>
+            ))}
+            <p className="mt-2.5 text-[0.78rem] leading-[1.6] text-ivory-dim">
+              나 {s.msgs.me.toLocaleString()}개 · {partnerLabel} {s.msgs.partner.toLocaleString()}개. 비율은 마음의 크기가 아니라 말을 보내는 습관을 보여줘요.
+            </p>
+          </InView>
+        );
+      })()}
+
+      <InView className={`reveal ${card} mt-3 text-ivory`}>
         <p className="mb-2 text-[0.84rem] font-semibold">주별 대화 온도</p>
         <TempChart weeks={s.weeks} partnerLabel={partnerLabel} />
         <p className="mt-2 text-[0.8rem] leading-[1.6] text-ivory-dim">
@@ -281,6 +313,25 @@ export function StatsPreview({ s, partnerLabel = "그 사람" }: { s: ChatStats;
         {vs("'다음에·언젠가'", `${s.vague.me}회`, `${s.vague.partner}회`)}
         {vs("좋아·보고 싶어 같은 감정 표현", `${s.feelingWords.me}회`, `${s.feelingWords.partner}회`)}
         {vs("대화를 마지막으로 남긴 쪽", `${s.ends.me}회`, `${s.ends.partner}회`)}
+        {s.longestWait && s.longestWait.hours >= 1 && (
+          <InView className={`reveal ${card}`}>
+            <p className="text-[0.78rem] text-ivory-dim">내가 보낸 뒤 가장 오래 기다린 답장</p>
+            <p className="font-display mt-1 text-[1.5rem] font-bold text-[#e46b8a]">{fmtMin(Math.round(s.longestWait.hours * 60))}</p>
+            <p className="mt-1 text-[0.78rem] leading-[1.6] text-ivory-dim">{d(s.longestWait.at)}에 보낸 메시지 · 그 시기에 무슨 일이 있었는지는 리포트에서 대화로 짚어 드려요.</p>
+          </InView>
+        )}
+        {s.partnerLenDayNight && s.partnerLenDayNight.nightMsgs >= 5 && (
+          <InView className={`reveal ${card}`}>
+            <p className="text-[0.78rem] text-ivory-dim">{partnerLabel}의 메시지 길이 · 낮 vs 밤(22시~6시)</p>
+            <p className="mt-1 flex items-baseline gap-3 text-ivory">
+              <span className="text-[0.82rem]">낮 {num(s.partnerLenDayNight.day, "font-display text-[1.5rem] font-bold text-[#e8b04a]")}자</span>
+              <span className="text-[0.82rem]">밤 {num(s.partnerLenDayNight.night, "font-display text-[1.5rem] font-bold text-[#e46b8a]")}자</span>
+            </p>
+            <p className="mt-1 text-[0.78rem] leading-[1.6] text-ivory-dim">
+              {s.partnerLenDayNight.night > s.partnerLenDayNight.day * 1.3 ? "밤에 말이 더 길어지는 편이에요." : s.partnerLenDayNight.day > s.partnerLenDayNight.night * 1.3 ? "낮에 말이 더 긴 편이에요." : "시간대에 따라 길이 차이는 크지 않아요."}
+            </p>
+          </InView>
+        )}
       </div>
       {s.lastFrom === "me" && (
         <p className="mt-3 rounded-2xl bg-[#e46b8a]/10 px-5 py-3 text-[0.86rem] leading-[1.7] text-ivory">
