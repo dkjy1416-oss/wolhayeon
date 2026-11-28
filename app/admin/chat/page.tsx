@@ -85,6 +85,22 @@ export default async function AdminChatPage() {
                 </button>
               </form>
             )}
+            {(r.asks ?? []).map((a, i) => (
+              <form key={i} action="/api/admin/chat/credits" method="POST" className="mt-1 flex flex-wrap items-center gap-2 text-[0.74rem]">
+                <span className={a.hidden ? "line-through opacity-50" : ""}>
+                  {i + 1}. {a.kind === "persona" ? `말투 연습 ${a.turns?.length ?? 0}턴` : `질문: ${a.q.slice(0, 30)}`} · {kst(a.at)}
+                </span>
+                {!a.hidden && (
+                  <>
+                    <input type="hidden" name="orderNumber" value={r.order_number} />
+                    <input type="hidden" name="hide" value={i} />
+                    <button type="submit" className="rounded-full border border-white/20 px-2 py-0.5 text-ivory-dim">
+                      숨기기(운영자 테스트)
+                    </button>
+                  </>
+                )}
+              </form>
+            ))}
           </li>
         ))}
       </ul>
