@@ -134,34 +134,27 @@ export default function OverviewBoard({ o }: { o: Overview }) {
 
       {/* 유입 출처 */}
       <h2 className="font-display mt-7 text-[1rem] font-semibold">어디서 들어왔나 (결제까지)</h2>
-      <div className="mt-3 overflow-x-auto rounded-xl border border-gold-dim/25 bg-ink-soft/50">
-        <table className="w-full min-w-[640px] text-[0.8rem]">
-          <thead>
-            <tr className="text-left text-[0.7rem] text-ivory-dim">
-              <th className="px-4 py-2 font-normal">출처</th>
-              <th className="px-3 py-2 text-right font-normal">방문자</th>
-              <th className="px-3 py-2 text-right font-normal">재회 시작</th>
-              <th className="px-3 py-2 text-right font-normal">카톡 시작</th>
-              <th className="px-3 py-2 text-right font-normal">결제</th>
-              <th className="px-3 py-2 text-right font-normal">매출</th>
-            </tr>
-          </thead>
-          <tbody>
-            {o.sources.map((r) => (
-              <tr key={r.label} className={`border-t border-gold-dim/15 ${r.ad ? "bg-[#4f6bed]/10" : ""}`}>
-                <td className="max-w-[260px] px-4 py-2">
-                  {r.ad && <span className="mr-1.5 rounded bg-[#4f6bed] px-1.5 py-0.5 text-[0.62rem] font-bold text-white">광고</span>}
-                  <span className="break-all">{r.label}</span>
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums">{r.visitors}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{r.ritualStart}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{r.chatStart}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{r.paid}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{won(r.revenue)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* 11/28: 휴대폰에서 표가 잘려 방문자만 보이던 문제 → 한 줄 카드로 (결제가 있는 출처를 위로) */}
+      <div className="mt-3 overflow-hidden rounded-xl border border-gold-dim/25 bg-ink-soft/50">
+        {[...o.sources]
+          .sort((a, b) => b.revenue - a.revenue || b.paid - a.paid || b.visitors - a.visitors)
+          .map((r) => (
+            <div key={r.label} className={`border-t border-gold-dim/15 px-4 py-2.5 first:border-0 ${r.ad ? "bg-[#4f6bed]/10" : ""}`}>
+              <p className="text-[0.8rem] leading-snug">
+                {r.ad && <span className="mr-1.5 rounded bg-[#4f6bed] px-1.5 py-0.5 text-[0.62rem] font-bold text-white">광고</span>}
+                <span className="break-all">{r.label}</span>
+              </p>
+              <p className="mt-1 flex flex-wrap gap-x-3 text-[0.74rem] tabular-nums text-ivory-dim">
+                <span>방문 <b className="text-ivory">{r.visitors}</b></span>
+                <span>재회 시작 <b className="text-ivory">{r.ritualStart}</b></span>
+                <span>카톡 시작 <b className="text-ivory">{r.chatStart}</b></span>
+                <span className={r.paid ? "text-[#7fd6a2]" : ""}>
+                  결제 <b>{r.paid}</b>
+                  {r.paid > 0 && ` · ${won(r.revenue)}`}
+                </span>
+              </p>
+            </div>
+          ))}
       </div>
       <p className="mt-2 text-[0.72rem] text-ivory-dim">
         더 자세한 단계별 이탈·나이·상황별 분석은{" "}
