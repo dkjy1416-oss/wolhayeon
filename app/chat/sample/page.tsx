@@ -9,7 +9,7 @@ import type { ChatOrder, ChatResult } from "@/lib/chat/types";
 
 export const metadata: Metadata = { title: "카톡 분석 결과 예시 | 월하연 月下緣" };
 /* 누적 숫자는 1시간 캐시 */
-export const revalidate = 3600;
+export const dynamic = "force-dynamic"; /* 11/28: ?track=ex 예시 전환 */
 
 /* 가상 대화로 만든 예시 결과 — 실제 손님 결과가 아님 */
 const R: ChatResult = {
@@ -84,6 +84,73 @@ const R: ChatResult = {
 
 const O = { partner_label: "그 사람", name: "", product: "chat" } as unknown as ChatOrder;
 
+/* 11/28 두 갈래: '이미 헤어진 사이' 예시 (가상 대화) — 재회를 단정하지 않고 연락 기준·보낼 문장 중심 */
+const R_EX: ChatResult = {
+  summary: "끝난 이유는 마음의 크기보다 '서운함을 말하는 방식'에 가까웠어요. 지금은 연락보다 내 기준을 먼저 세울 때예요.",
+  type_label: "서운함이 쌓여 닫힌 대화",
+  temperature: { me: 72, partner: 41, note: "헤어지기 전 석 달의 대화로 본 상대적인 온도예요. 점수가 아니라 흐름을 보는 지표예요." },
+  balance: {
+    first_contact: "헤어지기 전 석 달, 먼저 말을 건 건 나 24번, 그 사람 11번이에요.",
+    length: "다툰 날 내 메시지는 평소의 3배 길었고, 그 사람 답은 평소보다 짧았어요.",
+    reply_speed: "그 사람 답장은 평소 20분 안팎 → 다툰 다음 날에는 평균 9시간이었어요.",
+  },
+  turning_points: [
+    { when: "7/3", what: "“또 시작이네”라는 말이 처음 나왔어요. 이후 다툼 때마다 같은 말이 4번 반복됐어요." },
+    { when: "8/19", what: "“우리 좀 쉬자”가 나온 날이에요. 그 뒤 일주일 동안 대화가 하루 평균 3개로 줄었어요." },
+  ],
+  partner_signals: {
+    positive: ["헤어진 뒤에도 생일에 짧은 축하 메시지가 왔어요.", "마지막 대화에서 “고마웠어”를 먼저 말했어요."],
+    caution: ["헤어진 뒤 먼저 연락한 적은 생일 1번뿐이에요.", "다시 만나자는 말에는 두 번 모두 답을 미뤘어요."],
+  },
+  my_patterns: [
+    { pattern: "서운함을 한꺼번에 긴 메시지로 보내기", why_it_hurts: "내용이 맞아도 상대에게는 '목록'처럼 도착해 방어하게 만들어요.", instead: "한 번에 한 가지만, 한두 문장으로." },
+    { pattern: "답이 없으면 같은 얘기를 다시 꺼내기", why_it_hurts: "대화가 늘 같은 자리로 돌아가 상대가 지치기 쉬워요.", instead: "답이 없으면 그날은 멈추고, 다음 대화는 다른 주제로." },
+  ],
+  avoid_messages: [
+    { text: "우리 다시 만나면 안 돼? 나 진짜 바뀔게", why: "결정을 바로 요구하는 문장이라, 지금은 거절을 부르기 쉬워요." },
+    { text: "잘 지내? 나는 아직도 힘들어", why: "안부처럼 보여도 상대에게 책임을 넘기는 말로 읽혀요." },
+  ],
+  next_messages: [
+    { text: "요즘 날씨 추워졌더라, 감기 조심해", when: "마지막 대화 뒤 최소 3~4주, 평일 저녁", intent: "답을 요구하지 않는 안부 한 줄", likely_response: "짧은 답이 오거나 답이 없을 수 있어요. 둘 다 괜찮은 문장이에요." },
+    { text: "그때 같이 갔던 식당 문 닫는대, 생각나서", when: "1번에 답이 온 뒤 1~2주", intent: "좋았던 기억을 가볍게 꺼내기", likely_response: "추억에 대한 짧은 대화로 이어질 가능성이 있어요." },
+    { text: "편할 때 커피 한 잔 할래? 아니면 괜찮아", when: "그 사람이 먼저 말을 이어 온 뒤", intent: "거절해도 부담 없는 제안", likely_response: "바로 확답보다 '나중에'가 올 수 있어요. 그때는 더 묻지 않아요." },
+  ],
+  plan: [
+    { period: "오늘~2주", actions: ["먼저 연락하지 않기", "SNS 확인 줄이기", "서운했던 일을 메모장에 정리하기"] },
+    { period: "3~4주", actions: ["보낼지 말지 내 기준 정하기", "보낸다면 1번 한 줄만"] },
+    { period: "그 뒤", actions: ["답이 오면 같은 온도로 짧게", "답이 없으면 그 자체를 지금의 답으로 받아들이기"] },
+  ],
+  closing: "다시 만날지보다, 다시 연락하더라도 같은 자리로 돌아가지 않는 게 먼저예요. 어느 쪽을 고르든 당신의 하루가 무너지지 않는 쪽으로 가요.",
+  overview:
+    "두 사람은 처음 반년 동안 하루도 빠짐없이 대화했어요. 7월부터 다툼의 패턴이 생겼는데, 내가 서운함을 긴 메시지로 보내면 그 사람은 짧게 답하거나 대화를 멈추는 흐름이 반복됐어요. 헤어짐은 한 번의 사건보다 이 순환이 쌓인 결과에 가까워요.",
+  partner_mind: {
+    reading:
+      "대화에서 보이는 그 사람은 마음이 완전히 정리됐다기보다, 같은 다툼이 반복되는 데 지친 쪽에 가까워요. 생일 축하와 '고마웠어'는 좋은 기억이 남아 있을 가능성을 보여 주지만, 다시 만나자는 말에 답을 미룬 건 지금은 결정할 준비가 안 됐다는 신호일 수 있어요.",
+    clues: [
+      { quote: "또 시작이네", meaning: "다툼의 내용보다 '같은 방식이 반복되는 것'에 지쳤다는 표현일 가능성이 커요." },
+      { quote: "우리 좀 쉬자", meaning: "끝내자는 말 대신 고른 표현이에요. 그때는 관계보다 다툼을 멈추고 싶었던 것으로 보여요." },
+      { quote: "고마웠어", meaning: "마지막을 좋은 말로 닫고 싶었던 마음이 보여요. 다시 만나자는 뜻으로 읽기는 어려워요." },
+    ],
+  },
+  say_vs_do: [
+    { says: "“나중에 얘기하자”를 3번 말했어요", does: "그 ‘나중’이 실제로 온 적은 없어요", gap: "대화를 피하고 싶은 마음이 말보다 컸을 수 있어요." },
+  ],
+  future_flow: {
+    now_stage: "연락이 끊긴 지 한 달 남짓 — 서로 거리를 두는 정리 단계예요.",
+    paths: [
+      { condition: "지금 긴 메시지로 마음을 전하면", outcome: "예전 다툼과 같은 자리로 돌아갈 가능성이 커요." },
+      { condition: "3~4주 뒤 답하기 쉬운 한 줄로 안부를 전하면", outcome: "짧게라도 대화가 다시 열릴 여지가 있어요. 열리지 않아도 내가 잃는 것은 적어요." },
+      { condition: "연락하지 않고 내 일상을 먼저 세우면", outcome: "다시 연락하든 안 하든, 같은 방식으로 다투지 않을 준비가 돼요." },
+    ],
+  },
+  my_strengths: ["다툰 뒤에도 먼저 사과한 날이 많아요 — 관계를 지키려는 힘이 있었어요.", "그 사람의 일정과 컨디션을 잘 챙겼어요."],
+  reply_guide: {
+    warm: "같은 온도로 한두 번 답하고 대화를 길게 끌지 않아요. 지난 다툼 얘기는 꺼내지 않아요.",
+    short: "더 묻지 않고 “응 잘 지내!”로 마무리해요. 다음 연락은 최소 2주 뒤로.",
+    none: "다시 보내지 않아요. 그 자체가 지금의 답이에요. 내 하루와 마음을 돌보는 쪽으로 돌아와요.",
+  },
+};
+
 /* 11/23 운영자 요청: 결과 예시를 본 손님이 '이걸 받으려면' 바로 결제 흐름으로 — 받는 것 · 다른 점 · 누적 숫자 · 결제로 가는 버튼 */
 const START = "/chat?start=file&utm_source=site&utm_medium=sample&utm_content=chat_sample";
 
@@ -104,15 +171,20 @@ const COMPARE: Array<[string, string, string]> = [
   ["무엇을 받나요", "시기와 운 중심의 이야기", "보낼 메시지 3개 · 반응별 대응 · 2주 계획"],
 ];
 
-export default async function ChatSamplePage() {
+export default async function ChatSamplePage({ searchParams }: { searchParams: Promise<{ track?: string }> }) {
+  const ex = (await searchParams).track === "ex";
   const totals = await getSiteTotals().catch(() => null);
   const customers = totals?.visitors ?? 0;
   return (
     <main className="fx-grain bg-[#0e0b0d] min-h-[100svh] px-5 pb-32 pt-10">
       <div className="mx-auto mb-6 max-w-[620px] rounded-xl border border-burgundy/40 bg-[#e46b8a]/10 px-4 py-3 text-[0.82rem] leading-[1.7] text-ivory">
-        <b>결과 예시</b> — 가상의 대화로 만든 예시예요. 실제 결과는 올려 주신 대화를 근거로 매번 새로 써요.
+        <b>결과 예시 · {ex ? "이미 헤어진 사이" : "아직 이어지는 사이"}</b> — 가상의 대화로 만든 예시예요. 실제 결과는 올려 주신 대화를 근거로 매번 새로 써요.
+        <span className="mt-2 flex gap-2">
+          <Link href="/chat/sample" className={`rounded-full border px-3 py-1 text-[0.76rem] ${ex ? "border-white/20 text-ivory-dim" : "border-[#e46b8a] text-ivory"}`}>아직 이어지는 사이</Link>
+          <Link href="/chat/sample?track=ex" className={`rounded-full border px-3 py-1 text-[0.76rem] ${ex ? "border-[#e46b8a] text-ivory" : "border-white/20 text-ivory-dim"}`}>이미 헤어진 사이</Link>
+        </span>
       </div>
-      <ChatResultView o={O} r={R} orderNumber="예시" bundleHref={null} />
+      <ChatResultView o={O} r={ex ? R_EX : R} orderNumber="예시" bundleHref={null} />
 
       {/* ① 이 리포트로 받는 것 */}
       <section className="mx-auto mt-14 max-w-[620px]">
@@ -175,7 +247,7 @@ export default async function ChatSamplePage() {
           마음에 들면 그다음에 리포트를 받으면 돼요.
         </p>
         <Link
-          href={START}
+          href={ex ? START + "&track=ex" : START}
           className="fx-sheen mt-5 flex min-h-14 w-full items-center justify-center rounded-full bg-[#e46b8a] px-5 text-[1rem] font-bold text-white shadow-[0_0_40px_rgba(228,107,138,0.35)] active:opacity-85"
         >
           내 카톡으로 이 리포트 받기 · {CHAT_PRICE_KRW.toLocaleString()}원
@@ -184,7 +256,7 @@ export default async function ChatSamplePage() {
           재회 분석까지 함께 받으면 {CHAT_BUNDLE_PRICE_KRW.toLocaleString()}원 · 1회 결제 · 정기결제 없음 · 결과 열기 전 7일 안 전액 환불
         </p>
       </div>
-      <ChatSampleSticky href={START} label={`내 카톡으로 이 리포트 받기 · ${CHAT_PRICE_KRW.toLocaleString()}원`} customers={customers} />
+      <ChatSampleSticky href={ex ? START + "&track=ex" : START} label={`내 카톡으로 이 리포트 받기 · ${CHAT_PRICE_KRW.toLocaleString()}원`} customers={customers} />
     </main>
   );
 }
