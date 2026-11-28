@@ -10,7 +10,7 @@ import { ALL_CHAT_QUESTIONS } from "@/lib/chat/questions";
 import { confirmTossPayment, getTossPayment } from "@/lib/toss";
 import { getChatOrder, updateChatOrder } from "@/lib/chat/store";
 import { sendOpsAlert } from "@/lib/ops-alert";
-import { ASK_FREE, ASK_PACK_COUNT, ASK_PACK_PRICE_KRW, ASK_PAY_RE, type ChatAsk, type ChatOrder } from "@/lib/chat/types";
+import { ASK_FREE, ASK_PACK_COUNT, ASK_PACK_PRICE_KRW, ASK_PAY_RE, PERSONA_TURNS, type ChatAsk, type ChatOrder } from "@/lib/chat/types";
 
 export function askLeft(o: ChatOrder): number {
   return Math.max(0, ASK_FREE + (o.ask_credits ?? 0) - (o.asks?.length ?? 0));
@@ -44,7 +44,7 @@ export async function askWolhwa(o: ChatOrder, q: string): Promise<string | null>
   if (!apiKey || !o.result) return null;
   const client = new Anthropic({ apiKey, maxRetries: 1 });
   const model = process.env.GEN_LIGHT_MODEL?.trim() || "claude-haiku-4-5";
-  const prev = (o.asks ?? []).slice(-3);
+  const prev = (o.asks ?? []).filter((x) => x.kind !== "persona").slice(-3);
   const messages: Anthropic.MessageParam[] = [];
   prev.forEach((x, i) => {
     messages.push({ role: "user", content: i === 0 ? `${context(o)}\n\n[질문]\n${x.q}` : x.q });
@@ -63,6 +63,64 @@ export async function askWolhwa(o: ChatOrder, q: string): Promise<string | null>
   } catch {
     return null;
   }
+}
+
+const PERSONA_SYSTEM = (partner: string) => `지금부터 당신은 '${partner}'의 카톡 말투를 흉내 내는 연습 상대입니다. 손님이 ${partner}에게 보내 보고 싶은 메시지를 보내면, [리포트]에 나온 ${partner}의 대화 습관(답장 길이, 말끝, 이모티콘, 답장 온도, 자주 쓰는 말, 피하는 주제)에 맞춰 ${partner}처럼 카톡 답장을 씁니다.
+
+규칙
+- 카톡 답장처럼 짧게. 보통 1~3줄, 리포트에서 단답이 많은 사람이면 더 짧게. 여러 말풍선이면 줄바꿈으로 나눔.
+- 리포트에 근거한 말투와 반응만 씁니다. 리포트에 없는 사실(새 약속, 새 사건, 다른 사람)을 지어내지 않습니다.
+- 리포트에서 확인되지 않은 고백·재회 약속·확답은 하지 않습니다. 애매하면 ${partner}의 평소 패턴대로 애매하게 답합니다.
+- 손님을 비하하거나 상처 주는 말, 성적인 말, 위협은 쓰지 않습니다.
+- 손님이 크게 힘들어 보이면 연습을 멈추고 "(월화) 잠깐 쉬어 가요."로 시작해 마음을 살피는 한두 문장을 씁니다.
+- 설명·해설·따옴표 없이 답장 문장만 씁니다.`;
+
+/** 그 사람 말투 가상 채팅: 한 세션(질문권 1번) = 최대 PERSONA_TURNS 턴 */
+export async function askPersona(o: ChatOrder, msg: string, turns: { me: string; them: string }[]): Promise<string | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey || !o.result) return null;
+  const partner = o.partner_label || "그 사람";
+  const client = new Anthropic({ apiKey, maxRetries: 1 });
+  const model = process.env.GEN_LIGHT_MODEL?.trim() || "claude-haiku-4-5";
+  const messages: Anthropic.MessageParam[] = [];
+  turns.forEach((t, i) => {
+    messages.push({ role: "user", content: i === 0 ? `${context(o)}\n\n[손님이 ${partner}에게 보낸 메시지]\n${t.me}` : t.me });
+    messages.push({ role: "assistant", content: t.them });
+  });
+  messages.push({ role: "user", content: turns.length ? msg : `${context(o)}\n\n[손님이 ${partner}에게 보낸 메시지]\n${msg}` });
+  try {
+    const r = await client.messages.create({ model, max_tokens: 300, system: PERSONA_SYSTEM(partner), messages }, { timeout: 30_000 });
+    const text = r.content
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("")
+      .replace(/[#*]/g, "")
+      .trim();
+    return text || null;
+  } catch {
+    return null;
+  }
+}
+
+/** 진행 중인 가상 채팅(턴이 남은 마지막 세션)이 있으면 그 위치 */
+export function openPersona(o: ChatOrder): number {
+  const asks = o.asks ?? [];
+  const i = asks.length - 1;
+  return i >= 0 && asks[i].kind === "persona" && (asks[i].turns?.length ?? 0) < PERSONA_TURNS ? i : -1;
+}
+
+export async function savePersonaTurn(orderNumber: string, turn: { me: string; them: string }): Promise<ChatOrder | null> {
+  return updateChatOrder(orderNumber, (cur) => {
+    const asks = [...(cur.asks ?? [])];
+    const i = openPersona(cur);
+    if (i >= 0) {
+      asks[i] = { ...asks[i], turns: [...(asks[i].turns ?? []), turn] };
+      return { ...cur, asks };
+    }
+    if (askLeft(cur) <= 0) return null;
+    asks.push({ q: "(그 사람 말투 가상 채팅)", a: "", at: new Date().toISOString(), kind: "persona", turns: [turn] });
+    return { ...cur, asks };
+  });
 }
 
 /** 질문 저장 (남은 횟수를 저장 시점에 다시 확인) */

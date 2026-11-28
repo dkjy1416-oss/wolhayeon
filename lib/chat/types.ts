@@ -32,7 +32,11 @@ export interface ChatAsk {
   q: string;
   a: string;
   at: string;
+  /** 11/28: 'persona' = 그 사람 말투로 쓴 가상 채팅 (질문권 1번에 6턴) */
+  kind?: "persona";
+  turns?: { me: string; them: string }[];
 }
+export const PERSONA_TURNS = 6;
 export const CHAT_MAX_IMAGES = 10;
 export const CHAT_MIN_IMAGES = 1;
 

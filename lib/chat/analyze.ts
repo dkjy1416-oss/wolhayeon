@@ -75,6 +75,16 @@ const SYSTEM = `당신은 '월하연'의 관계 분석가 '월화'입니다. 손
 - plan: 3단계(예: 오늘~3일, 4~14일, 3~4주) 각 2~5개 행동.
 - closing: 월화가 손님에게 건네는 편지 같은 마무리 3~5문장.`;
 
+/** 11/28 두 갈래: 헤어진 사이 / 아직 이어지는 사이 — 리포트 관점 안내 */
+function trackNote(o: ChatOrder): string {
+  const rel = o.answers?.rel;
+  if (rel === "ex")
+    return "\n- 관점: 이미 헤어진 사이. 재회 가능성을 단정하지 말고, 왜 멀어졌는지 대화 근거, 지금 연락해도 되는 기준, 다시 연락한다면 보낼 문장과 보내지 말아야 할 문장, 내 마음 정리를 중심으로 쓰세요.";
+  if (rel)
+    return "\n- 관점: 아직 이어지는 사이(썸·연애·짝사랑 등). 관계를 이어 가는 데 도움이 되는 대화 습관, 지금 단계에서 부담 낮은 다음 걸음 중심으로 쓰세요.";
+  return "";
+}
+
 function answerText(o: ChatOrder): string {
   /* 캡처(질문 전부 답함)는 기존처럼 전부, 파일 분석은 11/28 상황 질문 중 답한 것만 */
   const qs = ALL_CHAT_QUESTIONS.filter((q) => (o.source !== "file" && CHAT_QUESTIONS.includes(q)) || o.answers[q.id]);
@@ -149,7 +159,7 @@ export async function analyzeChatText(o: ChatOrder, text: string): Promise<ChatR
   const prompt = `[손님 정보]
 - 결과에서 부를 손님 이름: ${o.name || "손님"} (대화에서는 "나")
 - 상대 호칭: ${partner} (대화에서도 이 호칭으로 바꿔 두었음, 결과에도 이 호칭만 사용)
-${o.answers && Object.keys(o.answers).length ? `- 무료 질문 답변:\n${answerText(o)}\n` : ""}
+${o.answers && Object.keys(o.answers).length ? `- 무료 질문 답변:\n${answerText(o)}${trackNote(o)}\n` : ""}
 [이 대화에서 계산한 숫자 — 근거로 인용할 것]
 ${JSON.stringify(o.stats ?? {}, null, 0)}
 (starts=6시간 넘게 쉬었다 먼저 말 건 횟수, ends=대화를 마지막으로 남긴 쪽, replyMin=답장 시간 중앙값(분), partnerReplyEarly/Late=앞·뒤 절반 기간 상대 답장 중앙값, meetAsk=만나자는 말, vague='다음에·언젠가', feelingWords=감정 단어, nightStarts=밤 11시~새벽 3시 먼저 연락, weeks=주별 대화 온도(상대 지표), turnWeek=상대 온도가 가장 크게 떨어진 주)
