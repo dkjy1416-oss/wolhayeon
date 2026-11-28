@@ -46,7 +46,7 @@ export default function AddToHome() {
         ? "오른쪽 위 ⋮ 메뉴 → '홈 화면에 추가'"
         : "오른쪽 위 메뉴에서 '다른 브라우저로 열기' 후 홈 화면에 추가";
   return (
-    <div className="mx-auto mb-6 flex max-w-[620px] items-start gap-3 rounded-2xl border border-gold/25 bg-white/[0.04] px-4 py-3">
+    <div data-noprint className="mx-auto mb-6 flex max-w-[620px] items-start gap-3 rounded-2xl border border-gold/25 bg-white/[0.04] px-4 py-3">
       <span className="mt-0.5 text-[1.1rem]">🌙</span>
       <div className="flex-1">
         <p className="text-[0.86rem] font-semibold text-ivory">홈 화면에 추가해 두면 30일 동안 바로 다시 열 수 있어요</p>

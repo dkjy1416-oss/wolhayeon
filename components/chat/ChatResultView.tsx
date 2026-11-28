@@ -4,6 +4,7 @@ import Link from "next/link";
 import InView from "@/components/fx/InView";
 import SplitWords from "@/components/fx/SplitWords";
 import ResultChapterNav from "@/components/chat/ResultChapterNav";
+import RevealBubble from "@/components/chat/RevealBubble";
 import type { ChatOrder, ChatResult } from "@/lib/chat/types";
 
 const VIEW_DAYS = 30;
@@ -94,11 +95,9 @@ export default function ChatResultView({
             <p className="whitespace-pre-line text-[0.93rem] leading-[1.9] text-ivory">{r.partner_mind.reading}</p>
             <p className="mt-2 text-[0.74rem] text-ivory-dim">속마음을 확인한 것이 아니라, 대화에서 보이는 가능성이에요.</p>
           </div>
+          {/* 11/28: 근거 대화를 말풍선으로 — 누르면 해석 */}
           {r.partner_mind.clues.map((c, i) => (
-            <div key={i} className={card}>
-              <p className="text-[0.9rem] text-[#e46b8a]">“{c.quote}”</p>
-              <p className="mt-1 text-[0.86rem] leading-[1.8] text-ivory">{c.meaning}</p>
-            </div>
+            <RevealBubble key={i} quote={c.quote} meaning={c.meaning} who={partner} />
           ))}
         </InView>
       )}
