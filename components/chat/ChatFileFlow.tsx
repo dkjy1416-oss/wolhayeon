@@ -9,13 +9,41 @@ import InView from "@/components/fx/InView";
 import SplitWords from "@/components/fx/SplitWords";
 import CountUp from "@/components/fx/CountUp";
 import { parseChatExport, participants, analyzeChat, type Msg, type ChatStats } from "@/lib/chat/kakao-parse";
+import { listZip, readZipText, zipSupported, type ZipEntry } from "@/lib/chat/zip-read";
 
 const GUIDE: [string, string[]][] = [
   ["안드로이드 카톡", ["대화방 오른쪽 위 ≡ 메뉴", "오른쪽 아래 톱니바퀴(채팅방 설정)", "대화 내용 내보내기 → 텍스트만 보내기", "'내 파일에 저장' 또는 '파일' 앱에 저장"]],
   ["아이폰 카톡", ["대화방 오른쪽 위 ≡ 메뉴", "오른쪽 아래 톱니바퀴(채팅방 설정)", "대화 내보내기 → 텍스트 메시지만 보내기", "'파일에 저장' 선택"]],
   ["PC 카톡", ["대화방 오른쪽 위 ≡ 메뉴", "대화 내용 → 대화 내보내기", ".txt 파일로 저장"]],
-  ["인스타그램 DM", ["설정 → 계정 센터 → 내 정보 및 권한", "내 정보 다운로드 → 메시지 선택, 형식 JSON", "받은 파일 안의 message_1.json"]],
+  ["인스타그램 DM", ["설정 → 계정 센터 → 내 정보 및 권한", "내 정보 다운로드 → 정보 일부 → 메시지만 선택", "형식 JSON · 미디어 화질 낮음으로 요청", "메일로 온 .zip 파일을 그대로 올리기 (압축 안 풀어도 돼요)"]],
 ];
+
+interface Room {
+  kind: "kakao" | "ig";
+  title: string;
+  size: number;
+  parts: (() => Promise<string>)[];
+}
+
+/* 인스타 폴더 이름 "minsu_1234567890" → "minsu" */
+function igTitle(dir: string): string {
+  const seg = dir.replace(/\/$/, "").split("/").pop() ?? "";
+  return seg.replace(/_\d{6,}$/, "") || "인스타그램 DM";
+}
+
+/* 인스타 message_1.json, message_2.json … 을 한 대화로 합치기 */
+function mergeIg(texts: string[]): Msg[] {
+  const all: unknown[] = [];
+  for (const t of texts) {
+    try {
+      const j = JSON.parse(t) as { messages?: unknown[] };
+      if (Array.isArray(j.messages)) all.push(...j.messages);
+    } catch {
+      /* 깨진 조각은 건너뜀 */
+    }
+  }
+  return parseChatExport(JSON.stringify({ messages: all }));
+}
 
 export interface FileReady {
   msgs: Msg[];
@@ -36,18 +64,90 @@ export default function ChatFileFlow({ onReady, onQuiz }: { onReady: (r: FileRea
   const [people, setPeople] = useState<{ name: string; count: number }[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>("안드로이드 카톡");
+  const [rooms, setRooms] = useState<Room[] | null>(null);
+  const [reading, setReading] = useState(false);
 
-  const onFile = async (f: File | undefined) => {
-    setErr(null);
-    if (!f) return;
-    if (f.size > 30 * 1024 * 1024) return setErr("파일이 너무 커요. '텍스트만' 내보내기로 다시 받아 주세요.");
-    if (/\.zip$/i.test(f.name)) return setErr("압축 파일이에요. 압축을 풀어 안의 .txt 파일을 올려 주세요.");
-    const text = await f.text();
-    const m = parseChatExport(text);
+  const applyMsgs = (m: Msg[]) => {
     const p = participants(m);
-    if (m.length < 10 || p.length < 2) return setErr("대화를 읽지 못했어요. 카톡 '대화 내보내기'로 받은 .txt 파일인지 확인해 주세요.");
+    if (m.length < 10 || p.length < 2) {
+      setErr("대화를 읽지 못했어요. 카톡 '대화 내보내기' 파일이나 인스타그램 DM(.zip)인지 확인해 주세요.");
+      return false;
+    }
+    setRooms(null);
     setMsgs(m);
     setPeople(p.slice(0, 6));
+    return true;
+  };
+
+  const openRoom = async (r: Room) => {
+    setErr(null);
+    setReading(true);
+    try {
+      const texts = await Promise.all(r.parts.map((x) => x()));
+      applyMsgs(r.kind === "ig" ? mergeIg(texts) : parseChatExport(texts[0]));
+    } catch {
+      setErr("파일을 여는 중에 문제가 생겼어요. 압축을 풀어 대화 파일만 올려 주세요.");
+    } finally {
+      setReading(false);
+    }
+  };
+
+  /* 11/28: 여러 파일 · .zip(카톡 내보내기, 인스타 내 정보 다운로드) 지원 — 모두 휴대폰 안에서만 */
+  const onFiles = async (list: FileList | null) => {
+    setErr(null);
+    const files = list ? Array.from(list) : [];
+    if (!files.length) return;
+    setReading(true);
+    try {
+      const found: Room[] = [];
+      const igDirs = new Map<string, Room>();
+      for (const f of files) {
+        if (/\.zip$/i.test(f.name) || f.type.includes("zip")) {
+          if (!zipSupported()) throw new Error("이 브라우저는 압축 파일을 열 수 없어요. 압축을 풀어 안의 대화 파일을 올려 주세요.");
+          let ents: ZipEntry[];
+          try {
+            ents = await listZip(f);
+          } catch {
+            throw new Error("압축 파일을 열지 못했어요. 압축을 풀어 안의 대화 파일을 올려 주세요.");
+          }
+          for (const e of ents) {
+            const base = e.name.split("/").pop() ?? e.name;
+            if (base.startsWith(".") || e.name.includes("__MACOSX")) continue;
+            if (/^message_\d+\.json$/i.test(base)) {
+              const dir = e.name.slice(0, e.name.length - base.length);
+              const room = igDirs.get(dir) ?? { kind: "ig" as const, title: igTitle(dir), size: 0, parts: [] };
+              room.parts.push(() => readZipText(f, e));
+              room.size += e.usize;
+              igDirs.set(dir, room);
+            } else if (/\.(txt|csv)$/i.test(base) && e.usize > 200 && e.usize < 60 * 1024 * 1024) {
+              found.push({ kind: "kakao", title: base.replace(/\.(txt|csv)$/i, ""), size: e.usize, parts: [() => readZipText(f, e)] });
+            }
+          }
+        } else {
+          if (f.size > 60 * 1024 * 1024) throw new Error("파일이 너무 커요. '텍스트만' 내보내기로 다시 받아 주세요.");
+          if (/^message_\d+\.json$/i.test(f.name)) {
+            const room = igDirs.get("") ?? { kind: "ig" as const, title: "인스타그램 DM", size: 0, parts: [] };
+            room.parts.push(() => f.text());
+            room.size += f.size;
+            igDirs.set("", room);
+          } else {
+            found.push({ kind: /\.json$/i.test(f.name) ? "ig" : "kakao", title: f.name, size: f.size, parts: [() => f.text()] });
+          }
+        }
+      }
+      found.push(...igDirs.values());
+      found.sort((a, b) => b.size - a.size);
+      if (!found.length) throw new Error("압축 파일 안에서 대화를 찾지 못했어요. 카톡 내보내기 파일이나 인스타 DM(JSON)인지 확인해 주세요.");
+      if (found.length === 1) {
+        setReading(false);
+        return openRoom(found[0]);
+      }
+      setRooms(found.slice(0, 40));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "파일을 읽지 못했어요.");
+    } finally {
+      setReading(false);
+    }
   };
 
   const pickMe = (meName: string) => {
@@ -68,10 +168,28 @@ export default function ChatFileFlow({ onReady, onQuiz }: { onReady: (r: FileRea
             숫자 분석은 <b className="text-ivory">이 휴대폰 안에서만</b> 계산해요. 결제 전에는 대화가 서버로 가지 않아요.
           </p>
           <label className="mt-5 flex min-h-16 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-[#e46b8a]/60 bg-ink-soft text-[1rem] font-semibold text-[#e46b8a]">
-            파일 고르기 (.txt · .csv · .json)
-            <input type="file" accept=".txt,.csv,.json,text/plain,application/json" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+            {reading ? "휴대폰 안에서 읽는 중…" : "파일 고르기 (.txt · .zip · 인스타 DM)"}
+            <input type="file" multiple accept=".txt,.csv,.json,.zip,text/plain,application/json,application/zip,application/x-zip-compressed" className="hidden" disabled={reading} onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
           </label>
+          <p className="mt-2 text-center text-[0.76rem] text-ivory-dim">카톡 .txt · 카톡/인스타 .zip 그대로 · 여러 파일 한 번에 가능</p>
           {err && <p className="mt-3 text-[0.86rem] text-thread">{err}</p>}
+          {rooms && (
+            <div className="mt-5">
+              <p className="text-[0.9rem] font-semibold text-ivory">어떤 대화를 분석할까요?</p>
+              <p className="mt-1 text-[0.78rem] text-ivory-dim">대화가 많은 순서예요.</p>
+              <div className="mt-3 flex flex-col gap-2">
+                {rooms.map((r, i) => (
+                  <button key={i} type="button" disabled={reading} onClick={() => openRoom(r)} className="flex items-center justify-between rounded-xl border border-gold-dim bg-ink-soft px-4 py-3.5 text-left text-[0.92rem] text-ivory disabled:opacity-50">
+                    <span className="truncate">
+                      <span className="mr-2 text-[0.72rem] text-gold">{r.kind === "ig" ? "인스타" : "카톡"}</span>
+                      {r.title}
+                    </span>
+                    <span className="shrink-0 text-[0.76rem] text-ivory-dim">{r.size > 1048576 ? `${(r.size / 1048576).toFixed(1)}MB` : `${Math.max(1, Math.round(r.size / 1024))}KB`}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="mt-6 flex flex-col gap-2">
             <p className="text-[0.82rem] font-semibold text-gold">대화 내보내는 방법</p>
             {GUIDE.map(([k, steps]) => (

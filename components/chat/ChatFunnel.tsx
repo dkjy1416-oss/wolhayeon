@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PreviewExtras from "@/components/apply/PreviewExtras";
-import { CHAT_QUESTIONS, CHAT_LOCKED_ITEMS, freeChatType } from "@/lib/chat/questions";
+import { CHAT_QUESTIONS, CHAT_LOCKED_ITEMS, FILE_CTX_QUESTIONS, freeChatType } from "@/lib/chat/questions";
 import { CHAT_PRICE_KRW, CHAT_BUNDLE_PRICE_KRW, type ChatProduct } from "@/lib/chat/types";
 import { sendSiteEvent } from "@/lib/site-track";
 import ChatLanding from "@/components/chat/ChatLanding";
@@ -21,7 +21,7 @@ import InView from "@/components/fx/InView";
 import ShareTypeButton from "@/components/chat/ShareTypeButton";
 import ChatProcessing from "@/components/chat/ChatProcessing";
 
-type Step = "intro" | "file" | "quiz" | "free" | "form";
+type Step = "intro" | "file" | "ctx" | "quiz" | "free" | "form";
 
 const FILE_LOCKED = [
   "그 사람은 지금 나를 어떻게 생각할까 — 숫자 뒤의 해석",
@@ -57,6 +57,7 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
   const [mode, setMode] = useState<"file" | "quiz">("file");
   const [fileData, setFileData] = useState<FileReady | null>(null);
   const [qi, setQi] = useState(0);
+  const [ci, setCi] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [product, setProduct] = useState<ChatProduct>("chat");
   const [name, setName] = useState("");
@@ -126,7 +127,8 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          answers: mode === "quiz" ? answers : {},
+          /* 11/28: 파일 분석도 상황 질문(건너뛰기 가능) 답을 함께 보냄 */
+          answers,
           source: mode === "file" ? "file" : "images",
           stats: fileData ? { ...fileData.stats, meName: "", partnerName: "" } : null,
           name, email, birthYear: Number(birthYear), guardianOk, marketingOk, product, partnerLabel, mySide: "right", utm: readUtm(),
@@ -225,8 +227,14 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
       <ChatFileFlow
         onReady={(r) => {
           setFileData(r);
-          setStep("free");
-          sendSiteEvent("preview_view", { order: "" });
+          /* 11/28: 결제 끝난 묶음 손님은 바로, 나머지는 상황 질문 3개(건너뛰기 가능) 뒤 무료 결과 */
+          if (combo) {
+            setStep("free");
+            sendSiteEvent("preview_view", { order: "" });
+          } else {
+            setCi(0);
+            setStep("ctx");
+          }
           window.scrollTo({ top: 0 });
         }}
         onQuiz={() => {
@@ -235,6 +243,58 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
         }}
       />
     );
+
+  if (step === "ctx") {
+    const q = FILE_CTX_QUESTIONS[ci];
+    const done = (skipped: boolean) => {
+      sendSiteEvent("chat_ctx", { step: skipped ? `skip${ci + 1}` : "done" });
+      setStep("free");
+      sendSiteEvent("preview_view", { order: "" });
+      window.scrollTo({ top: 0 });
+    };
+    const pickCtx = (v: string) => {
+      setAnswers((a) => ({ ...a, [q.id]: v }));
+      if (ci + 1 < FILE_CTX_QUESTIONS.length) setCi(ci + 1);
+      else done(false);
+    };
+    return (
+      <div className="mx-auto max-w-[560px] px-5 pb-24 pt-24">
+        <p className="text-[0.74rem] tracking-[0.2em] text-gold">2단계 · 상황 알려주기 (선택)</p>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-ink-soft">
+          <div className="h-full bg-gradient-to-r from-[#8a2442] to-[#e46b8a] transition-all duration-500" style={{ width: `${((ci + 1) / FILE_CTX_QUESTIONS.length) * 100}%` }} />
+        </div>
+        <p className="mt-5 text-[0.78rem] text-ivory-dim">
+          {ci + 1} / {FILE_CTX_QUESTIONS.length} · 답해 주시면 리포트가 내 상황에 더 맞춰져요
+        </p>
+        <SplitWords key={q.id} as="h2" className="font-display mt-2 block text-[1.5rem] font-bold leading-snug text-ivory" text={q.q} />
+        <InView key={`c-${q.id}`} className="mt-6 flex flex-col gap-2.5">
+          {q.options.map((o, oi) => (
+            <button
+              key={o.v}
+              type="button"
+              onClick={() => pickCtx(o.v)}
+              style={{ ["--i" as string]: oi * 0.25 }}
+              className={`fx-pop rounded-xl border px-4 py-4 text-left text-[0.95rem] transition-colors active:scale-[0.99] ${answers[q.id] === o.v ? "border-[#e46b8a] bg-[#e46b8a]/10 text-ivory" : "border-gold-dim bg-ink-soft text-ivory"}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </InView>
+        <div className="mt-6 flex items-center justify-between text-[0.84rem] text-ivory-dim">
+          {ci > 0 ? (
+            <button type="button" onClick={() => setCi(ci - 1)} className="underline underline-offset-4">
+              이전
+            </button>
+          ) : (
+            <span />
+          )}
+          <button type="button" onClick={() => done(true)} className="underline underline-offset-4">
+            건너뛰고 무료 결과 보기 ›
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "quiz") {
     const q = CHAT_QUESTIONS[qi];
