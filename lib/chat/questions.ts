@@ -113,6 +113,24 @@ export const CHAT_QUESTIONS: ChatQuestion[] = [
   },
 ];
 
+/** 11/28: 대화 파일로 분석할 때 시작 전에 묻는 상황 질문 (건너뛰기 가능). rel·want는 위 질문을 그대로 쓴다 */
+export const CTX_EXTRA_QUESTIONS: ChatQuestion[] = [
+  {
+    id: "known",
+    q: "그 사람과 알고 지낸 지 얼마나 됐어요?",
+    options: [
+      { v: "m1", label: "한 달이 안 됐어요" },
+      { v: "m6", label: "1~6개월" },
+      { v: "y1", label: "6개월~1년" },
+      { v: "y3", label: "1~3년" },
+      { v: "y3p", label: "3년보다 오래" },
+    ],
+  },
+];
+const byId = (id: string) => CHAT_QUESTIONS.find((q) => q.id === id) as ChatQuestion;
+export const FILE_CTX_QUESTIONS: ChatQuestion[] = [byId("rel"), CTX_EXTRA_QUESTIONS[0], byId("want")];
+export const ALL_CHAT_QUESTIONS: ChatQuestion[] = [...CHAT_QUESTIONS, ...CTX_EXTRA_QUESTIONS];
+
 export interface FreeChatType {
   key: string;
   name: string;

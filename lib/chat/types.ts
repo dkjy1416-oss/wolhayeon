@@ -21,6 +21,18 @@ export const CHAT_PRODUCTS: Record<ChatProduct, { name: string; orderName: strin
 };
 
 export const CHAT_ORDER_RE = /^WC-\d{8}-[A-Z0-9]{5}$/;
+
+/** 11/28 대표 결정: 리포트 뒤 '월화에게 묻기' — 무료 1번, 추가 3번 4,900원 */
+export const ASK_FREE = 1;
+export const ASK_PACK_COUNT = 3;
+export const ASK_PACK_PRICE_KRW = 4900;
+/** 추가 질문 결제 주문번호: WC-YYYYMMDD-XXXXX-Q1 */
+export const ASK_PAY_RE = /^(WC-\d{8}-[A-Z0-9]{5})-Q(\d{1,2})$/;
+export interface ChatAsk {
+  q: string;
+  a: string;
+  at: string;
+}
 export const CHAT_MAX_IMAGES = 10;
 export const CHAT_MIN_IMAGES = 1;
 
@@ -88,4 +100,8 @@ export interface ChatOrder {
   /** 관리자 미리보기용 AI 결과 (결제 전, 손님에게 안 보임) */
   preview_result?: ChatResult | null;
   preview_at?: string | null;
+  /** 11/28: 리포트 뒤 월화에게 묻기 */
+  asks?: ChatAsk[];
+  ask_credits?: number; // 결제로 늘어난 질문 수
+  ask_payments?: { order_id: string; payment_key: string; amount: number; at: string }[];
 }

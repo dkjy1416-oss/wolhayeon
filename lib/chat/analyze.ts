@@ -6,7 +6,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
-import { CHAT_QUESTIONS } from "@/lib/chat/questions";
+import { CHAT_QUESTIONS, ALL_CHAT_QUESTIONS } from "@/lib/chat/questions";
 import type { ChatOrder, ChatResult } from "@/lib/chat/types";
 
 /* 11/23: 길이·개수 제한은 모델 안내(describe)로만 — 조금 넘었다고 결과 전체를 버리지 않게 */
@@ -76,11 +76,15 @@ const SYSTEM = `당신은 '월하연'의 관계 분석가 '월화'입니다. 손
 - closing: 월화가 손님에게 건네는 편지 같은 마무리 3~5문장.`;
 
 function answerText(o: ChatOrder): string {
-  return CHAT_QUESTIONS.map((q) => {
-    const v = o.answers[q.id];
-    const label = q.options.find((x) => x.v === v)?.label ?? "응답 없음";
-    return `- ${q.q} → ${label}`;
-  }).join("\n");
+  /* 캡처(질문 전부 답함)는 기존처럼 전부, 파일 분석은 11/28 상황 질문 중 답한 것만 */
+  const qs = ALL_CHAT_QUESTIONS.filter((q) => (o.source !== "file" && CHAT_QUESTIONS.includes(q)) || o.answers[q.id]);
+  return qs
+    .map((q) => {
+      const v = o.answers[q.id];
+      const label = q.options.find((x) => x.v === v)?.label ?? "응답 없음";
+      return `- ${q.q} → ${label}`;
+    })
+    .join("\n");
 }
 
 export async function analyzeChat(
