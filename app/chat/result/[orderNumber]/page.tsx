@@ -48,7 +48,7 @@ export default async function ChatResultPage({
         orderNumber={orderNumber}
         token={t as string}
         partner={o.partner_label || "그 사람"}
-        initialAsks={o.asks ?? []}
+        initialAsks={(o.asks ?? []).filter((x) => !x.hidden)}
         initialLeft={askLeft(o)}
         clientKey={process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim() || null}
         payOrderId={askPayOrderId(o)}
