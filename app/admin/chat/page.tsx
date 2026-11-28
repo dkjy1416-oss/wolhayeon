@@ -72,6 +72,19 @@ export default async function AdminChatPage() {
                 결과 보기
               </Link>
             )}
+            {/* 11/28: 월화에게 묻기 사용·횟수 + 관리자 횟수 추가 (테스트·보상용, 결제 없음) */}
+            {r.pay_status === "paid" && r.result && (
+              <form action="/api/admin/chat/credits" method="POST" className="mt-1.5 flex flex-wrap items-center gap-2">
+                <span>
+                  월화에게 묻기 {r.asks?.length ?? 0}번 사용 · 추가 {r.ask_credits ?? 0}번
+                  {(r.ask_payments ?? []).filter((x) => x.amount > 0).length > 0 && ` · 결제 ${(r.ask_payments ?? []).filter((x) => x.amount > 0).length}건`}
+                </span>
+                <input type="hidden" name="orderNumber" value={r.order_number} />
+                <button type="submit" className="rounded-full border border-gold-dim px-2.5 py-0.5 text-[0.74rem] text-gold">
+                  +3번 추가(무료)
+                </button>
+              </form>
+            )}
           </li>
         ))}
       </ul>
