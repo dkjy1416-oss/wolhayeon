@@ -15,8 +15,8 @@ import {
 } from "@/lib/admin-util";
 import { kickSweep } from "@/lib/sweep-kick";
 import { listChatOrders } from "@/lib/chat/store";
-import { getMarketingStats } from "@/lib/marketing-stats";
-import FunnelBoard from "@/components/admin/FunnelBoard";
+import OverviewBoard from "@/components/admin/OverviewBoard";
+import { getOverview } from "@/lib/admin-overview";
 
 /** 11/23: 판매 상품 이름 (메인 화면에서 구분) */
 function productLabel(r: { kind?: string; product?: string | null; payment_method?: string | null }): string {
@@ -76,7 +76,9 @@ function Tile({
   );
 }
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ d?: string }> }) {
+  const dParam = Number((await searchParams).d ?? 7);
+  const overviewPromise = getOverview(dParam).catch(() => null);
   /* 멈춘 주문 자동 재처리 깨우기 (응답 뒤, 실패해도 무관) */
   after(() => kickSweep());
   if (!(await isAdminAuthenticated())) redirect("/admin/login");
@@ -89,7 +91,6 @@ export default async function AdminDashboard() {
   const yesterdayKey = kstDate(yesterdayStart);
 
   /* 상단 핵심 숫자·퍼널 (30일) — 실패해도 대시보드는 열린다 */
-  const statsPromise = getMarketingStats(30).catch(() => null);
   /* 최근 7일 주문 + 처리 필요 주문(기간 무관) */
   const [recentRes, attentionRes, csChatRes, incidentRes, failRes, reviewRes] =
     await Promise.all([
@@ -278,7 +279,7 @@ export default async function AdminDashboard() {
   const recentPaid = [...paidAll, ...chatPaid]
     .sort((a, b) => (b.paid_at ?? "").localeCompare(a.paid_at ?? ""))
     .slice(0, 8);
-  const stats = await statsPromise;
+  const overview = await overviewPromise;
 
   return (
     <main className="mx-auto min-h-[100svh] w-full max-w-5xl px-5 pb-20 pt-8 text-ivory">
@@ -316,53 +317,14 @@ export default async function AdminDashboard() {
           : "결제 닫힘 — 고객에게 '결제 오픈 준비 중' 안내가 표시되는 상태"}
       </div>
 
-      {/* 오늘 — 핵심 6개 + 퍼널 + 전환율 */}
-      <h2 className="font-display mt-8 text-[1rem] font-semibold">오늘</h2>
-      {stats ? (
-        <FunnelBoard
-          stats={stats}
-          chat={{
-            today: { paid: chatDay(todayKey).length, revenue: chatDay(todayKey).reduce((s, r) => s + (r.payment_amount ?? 0), 0) },
-            yesterday: { paid: chatDay(yKey).length, revenue: chatDay(yKey).reduce((s, r) => s + (r.payment_amount ?? 0), 0) },
-          }}
-        />
+      {/* 11/28 운영자 요청: 첫 화면에서 광고·유입·상품 3개 단계·결제/취소를 바로 */}
+      {overview ? (
+        <OverviewBoard o={overview} />
       ) : (
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Tile label="신청" value={`${today.applied}명`} sub={`어제 ${yesterday.applied}명`} />
-          <Tile label="미리보기 도달" value={`${today.preview}명`} sub={`어제 ${yesterday.preview}명`} />
-          <Tile label="결제" value={`${today.paid}건`} sub={`어제 ${yesterday.paid}건`} accent={today.paid > 0} />
-          <Tile label="매출" value={won(today.revenue)} sub={`어제 ${won(yesterday.revenue)}`} accent={today.revenue > 0} />
-        </div>
+        <p className="mt-6 rounded-xl border border-thread/40 bg-thread/5 px-4 py-3 text-[0.85rem]">통계를 불러오지 못했어요. 새로고침해 주세요.</p>
       )}
-      {/* 11/23 운영자 요청: 상품별 결제·매출을 대시보드에서 한 번에 */}
-      <div className="mt-4 overflow-x-auto rounded-xl border border-gold-dim/25 bg-ink-soft/50">
-        <table className="w-full min-w-[520px] text-[0.8rem]">
-          <thead>
-            <tr className="text-left text-[0.7rem] text-ivory-dim">
-              <th className="px-4 py-2 font-normal">상품별</th>
-              <th className="px-3 py-2 text-right font-normal">오늘</th>
-              <th className="px-3 py-2 text-right font-normal">어제</th>
-              <th className="px-3 py-2 text-right font-normal">최근 7일</th>
-              <th className="px-3 py-2 text-right font-normal">최근 30일</th>
-            </tr>
-          </thead>
-          <tbody>
-            {productTable.map((p) => (
-              <tr key={p.label} className={`border-t border-gold-dim/15 ${p.label === "합계" ? "font-semibold text-gold" : ""}`}>
-                <td className="px-4 py-2">{p.label}</td>
-                {p.cells.map((c, i) => (
-                  <td key={i} className="px-3 py-2 text-right tabular-nums">
-                    {c.n}건 <span className="text-ivory-dim">· {won(c.rev)}</span>
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-2 text-[0.75rem] text-ivory-dim">
-        최근 7일 결제 {weekPaid.length}건 · 매출 {won(weekRevenue)}
-        {csToday !== null && ` · 오늘 CS 문의 ${csToday}건`}
+      <p className="mt-3 text-[0.75rem] text-ivory-dim">
+        {csToday !== null && `오늘 CS 문의 ${csToday}건`}
         {couponPending > 0 && ` · 사과 쿠폰 대기 주문 ${couponPending}건`}
       </p>
 
@@ -436,27 +398,6 @@ export default async function AdminDashboard() {
         </ul>
       )}
 
-      {/* 바로가기 */}
-      <h2 className="font-display mt-8 text-[1rem] font-semibold">바로가기</h2>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {[
-          ["/admin/orders", "주문 검색·관리", "이름·이메일·주문번호로 찾기"],
-          ["/admin/stats", "유입·전환 통계", "일별 추이·결제 퍼널"],
-          ["/admin/cs", "고객센터 현황", "문의·조회·처리·장애"],
-          ["/admin/remind", "리마인드 메일", "미결제 고객 이어보기 메일"],
-          ["https://dashboard.tosspayments.com", "토스 상점관리자", "결제 조회·취소·정산"],
-        ].map(([href, title, desc]) => (
-          <Link
-            key={href}
-            href={href}
-            target={href.startsWith("http") ? "_blank" : undefined}
-            className="rounded-xl border border-gold-dim/25 bg-ink-soft/50 px-4 py-3 hover:border-gold/50"
-          >
-            <p className="text-[0.88rem]">{title}</p>
-            <p className="mt-0.5 text-[0.7rem] text-ivory-dim">{desc}</p>
-          </Link>
-        ))}
-      </div>
     </main>
   );
 }
