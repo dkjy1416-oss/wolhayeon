@@ -14,6 +14,18 @@ export async function POST(request: Request) {
   const f = await request.formData().catch(() => null);
   const on = String(f?.get("orderNumber") ?? "");
   if (!CHAT_ORDER_RE.test(on)) return NextResponse.json({ ok: false }, { status: 400 });
+  /* 11/28: 운영자 테스트 기록 숨기기 (지우지 않음 — 손님 화면·남은 횟수에서만 빠짐) */
+  const hide = f?.get("hide");
+  if (hide !== null && hide !== undefined) {
+    const i = Number(hide);
+    await updateChatOrder(on, (cur) => {
+      const asks = [...(cur.asks ?? [])];
+      if (!Number.isInteger(i) || !asks[i]) return null;
+      asks[i] = { ...asks[i], hidden: true };
+      return { ...cur, asks };
+    });
+    return NextResponse.redirect(new URL(`/admin/chat?hidden=${on}`, request.url), 303);
+  }
   await updateChatOrder(on, (cur) => ({
     ...cur,
     ask_credits: (cur.ask_credits ?? 0) + ASK_PACK_COUNT,
