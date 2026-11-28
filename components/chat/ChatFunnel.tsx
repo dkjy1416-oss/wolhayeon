@@ -21,12 +21,13 @@ import InView from "@/components/fx/InView";
 import ShareTypeButton from "@/components/chat/ShareTypeButton";
 import ChatProcessing from "@/components/chat/ChatProcessing";
 
-type Step = "intro" | "file" | "ctx" | "quiz" | "free" | "form";
+type Step = "intro" | "track" | "file" | "ctx" | "quiz" | "free" | "form";
 
 const FILE_LOCKED = [
-  "그 사람은 지금 나를 어떻게 생각할까 — 숫자 뒤의 해석",
+  /* 11/28: 상대 마음을 단정하는 듯한 문구 → '대화로 본 가능성'으로 */
+  "숫자 뒤의 해석 — 대화로 본 그 사람 마음의 가능성",
   "우리 관계는 어디로 흘러갈까 — 만남·약속 얘기의 흐름",
-  "말하지 않고 숨기는 마음 — 말과 행동의 온도차",
+  "말과 행동의 온도차 — 말과 실제 연락이 다른 지점",
   "대화가 달라진 날, 그날 무슨 말이 오갔는지",
   "지금 보내면 안 되는 문장",
   "다음에 보낼 메시지 3개와 예상 반응 · 1~2주 계획",
@@ -58,6 +59,8 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
   const [fileData, setFileData] = useState<FileReady | null>(null);
   const [qi, setQi] = useState(0);
   const [ci, setCi] = useState(0);
+  /* 11/28 두 갈래: on = 아직 이어지는 사이, ex = 이미 헤어진 사이 */
+  const [track, setTrack] = useState<"on" | "ex" | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [product, setProduct] = useState<ChatProduct>("chat");
   const [name, setName] = useState("");
@@ -85,6 +88,11 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
       return;
     }
     /* 11/23: 결과 예시 페이지의 '이 리포트 받기' 버튼 — 바로 대화 파일 올리기부터 */
+    if (sp.get("track") === "ex" || sp.get("track") === "on") {
+      const tk = sp.get("track") as "on" | "ex";
+      setTrack(tk);
+      if (tk === "ex") setAnswers((a) => ({ ...a, rel: "ex" }));
+    }
     if (sp.get("start") === "file") {
       setMode("file");
       setStep("file");
@@ -212,7 +220,7 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
         reviews={reviews}
         onFile={() => {
           setMode("file");
-          setStep("file");
+          setStep("track");
           sendSiteEvent("chat_start", { step: "file" });
           window.scrollTo({ top: 0 });
         }}
@@ -247,8 +255,58 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
       />
     );
 
+  if (step === "track")
+    return (
+      <div className="mx-auto max-w-[560px] px-5 pb-24 pt-24">
+        <p className="text-[0.74rem] tracking-[0.2em] text-gold">시작하기 전에</p>
+        <SplitWords as="h2" className="font-display mt-2 block text-[1.6rem] font-bold leading-snug text-ivory" text="그 사람과 지금 어떤 사이예요?" />
+        <p className="mt-2 text-[0.88rem] leading-[1.8] text-ivory-dim">고른 상황에 맞춰 리포트가 보는 관점이 달라져요. 가격은 같아요.</p>
+        <div className="mt-6 flex flex-col gap-3">
+          {(
+            [
+              ["on", "아직 이어지는 사이", "썸 · 연애 중 · 짝사랑 · 연락이 뜸해진 사이", "대화 습관, 그 사람이 보내는 신호의 가능성, 부담 낮은 다음 걸음"],
+              ["ex", "이미 헤어진 사이", "헤어졌지만 대화가 남아 있는 사이", "왜 멀어졌는지 대화 근거, 지금 연락해도 되는 기준, 보낼 문장·보내지 말 문장"],
+            ] as const
+          ).map(([k, t, sub, get]) => (
+            <div key={k} className="fx-glass rounded-2xl px-5 py-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setTrack(k);
+                  setAnswers((a) => {
+                    const n = { ...a };
+                    if (k === "ex") n.rel = "ex";
+                    else if (n.rel === "ex") delete n.rel;
+                    return n;
+                  });
+                  sendSiteEvent("chat_ctx", { step: `track_${k}` });
+                  setStep("file");
+                  window.scrollTo({ top: 0 });
+                }}
+                className="block w-full text-left"
+              >
+                <span className="flex items-center justify-between">
+                  <span className="font-display text-[1.25rem] font-bold text-ivory">{t}</span>
+                  <span className="text-[#e46b8a]">›</span>
+                </span>
+                <span className="mt-1 block text-[0.8rem] text-ivory-dim">{sub}</span>
+                <span className="mt-3 block rounded-xl bg-black/25 px-3.5 py-2.5 text-[0.82rem] leading-[1.7] text-ivory">받는 것 · {get}</span>
+              </button>
+              <Link href={`/chat/sample${k === "ex" ? "?track=ex" : ""}`} className="mt-3 inline-block text-[0.8rem] text-[#e46b8a] underline underline-offset-4">
+                결과 예시 보기 ›
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
   if (step === "ctx") {
-    const q = FILE_CTX_QUESTIONS[ci];
+    /* 11/28 두 갈래: 헤어진 사이를 골랐으면 '어떤 사이' 질문은 건너뛰고, 이어지는 사이면 '헤어진 연인' 보기는 뺌 */
+    const ctxQs = FILE_CTX_QUESTIONS.filter((x) => !(x.id === "rel" && track === "ex")).map((x) =>
+      x.id === "rel" && track === "on" ? { ...x, options: x.options.filter((o) => o.v !== "ex") } : x
+    );
+    const q = ctxQs[Math.min(ci, ctxQs.length - 1)];
     const done = (skipped: boolean) => {
       sendSiteEvent("chat_ctx", { step: skipped ? `skip${ci + 1}` : "done" });
       setStep("free");
@@ -257,17 +315,17 @@ export default function ChatFunnel({ totals = null, reviews = [] }: { totals?: S
     };
     const pickCtx = (v: string) => {
       setAnswers((a) => ({ ...a, [q.id]: v }));
-      if (ci + 1 < FILE_CTX_QUESTIONS.length) setCi(ci + 1);
+      if (ci + 1 < ctxQs.length) setCi(ci + 1);
       else done(false);
     };
     return (
       <div className="mx-auto max-w-[560px] px-5 pb-24 pt-24">
         <p className="text-[0.74rem] tracking-[0.2em] text-gold">2단계 · 상황 알려주기 (선택)</p>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-ink-soft">
-          <div className="h-full bg-gradient-to-r from-[#8a2442] to-[#e46b8a] transition-all duration-500" style={{ width: `${((ci + 1) / FILE_CTX_QUESTIONS.length) * 100}%` }} />
+          <div className="h-full bg-gradient-to-r from-[#8a2442] to-[#e46b8a] transition-all duration-500" style={{ width: `${((ci + 1) / ctxQs.length) * 100}%` }} />
         </div>
         <p className="mt-5 text-[0.78rem] text-ivory-dim">
-          {ci + 1} / {FILE_CTX_QUESTIONS.length} · 답해 주시면 리포트가 내 상황에 더 맞춰져요
+          {ci + 1} / {ctxQs.length} · 답해 주시면 리포트가 내 상황에 더 맞춰져요
         </p>
         <SplitWords key={q.id} as="h2" className="font-display mt-2 block text-[1.5rem] font-bold leading-snug text-ivory" text={q.q} />
         <InView key={`c-${q.id}`} className="mt-6 flex flex-col gap-2.5">
