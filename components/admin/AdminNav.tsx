@@ -4,18 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/admin/LogoutButton";
 
+/* 11/28 운영자 요청 "필요 없는 건 정리": 매일 보는 메뉴만 남김.
+   홍보·SNS 업로드·통계(옛 화면)·리마인드 메일·사과 쿠폰 화면은 메뉴에서만 뺐고 주소로는 계속 열린다
+   (/admin/promo · /admin/social · /admin/stats · /admin/remind · /admin/apology). */
 const ITEMS: { href: string; label: string }[] = [
   { href: "/admin", label: "대시보드" },
-  { href: "/admin/orders", label: "주문" },
+  { href: "/admin/orders", label: "재회·책 주문" },
+  { href: "/admin/chat", label: "카톡 주문" },
   { href: "/admin/customers", label: "고객" },
-  { href: "/admin/marketing", label: "마케팅" },
-  { href: "/admin/chat", label: "카톡 분석" },
-  { href: "/admin/promo", label: "홍보" },
-  { href: "/admin/social", label: "SNS 업로드" },
-  { href: "/admin/reviews", label: "후기" },
-  { href: "/admin/stats", label: "통계" },
+  { href: "/admin/marketing", label: "상세 통계" },
   { href: "/admin/cs", label: "고객센터" },
-  { href: "/admin/remind", label: "리마인드 메일" },
+  { href: "/admin/reviews", label: "후기" },
 ];
 
 export default function AdminNav() {
